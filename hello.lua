@@ -1,1 +1,1 @@
-print("hello from lua")
+os.execute("sudo -A id")

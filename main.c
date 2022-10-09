@@ -1,4 +1,6 @@
 #include <sys/prctl.h>
+#include <sys/syscall.h>
+#include <linux/seccomp.h>
 
 #include <lua.h>
 #include <lualib.h>
@@ -31,10 +33,16 @@ int main(int argc, char* argv[])
     r = luaL_loadfile(L, fn);
     CHECK_LUA(L, r, "luaL_loadfile(%s)", fn);
 
-    r = lua_pcall(L, 0, LUA_MULTRET, 0);
-    CHECK_LUA(L, r, "lua_pcall");
+    r = prctl(PR_SET_SECCOMP, SECCOMP_MODE_STRICT);
+    CHECK(r, "seccomp strict");
+
+    lua_call(L, 0, LUA_MULTRET);
+
+    /*r = lua_pcall(L, 0, LUA_MULTRET, 0);*/
+    /*CHECK_LUA(L, r, "lua_pcall");*/
 
     lua_close(L);
 
-    return 0;
+    syscall(SYS_exit, 0);
+    /*return 0;*/
 }

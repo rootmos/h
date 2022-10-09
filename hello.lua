@@ -1,1 +1,3 @@
-os.execute("sudo -A id")
+--os.execute("sudo -A id")
+--print("hello")
+--os.exit(3)

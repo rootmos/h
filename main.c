@@ -1,6 +1,7 @@
 #include <sys/prctl.h>
 #include <sys/syscall.h>
 #include <linux/seccomp.h>
+#include <linux/filter.h>
 
 #include <lua.h>
 #include <lualib.h>
@@ -19,6 +20,17 @@
 } while(0)
 #endif
 
+void seccomp_apply_filter()
+{
+    struct sock_filter filter[] = {
+#include "filter.bpfc"
+    };
+
+    struct sock_fprog p = { .len = LENGTH(filter), .filter = filter };
+    int r = prctl(PR_SET_SECCOMP, SECCOMP_MODE_FILTER, &p);
+    CHECK(r, "prctl(PR_SET_SECCOMP, SECCOMP_MODE_FILTER)");
+}
+
 int main(int argc, char* argv[])
 {
     int r = prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0);
@@ -27,22 +39,18 @@ int main(int argc, char* argv[])
     lua_State* L = luaL_newstate();
     CHECK_NOT(L, NULL, "unable to create Lua state");
 
-    luaL_openlibs(L);
-
     const char* fn = argv[1];
     r = luaL_loadfile(L, fn);
     CHECK_LUA(L, r, "luaL_loadfile(%s)", fn);
 
-    r = prctl(PR_SET_SECCOMP, SECCOMP_MODE_STRICT);
-    CHECK(r, "seccomp strict");
+    seccomp_apply_filter();
 
-    lua_call(L, 0, LUA_MULTRET);
+    luaL_openlibs(L);
 
-    /*r = lua_pcall(L, 0, LUA_MULTRET, 0);*/
-    /*CHECK_LUA(L, r, "lua_pcall");*/
+    r = lua_pcall(L, 0, LUA_MULTRET, 0);
+    CHECK_LUA(L, r, "lua_pcall");
 
     lua_close(L);
 
-    syscall(SYS_exit, 0);
-    /*return 0;*/
+    return 0;
 }

@@ -9,6 +9,16 @@
 #define LIBR_IMPLEMENTATION
 #include "r.h"
 
+#define LUA_EXPECT_TYPE(L, t, expected, format, ...) do { \
+    if(t != expected) {\
+        r_failwith(__extension__ __FUNCTION__, __extension__ __FILE__, \
+                   __extension__ __LINE__, 0, \
+                   format ": unexpected type %s (expected %s)\n", \
+                   ##__VA_ARGS__, lua_typename(L, t), \
+                   lua_typename(L, expected)); \
+    } \
+} while(0)
+
 void seccomp_apply_filter()
 {
     struct sock_filter filter[] = {
@@ -24,8 +34,10 @@ void remove_stdlib_function(struct lua_State* L,
                             const char* lib, const char* f)
 {
     int T = lua_gettop(L);
+
     int t = lua_getglobal(L, lib);
-    CHECK_IF(t != LUA_TTABLE, "%s type", lib);
+    LUA_EXPECT_TYPE(L, t, LUA_TTABLE, "%s", lib);
+
     lua_pushnil(L);
     lua_setfield(L, -2, f);
     lua_pop(L, 1);

@@ -1,5 +1,4 @@
 #include <sys/prctl.h>
-#include <sys/syscall.h>
 #include <linux/seccomp.h>
 #include <linux/filter.h>
 
@@ -9,16 +8,6 @@
 
 #define LIBR_IMPLEMENTATION
 #include "r.h"
-
-#ifdef LUA_VERSION
-#define CHECK_LUA(L, err, format, ...) do { \
-    if(err != LUA_OK) { \
-        r_failwith(__extension__ __FUNCTION__, __extension__ __FILE__, \
-                   __extension__ __LINE__, 0, \
-                   format ": %s\n", ##__VA_ARGS__, lua_tostring(L, -1)); \
-    } \
-} while(0)
-#endif
 
 void seccomp_apply_filter()
 {
@@ -33,17 +22,22 @@ void seccomp_apply_filter()
 
 int main(int argc, char* argv[])
 {
-    int r = prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0);
-    CHECK(r, "enabling 'no new privileges'");
+    const char* fn = argv[1];
+
+    no_new_privs();
+
+    int rsfd = landlock_new_ruleset();
+    landlock_allow_read_file(rsfd, "/etc/localtime");
+    landlock_allow_read_file(rsfd, fn);
+    landlock_apply(rsfd);
+
+    seccomp_apply_filter();
 
     lua_State* L = luaL_newstate();
     CHECK_NOT(L, NULL, "unable to create Lua state");
 
-    const char* fn = argv[1];
-    r = luaL_loadfile(L, fn);
+    int r = luaL_loadfile(L, fn);
     CHECK_LUA(L, r, "luaL_loadfile(%s)", fn);
-
-    seccomp_apply_filter();
 
     luaL_openlibs(L);
 

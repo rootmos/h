@@ -2,14 +2,29 @@
 ld [$$offsetof(struct seccomp_data, arch)$$]
 jne #$AUDIT_ARCH_X86_64, bad
 ld [$$offsetof(struct seccomp_data, nr)$$]
+
+jeq #$__NR_openat, good
+jeq #$__NR_read, good
+jeq #$__NR_write, good
+jeq #$__NR_newfstatat, good
+jeq #$__NR_lseek, good
+jeq #$__NR_close, good
+
 jeq #$__NR_rt_sigreturn, good
 jeq #$__NR_exit_group, good
 jeq #$__NR_exit, good
-jeq #$__NR_read, good
-jeq #$__NR_write, good
+jeq #$__NR_tgkill, good
+
+jeq #$__NR_getpid, good
+jeq #$__NR_gettid, good
+
 jeq #$__NR_rt_sigprocmask, good
 jeq #$__NR_rt_sigaction, good
-jeq #$__NR_write, good
-jeq #$__NR_newfstatat, good
+
+jeq #$__NR_getrandom, good
+
+jeq #$__NR_brk, good
+jeq #$__NR_mmap, good
+
 bad: ret #$SECCOMP_RET_KILL_THREAD
 good: ret #$SECCOMP_RET_ALLOW

@@ -76,8 +76,7 @@ static int landlock_new_ruleset(void)
 static void landlock_allow_read_file(int rsfd, const char* path)
 {
     struct landlock_path_beneath_attr pb = {
-        .allowed_access =
-            LANDLOCK_ACCESS_FS_READ_FILE,
+        .allowed_access = LANDLOCK_ACCESS_FS_READ_FILE,
     };
 
     pb.parent_fd = open(path, O_PATH|O_CLOEXEC);

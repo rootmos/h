@@ -20,6 +20,18 @@ void seccomp_apply_filter()
     CHECK(r, "prctl(PR_SET_SECCOMP, SECCOMP_MODE_FILTER)");
 }
 
+void remove_stdlib_function(struct lua_State* L,
+                            const char* lib, const char* f)
+{
+    int T = lua_gettop(L);
+    int t = lua_getglobal(L, lib);
+    CHECK_IF(t != LUA_TTABLE, "%s type", lib);
+    lua_pushnil(L);
+    lua_setfield(L, -2, f);
+    lua_pop(L, 1);
+    CHECK_IF(T != lua_gettop(L), "redundant stack elements present");
+}
+
 int main(int argc, char* argv[])
 {
     const char* fn = argv[1];
@@ -36,10 +48,11 @@ int main(int argc, char* argv[])
     lua_State* L = luaL_newstate();
     CHECK_NOT(L, NULL, "unable to create Lua state");
 
+    luaL_openlibs(L);
+    remove_stdlib_function(L, "os", "execute");
+
     int r = luaL_loadfile(L, fn);
     CHECK_LUA(L, r, "luaL_loadfile(%s)", fn);
-
-    luaL_openlibs(L);
 
     r = lua_pcall(L, 0, LUA_MULTRET, 0);
     CHECK_LUA(L, r, "lua_pcall");

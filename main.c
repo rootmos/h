@@ -30,10 +30,19 @@ void seccomp_apply_filter()
     CHECK(r, "prctl(PR_SET_SECCOMP, SECCOMP_MODE_FILTER)");
 }
 
+#ifndef LUA_STACK_NEUTRAL_TERM
+#define LUA_STACK_NEUTRAL_TERM __lua_stack_top
+#endif
+
+#define lua_stack_neutral_begin(L) int LUA_STACK_NEUTRAL_TERM = lua_gettop(L)
+#define lua_stack_neutral_end(L) \
+    CHECK_IF(LUA_STACK_NEUTRAL_TERM != lua_gettop(L), \
+             "redundant stack elements present")
+
 void remove_stdlib_function(struct lua_State* L,
                             const char* lib, const char* f)
 {
-    int T = lua_gettop(L);
+    lua_stack_neutral_begin(L);
 
     int t = lua_getglobal(L, lib);
     LUA_EXPECT_TYPE(L, t, LUA_TTABLE, "%s", lib);
@@ -41,7 +50,8 @@ void remove_stdlib_function(struct lua_State* L,
     lua_pushnil(L);
     lua_setfield(L, -2, f);
     lua_pop(L, 1);
-    CHECK_IF(T != lua_gettop(L), "redundant stack elements present");
+
+    lua_stack_neutral_end(L);
 }
 
 int main(int argc, char* argv[])

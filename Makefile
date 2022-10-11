@@ -1,5 +1,7 @@
 CC = gcc
 PP ?= ./pp
+TCC ?= 0
+TCC_BUNDLER ?= ./tcc-bundler
 
 CFLAGS = -Wall
 LDFLAGS = -llua
@@ -13,7 +15,11 @@ SRC ?= main.c
 build: $(EXE)
 
 $(EXE): $(SRC) filter.bpfc r.h
+ifeq ($(TCC), 1)
+	$(TCC_BUNDLER) $(LDFLAGS) -o "$(@)" "$<"
+else
 	$(CC) $(CFLAGS) $(EXTRA_CFLAGS) -o "$@" "$<" $(LDFLAGS)
+endif
 
 %.bpfc: %.bpf
 	$(PP) "$<" | bpf_asm -c > "$@"

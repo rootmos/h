@@ -25,5 +25,8 @@ jeq #$__NR_exit_group, good
 jeq #$__NR_exit, good
 jeq #$__NR_tgkill, good
 
+# required for tcc-style execution
+jeq #$__NR_munmap, good
+
 bad: ret #$SECCOMP_RET_KILL_THREAD
 good: ret #$SECCOMP_RET_ALLOW

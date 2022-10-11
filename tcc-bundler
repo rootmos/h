@@ -1,0 +1,40 @@
+#!/bin/bash
+
+set -o nounset -o pipefail -o errexit
+
+LIBS=()
+OUTPUT=${OUTPUT-/dev/stdout}
+VERSION=${VERSION-}
+while getopts "l:o:-" OPT; do
+    case $OPT in
+        l) LIBS+=("-l$OPTARG") ;;
+        o) OUTPUT=$OPTARG ;;
+        v) VERSION=$VERSION ;;
+        -) break ;;
+        ?) exit 2 ;;
+    esac
+done
+shift $((OPTIND-1))
+
+INPUT=$1
+
+BASE_DIR=$(dirname "$INPUT")
+if [ -z "$VERSION" ]; then
+    VERSION=$(git -C "$BASE_DIR" rev-parse HEAD)
+fi
+
+echo "#!/usr/bin/tcc -run ${LIBS[@]}" > "$OUTPUT"
+echo "// $(basename "$INPUT") ($VERSION) ($(date -Is))" >> "$OUTPUT"
+echo >> "$OUTPUT"
+
+if [ -f "$OUTPUT" ]; then
+    chmod +x "$OUTPUT"
+fi
+
+awk '{
+if(/^#include\s+"[^"]*"/) {
+    printf("// %s\n", $2)
+    system(sprintf("cat %s/%s", "'"$BASE_DIR"'", $2))
+} else {
+    print($0)
+} }' "$INPUT" >> "$OUTPUT"

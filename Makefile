@@ -1,7 +1,7 @@
 ROOT := $(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
 
 SCRIPTS ?= $(ROOT)/scripts
-PP ?= $(SCRIPTS)/pp
+BPFC ?= $(SCRIPTS)/bpfc
 TCC_BUNDLER ?= $(SCRIPTS)/tcc-bundler
 
 CC = gcc
@@ -27,7 +27,7 @@ else
 endif
 
 %.bpfc: %.bpf
-	$(PP) "$<" | bpf_asm -c > "$@"
+	$(BPFC) -o "$@" "$<"
 
 .PHONY: clean
 clean:

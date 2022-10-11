@@ -1,0 +1,18 @@
+#!/bin/bash
+
+set -o nounset -o pipefail -o errexit
+
+SCRIPT_DIR=$(readlink -f "$0" | xargs dirname)
+PP=${PP-$SCRIPT_DIR/pp}
+
+OUTPUT=/dev/stdout
+while getopts "o:-" OPT; do
+    case $OPT in
+        o) OUTPUT=$OPTARG ;;
+        -) break ;;
+        ?) exit 2 ;;
+    esac
+done
+shift $((OPTIND-1))
+
+"$PP" "$1" | bpf_asm -c > "$OUTPUT"

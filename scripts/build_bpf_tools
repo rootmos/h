@@ -9,8 +9,6 @@ WD=$(mktemp -d)
 trap 'rm -rf $WD' EXIT
 TARBALL="$WD/linux.tar.gz"
 
-PREFIX=${1-$PWD}
-
 VER=5.15.72
 fetch -s \
     "https://mirrors.edge.kernel.org/pub/linux/kernel/v5.x/linux-$VER.tar.gz" \
@@ -27,6 +25,9 @@ tar -xvf "$TARBALL" -C "$ROOT" --strip-components=1 \
 TOOLS=("bpf_asm" "bpf_dbg")
 
 make -C "$ROOT/tools/bpf" "${TOOLS[@]}"
+
+PREFIX=${1-$PWD}
+mkdir -p "$PREFIX"
 for t in "${TOOLS[@]}"; do
     cp -v "$ROOT/tools/bpf/$t" "$PREFIX"
 done

@@ -144,8 +144,26 @@ int main(int argc, char* argv[])
     lua_State* L = luaL_newstate();
     CHECK_NOT(L, NULL, "unable to create Lua state");
 
-    luaL_openlibs(L);
+    static const luaL_Reg loadedlibs[] = {
+        {LUA_GNAME, luaopen_base},
+        {LUA_LOADLIBNAME, luaopen_package},
+        {LUA_TABLIBNAME, luaopen_table},
+        {LUA_IOLIBNAME, luaopen_io},
+        {LUA_OSLIBNAME, luaopen_os},
+        {LUA_STRLIBNAME, luaopen_string},
+        {LUA_MATHLIBNAME, luaopen_math},
+        {LUA_UTF8LIBNAME, luaopen_utf8},
+        {NULL, NULL},
+        {LUA_DBLIBNAME, luaopen_debug},
+        {LUA_COLIBNAME, luaopen_coroutine},
+    };
+    for(const luaL_Reg* lib = loadedlibs; lib->func; lib++) {
+        luaL_requiref(L, lib->name, lib->func, 1);
+        lua_pop(L, 1);
+    }
+
     remove_stdlib_function(L, "os", "execute");
+    remove_stdlib_function(L, "package", "loadlib");
 
     r = luaL_loadfile(L, o.input);
     CHECK_LUA(L, r, "luaL_loadfile(%s)", o.input);

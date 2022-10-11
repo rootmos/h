@@ -3,10 +3,11 @@ PP ?= ./pp
 TCC ?= 0
 TCC_BUNDLER ?= ./tcc-bundler
 
+# CFLAGS = -Wall -Werror -O2
 CFLAGS = -Wall
 LDFLAGS = -llua
-#EXTRA_CFLAGS ?= -O2 -Werror
-EXTRA_CFLAGS ?=
+LOG_LEVEL ?= INFO
+EXTRA_CFLAGS ?= -DLOG_LEVEL=LOG_$(LOG_LEVEL)
 
 EXE ?= run
 SRC ?= main.c

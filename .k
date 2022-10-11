@@ -1,7 +1,7 @@
 run() {
-    make && ./run hello.lua
+    make && ./run -s hello.lua
 }
 
 trace() {
-    make && strace -f ./run hello.lua
+    make && strace -f ./run -s hello.lua
 }

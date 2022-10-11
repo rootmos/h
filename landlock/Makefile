@@ -1,9 +1,9 @@
 CC = gcc
 PP ?= ./pp
 
+# CFLAGS = -Wall -Werror -O2
 CFLAGS = -Wall
 LDFLAGS =
-#EXTRA_CFLAGS ?= -O2 -Werror
 LOG_LEVEL ?= INFO
 EXTRA_CFLAGS ?= -DLOG_LEVEL=LOG_$(LOG_LEVEL)
 EXTRA_LDFLAGS ?=

@@ -1,7 +1,11 @@
 run() {
-    make && ./run -s hello.lua
+    make && ./run -st hello.lua
 }
 
 trace() {
-    make && strace ./run -s hello.lua
+    make && strace ./run -st hello.lua
+}
+
+libr() {
+    "$HOME/git/libr/bundle.sh" -o r.h landlock fail logging util
 }

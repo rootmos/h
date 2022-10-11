@@ -55,11 +55,17 @@ void remove_stdlib_function(struct lua_State* L,
     lua_stack_neutral_end(L);
 }
 
+
+#define DEFAULT_TMP "/tmp"
+
 struct options {
     const char* input;
 
     int allow_localtime;
     int allow_script_dir;
+
+    int allow_tmp;
+    const char* tmp;
 };
 
 static void print_usage(int fd, const char* prog)
@@ -69,23 +75,31 @@ static void print_usage(int fd, const char* prog)
     dprintf(fd, "options:\n");
     dprintf(fd, "  -l       allow reading /etc/localtime\n");
     dprintf(fd, "  -s       allow reading files beneath the input script's directory\n");
+    dprintf(fd, "  -t       allow read+write access to %s\n", DEFAULT_TMP);
     dprintf(fd, "  -h       print this message\n");
 }
 
 static void parse_options(struct options* o, int argc, char* argv[])
 {
     memset(o, 0, sizeof(*o));
+
     o->allow_localtime = 0;
     o->allow_script_dir = 0;
 
+    o->allow_tmp = 0;
+    o->tmp = DEFAULT_TMP;
+
     int res;
-    while((res = getopt(argc, argv, "hls")) != -1) {
+    while((res = getopt(argc, argv, "hlst")) != -1) {
         switch(res) {
         case 'l':
             o->allow_localtime = 1;
             break;
         case 's':
             o->allow_script_dir = 1;
+            break;
+        case 't':
+            o->allow_tmp = 1;
             break;
         case 'h':
         default:
@@ -116,7 +130,7 @@ int main(int argc, char* argv[])
 
     if(o.allow_localtime) {
         debug("allowing read access: /etc/localtime");
-        landlock_allow_read_file(rsfd, "/etc/localtime");
+        landlock_allow_read(rsfd, "/etc/localtime");
     }
 
     if(o.allow_script_dir) {
@@ -130,10 +144,15 @@ int main(int argc, char* argv[])
         CHECK_NOT(script_dir, NULL, "realpath(%s)", dir);
 
         debug("allowing read access beneath: %s", script_dir);
-        landlock_allow_read_file(rsfd, script_dir);
+        landlock_allow_read(rsfd, script_dir);
     } else {
         debug("allowing read access: %s", o.input);
-        landlock_allow_read_file(rsfd, o.input);
+        landlock_allow_read(rsfd, o.input);
+    }
+
+    if(o.allow_tmp) {
+        debug("allowing read+write access beneath: %s", o.tmp);
+        landlock_allow_read_write(rsfd, o.tmp);
     }
 
     landlock_apply(rsfd);

@@ -11,6 +11,10 @@ jeq #$__NR_write, good
 jeq #$__NR_close, good
 jeq #$__NR_newfstatat, good
 jeq #$__NR_lseek, good
+jeq #$__NR_unlink, good
+
+jeq #$__NR_fcntl, good
+# TODO: only allow F_GETFL
 
 jeq #$__NR_getpid, good
 jeq #$__NR_gettid, good

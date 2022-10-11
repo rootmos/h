@@ -1,13 +1,17 @@
-// libr (261297e0d50b899a03d868c1d635c0e4d32a591b) (https://github.com/rootmos/libr) (2022-10-10T17:06:40+02:00)
+// libr (a4ad8cac2c74c0f6064ee64a24efe56e99afd9bc) (https://github.com/rootmos/libr) (2022-10-11T09:00:04+02:00)
 // modules: landlock fail logging util
 
 #ifndef LIBR_HEADER
 #define LIBR_HEADER
 
 // libr: landlock.h
+#include <linux/types.h>
+
 int landlock_abi_version(void);
 int landlock_new_ruleset(void);
-void landlock_allow_read_file(int fd, const char* path);
+void landlock_allow(int rsfd, const char* path, __u64 allowed_access);
+void landlock_allow_read(int fd, const char* path);
+void landlock_allow_read_write(int rsfd, const char* path);
 void landlock_apply(int fd);
 
 // libr: fail.h
@@ -258,10 +262,10 @@ int landlock_new_ruleset(void)
     return rsfd;
 }
 
-void landlock_allow_read_file(int rsfd, const char* path)
+void landlock_allow(int rsfd, const char* path, __u64 allowed_access)
 {
     struct landlock_path_beneath_attr pb = {
-        .allowed_access = LANDLOCK_ACCESS_FS_READ_FILE,
+        .allowed_access = allowed_access,
     };
 
     pb.parent_fd = open(path, __O_PATH|O_CLOEXEC);
@@ -271,6 +275,23 @@ void landlock_allow_read_file(int rsfd, const char* path)
     CHECK(r, "landlock_add_rule");
 
     r = close(pb.parent_fd); CHECK(r, "close(%s)", path);
+}
+
+void landlock_allow_read(int rsfd, const char* path)
+{
+    landlock_allow(rsfd, path,
+        LANDLOCK_ACCESS_FS_READ_FILE
+    );
+}
+
+void landlock_allow_read_write(int rsfd, const char* path)
+{
+    landlock_allow(rsfd, path,
+        LANDLOCK_ACCESS_FS_READ_FILE
+      | LANDLOCK_ACCESS_FS_WRITE_FILE
+      | LANDLOCK_ACCESS_FS_MAKE_REG
+      | LANDLOCK_ACCESS_FS_REMOVE_FILE
+    );
 }
 
 void landlock_apply(int fd)

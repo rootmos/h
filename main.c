@@ -21,6 +21,32 @@ void seccomp_apply_filter()
     CHECK(r, "prctl(PR_SET_SECCOMP, SECCOMP_MODE_FILTER)");
 }
 
+void openlibs(struct lua_State* L)
+{
+    lua_stack_neutral_begin(L);
+
+    static const luaL_Reg loadedlibs[] = {
+        {LUA_GNAME, luaopen_base},
+        {LUA_LOADLIBNAME, luaopen_package},
+        {LUA_TABLIBNAME, luaopen_table},
+        {LUA_IOLIBNAME, luaopen_io},
+        {LUA_OSLIBNAME, luaopen_os},
+        {LUA_STRLIBNAME, luaopen_string},
+        {LUA_MATHLIBNAME, luaopen_math},
+        {LUA_UTF8LIBNAME, luaopen_utf8},
+        {NULL, NULL},
+        {LUA_DBLIBNAME, luaopen_debug},
+        {LUA_COLIBNAME, luaopen_coroutine},
+    };
+
+    for(const luaL_Reg* lib = loadedlibs; lib->func; lib++) {
+        luaL_requiref(L, lib->name, lib->func, 1);
+        lua_pop(L, 1);
+    }
+
+    lua_stack_neutral_end(L);
+}
+
 void remove_stdlib_function(struct lua_State* L,
                             const char* lib, const char* f)
 {
@@ -144,24 +170,7 @@ int main(int argc, char* argv[])
     lua_State* L = luaL_newstate();
     CHECK_NOT(L, NULL, "unable to create Lua state");
 
-    static const luaL_Reg loadedlibs[] = {
-        {LUA_GNAME, luaopen_base},
-        {LUA_LOADLIBNAME, luaopen_package},
-        {LUA_TABLIBNAME, luaopen_table},
-        {LUA_IOLIBNAME, luaopen_io},
-        {LUA_OSLIBNAME, luaopen_os},
-        {LUA_STRLIBNAME, luaopen_string},
-        {LUA_MATHLIBNAME, luaopen_math},
-        {LUA_UTF8LIBNAME, luaopen_utf8},
-        {NULL, NULL},
-        {LUA_DBLIBNAME, luaopen_debug},
-        {LUA_COLIBNAME, luaopen_coroutine},
-    };
-    for(const luaL_Reg* lib = loadedlibs; lib->func; lib++) {
-        luaL_requiref(L, lib->name, lib->func, 1);
-        lua_pop(L, 1);
-    }
-
+    openlibs(L);
     remove_stdlib_function(L, "os", "execute");
     remove_stdlib_function(L, "package", "loadlib");
 

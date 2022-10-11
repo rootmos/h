@@ -13,8 +13,11 @@ jeq #$__NR_newfstatat, good
 jeq #$__NR_lseek, good
 jeq #$__NR_unlink, good
 
-jeq #$__NR_fcntl, good
-# TODO: only allow F_GETFL
+jne #$__NR_fcntl, fcntl_end
+ld [$$offsetof(struct seccomp_data, args[1])$$]
+jeq #$F_GETFL, good
+jmp bad
+fcntl_end:
 
 jeq #$__NR_getpid, good
 jeq #$__NR_gettid, good

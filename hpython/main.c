@@ -1,8 +1,22 @@
+#include <linux/seccomp.h>
+#include <linux/filter.h>
+
 #define PY_SSIZE_T_CLEAN
 #include <Python.h>
 
 #define LIBR_IMPLEMENTATION
 #include "r.h"
+
+void seccomp_apply_filter()
+{
+    struct sock_filter filter[] = {
+#include "filter.bpfc"
+    };
+
+    struct sock_fprog p = { .len = LENGTH(filter), .filter = filter };
+    int r = prctl(PR_SET_SECCOMP, SECCOMP_MODE_FILTER, &p);
+    CHECK(r, "prctl(PR_SET_SECCOMP, SECCOMP_MODE_FILTER)");
+}
 
 struct options {
     const char* input;
@@ -51,12 +65,13 @@ int main(int argc, char* argv[])
     int rsfd = landlock_new_ruleset();
     landlock_allow_read(rsfd, o.input);
     landlock_allow(rsfd, "/usr/lib",
-        LANDLOCK_ACCESS_FS_READ_FILE
-      | LANDLOCK_ACCESS_FS_READ_DIR
-    );
+        LANDLOCK_ACCESS_FS_READ_FILE | LANDLOCK_ACCESS_FS_READ_DIR );
 
     landlock_apply(rsfd);
     int r = close(rsfd); CHECK(r, "close");
+
+    seccomp_apply_filter();
+
 
     wchar_t *pgr = Py_DecodeLocale(argv[0], NULL);
     CHECK_NOT(pgr, NULL, "Py_DecodeLocale(%s)", argv[0]);

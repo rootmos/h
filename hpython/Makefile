@@ -24,7 +24,7 @@ SRC ?= main.c
 .PHONY: build
 build: $(EXE)
 
-$(EXE): $(SRC) r.h
+$(EXE): $(SRC) r.h filter.bpfc
 ifeq ($(TCC), 1)
 	$(TCC_BUNDLER) $(LDFLAGS) -o "$(@)" "$<"
 else

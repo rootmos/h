@@ -1,0 +1,58 @@
+# https://www.kernel.org/doc/Documentation/networking/filter.txt
+ld [$$offsetof(struct seccomp_data, arch)$$]
+jne #$AUDIT_ARCH_X86_64, bad
+ld [$$offsetof(struct seccomp_data, nr)$$]
+
+jeq #$__NR_read, good
+jeq #$__NR_write, good
+jeq #$__NR_close, good
+jeq #$__NR_getdents64, good
+jeq #$__NR_lseek, good
+jeq #$__NR_dup, good
+
+jeq #$__NR_futex, good
+
+jeq #$__NR_brk, good
+jeq #$__NR_getrandom, good
+
+jeq #$__NR_openat, good
+jeq #$__NR_newfstatat, good
+
+jeq #$__NR_getpid, good
+jeq #$__NR_gettid, good
+jeq #$__NR_geteuid, good
+jeq #$__NR_getegid, good
+jeq #$__NR_getuid, good
+jeq #$__NR_getgid, good
+
+jne #$__NR_mmap, mmap_end
+ld [$$offsetof(struct seccomp_data, args[3])$$]
+jeq #$MAP_PRIVATE, good
+jeq #$$(MAP_PRIVATE|MAP_ANONYMOUS)$$, good
+jmp bad
+mmap_end:
+
+jeq #$__NR_getcwd, good
+jeq #$__NR_readlink, good
+jeq #$__NR_sysinfo, good
+
+jeq #$__NR_rt_sigaction, good
+jeq #$__NR_tgkill, good
+
+jeq #$__NR_munmap, good
+jeq #$__NR_exit_group, good
+
+jne #$__NR_fcntl, fcntl_end
+ld [$$offsetof(struct seccomp_data, args[1])$$]
+jeq #$F_GETFL, good
+jeq #$F_GETFD, good
+jmp bad
+fcntl_end:
+
+jne #$__NR_ioctl, bad
+ld [$$offsetof(struct seccomp_data, args[1])$$]
+jeq #$TCGETS, good
+jmp bad
+
+bad: ret #$SECCOMP_RET_KILL_THREAD
+good: ret #$SECCOMP_RET_ALLOW

@@ -6,6 +6,7 @@ INCLUDE=()
 INCLUDE+=("fcntl.h")
 INCLUDE+=("linux/unistd.h")
 INCLUDE+=("linux/seccomp.h" "linux/audit.h")
+INCLUDE+=("sys/mman.h" "sys/ioctl.h")
 
 FMT=%d
 NEWLINE='\n'

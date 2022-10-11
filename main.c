@@ -137,6 +137,7 @@ int main(int argc, char* argv[])
     }
 
     landlock_apply(rsfd);
+    int r = close(rsfd); CHECK(r, "close");
 
     seccomp_apply_filter();
 
@@ -146,7 +147,7 @@ int main(int argc, char* argv[])
     luaL_openlibs(L);
     remove_stdlib_function(L, "os", "execute");
 
-    int r = luaL_loadfile(L, o.input);
+    r = luaL_loadfile(L, o.input);
     CHECK_LUA(L, r, "luaL_loadfile(%s)", o.input);
 
     r = lua_pcall(L, 0, LUA_MULTRET, 0);

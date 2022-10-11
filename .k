@@ -3,5 +3,5 @@ run() {
 }
 
 trace() {
-    make && strace -f ./run -s hello.lua
+    make && strace ./run -s hello.lua
 }

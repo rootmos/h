@@ -48,6 +48,16 @@ int main(int argc, char* argv[])
     struct options o;
     parse_options(&o, argc, argv);
 
+    int rsfd = landlock_new_ruleset();
+    landlock_allow_read(rsfd, o.input);
+    landlock_allow(rsfd, "/usr/lib",
+        LANDLOCK_ACCESS_FS_READ_FILE
+      | LANDLOCK_ACCESS_FS_READ_DIR
+    );
+
+    landlock_apply(rsfd);
+    int r = close(rsfd); CHECK(r, "close");
+
     wchar_t *pgr = Py_DecodeLocale(argv[0], NULL);
     CHECK_NOT(pgr, NULL, "Py_DecodeLocale(%s)", argv[0]);
     Py_SetProgramName(pgr);
@@ -59,7 +69,7 @@ int main(int argc, char* argv[])
     CHECK_NOT(f, NULL, "fopen(%s, r)", o.input);
 
     debug("running file: %s", o.input);
-    int r = PyRun_SimpleFileExFlags(f, o.input, /*closeit*/ 1, NULL);
+    r = PyRun_SimpleFileExFlags(f, o.input, /*closeit*/ 1, NULL);
     CHECK_NOT(r, -1, "PyRun_SimpleFileExFlags(%s)", o.input);
 
     Py_FinalizeEx();

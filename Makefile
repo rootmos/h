@@ -1,15 +1,19 @@
+ROOT := $(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
+
+SCRIPTS ?= $(ROOT)/scripts
+PP ?= $(SCRIPTS)/pp
+TCC_BUNDLER ?= $(SCRIPTS)/tcc-bundler
+
 CC = gcc
-PP ?= ./pp
 TCC ?= 0
-TCC_BUNDLER ?= ./tcc-bundler
 
-# CFLAGS = -Wall -Werror -O2
-CFLAGS = -Wall
+CFLAGS = -Wall -Werror -O2
 LDFLAGS = -llua
-LOG_LEVEL ?= INFO
+LOG_LEVEL ?= WARN
 EXTRA_CFLAGS ?= -DLOG_LEVEL=LOG_$(LOG_LEVEL)
+EXTRA_LDFLAGS ?=
 
-EXE ?= run
+EXE ?= hlua
 SRC ?= main.c
 
 .PHONY: build
@@ -19,7 +23,7 @@ $(EXE): $(SRC) filter.bpfc r.h
 ifeq ($(TCC), 1)
 	$(TCC_BUNDLER) $(LDFLAGS) -o "$(@)" "$<"
 else
-	$(CC) $(CFLAGS) $(EXTRA_CFLAGS) -o "$@" "$<" $(LDFLAGS)
+	$(CC) $(CFLAGS) $(EXTRA_CFLAGS) -o "$@" "$<" $(LDFLAGS) $(EXTRA_LDFLAGS)
 endif
 
 %.bpfc: %.bpf

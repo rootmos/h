@@ -1,9 +1,9 @@
 run() {
-    make && ./run -st hello.lua
+    make && (cd example && ../hlua -st main.lua)
 }
 
 trace() {
-    make && strace ./run -st hello.lua
+    make && (cd example && strace ../hlua -st main.lua)
 }
 
 libr() {

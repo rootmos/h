@@ -10,16 +10,6 @@
 #define LIBR_IMPLEMENTATION
 #include "r.h"
 
-#define LUA_EXPECT_TYPE(L, t, expected, format, ...) do { \
-    if(t != expected) {\
-        r_failwith(__extension__ __FUNCTION__, __extension__ __FILE__, \
-                   __extension__ __LINE__, 0, \
-                   format ": unexpected type %s (expected %s)\n", \
-                   ##__VA_ARGS__, lua_typename(L, t), \
-                   lua_typename(L, expected)); \
-    } \
-} while(0)
-
 void seccomp_apply_filter()
 {
     struct sock_filter filter[] = {
@@ -30,15 +20,6 @@ void seccomp_apply_filter()
     int r = prctl(PR_SET_SECCOMP, SECCOMP_MODE_FILTER, &p);
     CHECK(r, "prctl(PR_SET_SECCOMP, SECCOMP_MODE_FILTER)");
 }
-
-#ifndef LUA_STACK_NEUTRAL_TERM
-#define LUA_STACK_NEUTRAL_TERM __lua_stack_top
-#endif
-
-#define lua_stack_neutral_begin(L) int LUA_STACK_NEUTRAL_TERM = lua_gettop(L)
-#define lua_stack_neutral_end(L) \
-    CHECK_IF(LUA_STACK_NEUTRAL_TERM != lua_gettop(L), \
-             "redundant stack elements present")
 
 void remove_stdlib_function(struct lua_State* L,
                             const char* lib, const char* f)

@@ -1,5 +1,5 @@
-// libr (a4ad8cac2c74c0f6064ee64a24efe56e99afd9bc) (https://github.com/rootmos/libr) (2022-10-11T09:00:04+02:00)
-// modules: landlock fail logging util
+// libr (e64aab8c0ee175883bb2835961259f6e45eb96ec) (https://github.com/rootmos/libr) (2022-10-11T09:26:07+02:00)
+// modules: landlock fail logging util lua
 
 #ifndef LIBR_HEADER
 #define LIBR_HEADER
@@ -186,6 +186,34 @@ const char* now_iso8601(void);
 
 void set_blocking(int fd, int blocking);
 void no_new_privs(void);
+
+// libr: lua.h
+#define CHECK_LUA(L, err, format, ...) do { \
+    if(err != LUA_OK) { \
+        r_failwith(__extension__ __FUNCTION__, __extension__ __FILE__, \
+                   __extension__ __LINE__, 0, \
+                   format ": %s\n", ##__VA_ARGS__, lua_tostring(L, -1)); \
+    } \
+} while(0)
+
+#define LUA_EXPECT_TYPE(L, t, expected, format, ...) do { \
+    if(t != expected) {\
+        r_failwith(__extension__ __FUNCTION__, __extension__ __FILE__, \
+                   __extension__ __LINE__, 0, \
+                   format ": unexpected type %s (expected %s)\n", \
+                   ##__VA_ARGS__, lua_typename(L, t), \
+                   lua_typename(L, expected)); \
+    } \
+} while(0)
+
+#ifndef LUA_STACK_NEUTRAL_TERM
+#define LUA_STACK_NEUTRAL_TERM __lua_stack_top
+#endif
+
+#define lua_stack_neutral_begin(L) int LUA_STACK_NEUTRAL_TERM = lua_gettop(L)
+#define lua_stack_neutral_end(L) \
+    CHECK_IF(LUA_STACK_NEUTRAL_TERM != lua_gettop(L), \
+             "redundant stack elements present")
 
 #endif // LIBR_HEADER
 #ifdef LIBR_IMPLEMENTATION
@@ -403,5 +431,8 @@ void no_new_privs(void)
     int r = prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0);
     CHECK(r, "prctl(PR_SET_NO_NEW_PRIVS, 1)");
 }
+
+// libr: lua.c
+
 
 #endif // LIBR_IMPLEMENTATION

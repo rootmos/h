@@ -5,11 +5,12 @@
 #include "r.h"
 
 struct options {
+    const char* input;
 };
 
 static void print_usage(int fd, const char* prog)
 {
-    dprintf(fd, "usage: %s [OPTION]...\n", prog);
+    dprintf(fd, "usage: %s [OPTION]... INPUT\n", prog);
     dprintf(fd, "\n");
     dprintf(fd, "options:\n");
     dprintf(fd, "  -h       print this message\n");
@@ -28,6 +29,16 @@ static void parse_options(struct options* o, int argc, char* argv[])
             exit(res == 'h' ? 0 : 1);
         }
     }
+
+    if(optind < argc) {
+        o->input = argv[optind];
+    } else {
+        dprintf(2, "error: no input file specified\n");
+        print_usage(2, argv[0]);
+        exit(1);
+    }
+
+    debug("input: %s", o->input);
 }
 
 int main(int argc, char* argv[])
@@ -37,19 +48,24 @@ int main(int argc, char* argv[])
     struct options o;
     parse_options(&o, argc, argv);
 
-    wchar_t *program = Py_DecodeLocale(argv[0], NULL);
-    if (program == NULL) {
-        fprintf(stderr, "Fatal error: cannot decode argv[0]\n");
-        exit(1);
-    }
-    Py_SetProgramName(program);  /* optional but recommended */
+    wchar_t *pgr = Py_DecodeLocale(argv[0], NULL);
+    CHECK_NOT(pgr, NULL, "Py_DecodeLocale(%s)", argv[0]);
+    Py_SetProgramName(pgr);
+
     Py_Initialize();
-    PyRun_SimpleString("from time import time,ctime\n"
-                       "print('Today is', ctime(time()))\n");
-    if (Py_FinalizeEx() < 0) {
-        exit(120);
-    }
-    PyMem_RawFree(program);
+
+    debug("opening input file: %s", o.input);
+    FILE* f = fopen(o.input, "r");
+    CHECK_NOT(f, NULL, "fopen(%s, r)", o.input);
+
+    debug("running file: %s", o.input);
+    int r = PyRun_SimpleFileExFlags(f, o.input, /*closeit*/ 1, NULL);
+    CHECK_NOT(r, -1, "PyRun_SimpleFileExFlags(%s)", o.input);
+
+    Py_FinalizeEx();
+    CHECK_NOT(r, -1, "Py_FinalizeEx()");
+
+    PyMem_RawFree(pgr);
 
     return 0;
 }

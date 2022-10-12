@@ -1,0 +1,39 @@
+name: Continuous Dissemination
+on: [ push ]
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    steps:
+    - name: Check out repository code
+      uses: actions/checkout@v3
+
+    - name: Cache tools
+      id: cache-tools
+      uses: actions/cache@v3
+      env:
+        cache-name: cache-tools
+      with:
+        path: tools/bpf/bpf_*
+        key: ${{runner.os}}-${{env.cache-name}}-${{hashFiles('tools/**/build')}}
+    - if: ${{steps.cache-tools.outputs.cache-hit != 'true'}}
+      name: Build tools
+      run: make -C tools
+
+    - name: Install dependencies
+      run: sudo build/deps
+
+    - name: Build hlua
+      run: make -C hlua LUA_PKG=lua54
+
+    - name: Build hpython
+      run: make -C hpython
+
+    - name: Archive bundled stand-alone c-files
+      uses: actions/upload-artifact@v3
+      with:
+        name: stand-alone-c-files.${{github.sha}}
+        retention-days: 7
+        path: |
+          hlua/hlua.c
+          hpython/hpython.c

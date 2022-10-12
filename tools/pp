@@ -3,19 +3,21 @@
 set -o nounset -o pipefail -o errexit
 
 INCLUDE=()
+INCLUDE+=("stddef.h")
 INCLUDE+=("fcntl.h")
 INCLUDE+=("linux/unistd.h")
 INCLUDE+=("linux/seccomp.h" "linux/audit.h")
 INCLUDE+=("sys/mman.h" "sys/ioctl.h")
 
-FMT=%d
+LONG=${PP_LONG-l}
+FMT=%${LONG}d
 NEWLINE='\n'
 while getopts "nxud-" OPT; do
     case $OPT in
         n) NEWLINE= ;;
-        x) FMT=0x%x ;;
-        u) FMT=%u ;;
-        d) FMT=%d ;;
+        x) FMT=0x%${LONG}x ;;
+        u) FMT=%${LONG}u ;;
+        d) FMT=%${LONG}d ;;
         -) break ;;
         ?) exit 2 ;;
     esac

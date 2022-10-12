@@ -1,7 +1,5 @@
-name: Hello world
-on:
-  push:
-    branches: [ "ci" ]
+name: Continuous Dissemination
+on: [ push ]
 
 jobs:
   build:

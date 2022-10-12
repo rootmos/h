@@ -11,3 +11,7 @@ jobs:
       uses: actions/checkout@v3
     - name: Build tools
       run: make -C tools
+    - name: Build hlua
+      run: make -C hlua
+    - name: Build hpython
+      run: make -C hpython

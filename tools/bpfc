@@ -17,7 +17,7 @@ shift $((OPTIND-1))
 
 BPF_ASM=${BPF_ASM-bpf_asm}
 if ! command -v "$BPF_ASM" > /dev/null; then
-    BPF_ASM=$SCRIPT_DIR/bpf_asm
+    BPF_ASM=$SCRIPT_DIR/bpf/bpf_asm
 fi
 
 "$PP" "$1" | "$BPF_ASM" -c > "$OUTPUT"

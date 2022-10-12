@@ -1,17 +1,7 @@
 ROOT := $(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
+include $(ROOT)/../build/common.makefile
 
-TOOLS ?= $(ROOT)/../tools
-BPFC ?= $(TOOLS)/bpf/bpfc
-TCC_BUNDLER ?= $(TOOLS)/tcc-bundler
-
-CC = gcc
 TCC ?= 0
-
-CFLAGS = -Wall -Werror -O2
-LDFLAGS = -llua
-LOG_LEVEL ?= WARN
-EXTRA_CFLAGS ?= -DLOG_LEVEL=LOG_$(LOG_LEVEL)
-EXTRA_LDFLAGS ?=
 
 EXE ?= hlua
 SRC ?= main.c

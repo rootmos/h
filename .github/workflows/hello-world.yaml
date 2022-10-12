@@ -30,3 +30,11 @@ jobs:
 
     - name: Build hpython
       run: make -C hpython
+
+    - name: Archive bundled stand-alone c-files
+      uses: actions/upload-artifact@v3
+      with:
+        name: stand-alone-c-files
+        path: |
+          hlua/hlua.c
+          hpython/hpython.c

@@ -1,0 +1,11 @@
+#!/bin/bash
+
+set -o nounset -o pipefail -o errexit
+
+if command -v apt-get > /dev/null; then
+    apt-get update
+    apt-get install "lua5.3"
+else
+    echo 1>&2 "I don't know how to install dependencies on this system"
+    exit 1
+fi

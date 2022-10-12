@@ -2,7 +2,7 @@
 
 set -o nounset -o pipefail -o errexit
 
-LUA_VER=5.4
+LUA_VER=5.3
 
 if command -v apt-get > /dev/null; then
     apt-get update

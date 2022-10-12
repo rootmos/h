@@ -9,6 +9,7 @@ jobs:
     steps:
     - name: Check out repository code
       uses: actions/checkout@v3
+
     - name: Cache tools
       id: cache-tools
       uses: actions/cache@v3
@@ -20,9 +21,12 @@ jobs:
     - if: ${{steps.cache-tools.outputs.cache-hit != 'true'}}
       name: Build tools
       run: make -C tools
+
     - name: Install dependencies
       run: sudo build/deps
+
     - name: Build hlua
       run: make -C hlua LUA_PKG=lua54
+
     - name: Build hpython
       run: make -C hpython

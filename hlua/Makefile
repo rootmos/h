@@ -11,16 +11,9 @@ SRC ?= main.c
 .PHONY: build
 build: $(EXE)
 
-$(EXE): $(SRC) filter.bpfc r.h
-ifeq ($(TCC), 1)
-	$(TCC_BUNDLER) $(LDFLAGS) -o "$(@)" "$<"
-else
-	$(CC) $(CFLAGS) $(EXTRA_CFLAGS) -o "$@" "$<" $(LDFLAGS) $(EXTRA_LDFLAGS)
-endif
-
-%.bpfc: %.bpf
-	$(BPFC) -o "$@" "$<"
+$(EXE).c: $(SRC) filter.bpfc r.h
+	$(SINGLE_FILE) -o "$@" "$<"
 
 .PHONY: clean
 clean:
-	rm -f "$(EXE)" *.bpfc
+	rm -f $(EXE) $(EXE).c *.bpfc

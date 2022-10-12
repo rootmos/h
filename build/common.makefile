@@ -2,7 +2,7 @@ ROOT := $(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
 
 TOOLS ?= $(realpath $(ROOT)/../tools)
 BPFC ?= $(TOOLS)/bpfc
-TCC_BUNDLER ?= $(TOOLS)/tcc-bundler
+SINGLE_FILE ?= $(TOOLS)/single-file
 
 CC = gcc
 PKG_CONFIG ?= pkg-config
@@ -15,3 +15,6 @@ EXTRA_LDFLAGS ?=
 
 %.bpfc: %.bpf
 	$(BPFC) -o "$@" "$<"
+
+%: %.c
+	$(CC) $(CFLAGS) $(EXTRA_CFLAGS) -o "$@" "$<" $(LDFLAGS) $(EXTRA_LDFLAGS)

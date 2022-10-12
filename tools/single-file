@@ -5,11 +5,13 @@ set -o nounset -o pipefail -o errexit
 LIBS=()
 OUTPUT=${OUTPUT-/dev/stdout}
 VERSION=${VERSION-}
-while getopts "l:o:-" OPT; do
+TCC=
+while getopts "l:o:t-" OPT; do
     case $OPT in
         l) LIBS+=("-l$OPTARG") ;;
         o) OUTPUT=$OPTARG ;;
         v) VERSION=$VERSION ;;
+        t) TCC=1 ;;
         -) break ;;
         ?) exit 2 ;;
     esac
@@ -23,11 +25,16 @@ if [ -z "$VERSION" ]; then
     VERSION=$(git -C "$BASE_DIR" rev-parse HEAD)
 fi
 
-echo "#!/usr/bin/tcc -run ${LIBS[@]}" > "$OUTPUT"
+cp /dev/null "$OUTPUT"
+
+if [ -n "$TCC" ]; then
+    echo "#!/usr/bin/tcc -run ${LIBS[@]}" > "$OUTPUT"
+fi
+
 echo "// $(basename "$INPUT") ($VERSION) ($(date -Is))" >> "$OUTPUT"
 echo >> "$OUTPUT"
 
-if [ -f "$OUTPUT" ]; then
+if [ -n "$TCC" ] && [ -f "$OUTPUT" ]; then
     chmod +x "$OUTPUT"
 fi
 

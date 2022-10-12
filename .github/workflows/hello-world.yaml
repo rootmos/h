@@ -5,7 +5,7 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
     - name: Check out repository code
       uses: actions/checkout@v3
@@ -23,6 +23,6 @@ jobs:
     - name: Install dependencies
       run: sudo build/deps
     - name: Build hlua
-      run: make -C hlua LUA_PKG=lua53
+      run: make -C hlua LUA_PKG=lua54
     - name: Build hpython
       run: make -C hpython

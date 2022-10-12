@@ -7,6 +7,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
-    #- run: make -C scripts
-    - run: apt-get source linux-image-unsigned-$(uname -r)
+    - name: Check out repository code
+      uses: actions/checkout@v3
+    - name: Build tools
+      run: make -C tools

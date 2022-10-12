@@ -1,7 +1,7 @@
 .PHONY: all
 all: bpf_asm bpf_dbg
 
-bpf_asm bpf_dbg: build_bpf_tools
+bpf_asm bpf_dbg: build
 	./$<
 
 .PHONY: clean

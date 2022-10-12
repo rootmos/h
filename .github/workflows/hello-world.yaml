@@ -22,7 +22,7 @@ jobs:
       run: make -C tools
     - name: Install dependencies
       run: sudo build/deps
-    #- name: Build hlua
-      #run: make -C hlua
-    #- name: Build hpython
-      #run: make -C hpython
+    - name: Build hlua
+      run: make -C hlua
+    - name: Build hpython
+      run: make -C hpython

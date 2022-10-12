@@ -1,7 +1,9 @@
 ROOT := $(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
 include $(ROOT)/../build/common.makefile
 
-TCC ?= 0
+LUA_PKG ?= lua
+CFLAGS += $(shell $(PKG_CONFIG) --cflags "$(LUA_PKG)")
+LDFLAGS += $(shell $(PKG_CONFIG) --libs "$(LUA_PKG)")
 
 EXE ?= hlua
 SRC ?= main.c

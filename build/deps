@@ -2,9 +2,11 @@
 
 set -o nounset -o pipefail -o errexit
 
+LUA_VER=5.4
+
 if command -v apt-get > /dev/null; then
     apt-get update
-    apt-get install "lua5.3"
+    apt-get install "lua$LUA_VER" "lua$LUA_VER-dev"
 else
     echo 1>&2 "I don't know how to install dependencies on this system"
     exit 1

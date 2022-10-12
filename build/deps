@@ -6,7 +6,9 @@ LUA_VER=5.3
 
 if command -v apt-get > /dev/null; then
     apt-get update
-    apt-get install "lua$LUA_VER" "liblua$LUA_VER-dev"
+    apt-get install \
+        linux-libc-dev \
+        "lua$LUA_VER" "liblua$LUA_VER-dev"
 else
     echo 1>&2 "I don't know how to install dependencies on this system"
     exit 1

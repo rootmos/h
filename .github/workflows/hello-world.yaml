@@ -23,6 +23,6 @@ jobs:
     - name: Install dependencies
       run: sudo build/deps
     - name: Build hlua
-      run: make -C hlua
+      run: make -C hlua LUA_PKG=lua53
     - name: Build hpython
       run: make -C hpython

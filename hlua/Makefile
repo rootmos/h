@@ -1,6 +1,6 @@
 ROOT := $(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
 
-SCRIPTS ?= $(ROOT)/scripts
+SCRIPTS ?= $(ROOT)/../scripts
 BPFC ?= $(SCRIPTS)/bpfc
 TCC_BUNDLER ?= $(SCRIPTS)/tcc-bundler
 

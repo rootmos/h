@@ -35,7 +35,7 @@ static void parse_options(struct options* o, int argc, char* argv[])
     memset(o, 0, sizeof(*o));
 
     int res;
-    while((res = getopt(argc, argv, "hlst")) != -1) {
+    while((res = getopt(argc, argv, "h")) != -1) {
         switch(res) {
         case 'h':
         default:
@@ -64,7 +64,7 @@ int main(int argc, char* argv[])
 
     int rsfd = landlock_new_ruleset();
     landlock_allow_read(rsfd, o.input);
-    landlock_allow(rsfd, "/usr/lib",
+    landlock_allow(rsfd, "/usr/lib/python3.10", // TODO: how to retrieve this properly?
         LANDLOCK_ACCESS_FS_READ_FILE | LANDLOCK_ACCESS_FS_READ_DIR );
 
     landlock_apply(rsfd);
@@ -72,12 +72,19 @@ int main(int argc, char* argv[])
 
     seccomp_apply_filter();
 
-
     wchar_t *pgr = Py_DecodeLocale(argv[0], NULL);
     CHECK_NOT(pgr, NULL, "Py_DecodeLocale(%s)", argv[0]);
     Py_SetProgramName(pgr);
 
-    Py_Initialize();
+    // TODO: error handling
+    PyPreConfig preconfig;
+    PyPreConfig_InitIsolatedConfig(&preconfig);
+    Py_PreInitialize(&preconfig);
+
+    PyConfig config;
+    PyConfig_InitIsolatedConfig(&config);
+    Py_InitializeFromConfig(&config);
+    PyConfig_Clear(&config);
 
     debug("opening input file: %s", o.input);
     FILE* f = fopen(o.input, "r");

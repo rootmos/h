@@ -23,11 +23,11 @@ jobs:
     - name: Install dependencies
       run: sudo build/deps
 
-    - name: Build hlua
-      run: make -C hlua LUA_PKG=lua54
+    - name: Build
+      run: make build LUA_PKG=lua54
 
-    - name: Build hpython
-      run: make -C hpython
+    - name: Test
+      run: make test
 
     - name: Archive bundled stand-alone c-files
       uses: actions/upload-artifact@v3

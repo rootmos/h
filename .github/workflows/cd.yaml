@@ -41,6 +41,6 @@ jobs:
     - name: Archive test results
       uses: actions/upload-artifact@v3
       with:
-        name: tests.${{github.sha}}.tar.gz
+        name: tests.${{github.sha}}
         retention-days: 7
-        path: *-tests-*.tar.gz
+        path: "*-tests-*.tar.gz"

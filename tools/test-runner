@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 
 import argparse
+import json
 import logging
 import os
+import subprocess
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Yet another test runner")
@@ -34,3 +36,52 @@ if __name__ == "__main__":
     args = parse_args()
     logger = setup_logger(args.log.upper())
     logger.debug(f"args: {args}")
+
+    fn = args.input
+    logger.info(f"test file: {fn}")
+
+    with open(fn, "r") as f:
+        t = json.load(f)
+    logger.debug(f"test spec: {t}")
+
+    root = os.path.dirname(fn)
+    logger.debug(f"test root: {root}")
+
+    name = t.get("name")
+    if name is None:
+        name = os.path.basename(root)
+    logger.debug(f"test name: {name}")
+
+    sut = os.environ.get("SUT")
+    if sut is None:
+        project_root = os.environ.get("PROJECT_ROOT")
+        if project_root is None:
+            project_root = os.path.dirname(os.path.dirname(root))
+
+        exe = os.environ.get("EXE")
+        if exe is None:
+            exe = os.path.basename(project_root)
+
+        sut = os.path.join(project_root, exe)
+    logger.debug(f"test sut: {sut}")
+
+    input_ = os.path.join(root, t.get("input"))
+    logger.debug(f"test input: {input_}")
+
+    p = subprocess.run([sut, input_], check=True, capture_output=True)
+    expected_exit = t.get("exit", 0)
+    if p.returncode != expected_exit:
+        raise RuntimeError(f"unexpected exit status: {p.returncode} != {expected_exit}")
+
+    expected_stdout_fn = t.get("stdout")
+    if expected_stdout_fn is None:
+        expected_stdout_fn = os.path.join(root, "stdout")
+        if not os.path.exists(expected_stdout_fn):
+            expected_stdout_fn = None
+    if expected_stdout_fn is not None:
+        logger.debug(f"expected stdout from: {expected_stdout_fn}")
+        with open(expected_stdout_fn, "rb") as f:
+            stdout = p.stdout
+            expected_stdout = f.read()
+            if expected_stdout != p.stdout:
+                raise RuntimeError("stdout mismatch", stdout, expected_stdout)

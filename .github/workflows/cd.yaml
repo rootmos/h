@@ -26,9 +26,6 @@ jobs:
     - name: Build
       run: make build LUA_PKG=lua54
 
-    - name: Test
-      run: make test
-
     - name: Archive bundled stand-alone c-files
       uses: actions/upload-artifact@v3
       with:
@@ -37,3 +34,13 @@ jobs:
         path: |
           hlua/hlua.c
           hpython/hpython.c
+
+    - name: Test
+      run: tools/test-harness -o.
+
+    - name: Archive test results
+      uses: actions/upload-artifact@v3
+      with:
+        name: tests.${{github.sha}}
+        retention-days: 7
+        path: "*-tests-*.tar.gz"

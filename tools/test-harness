@@ -5,20 +5,89 @@ set -o nounset -o pipefail -o errexit
 SCRIPT_DIR=$(readlink -f "$0" | xargs dirname)
 
 TEST_ROOT=${TEST_ROOT-$PWD}
+PARENT_PROJECT=${PARENT_PROJECT-$(basename "$TEST_ROOT")}
 TEST_METAFILE=test.json
 TEST_RUNNER=${TEST_RUNNER-$SCRIPT_DIR/test-runner}
-while getopts "lc:-" OPT; do
+TEST_OUTPUT_DIR=
+TEST_RESULT_BUNDLE=${TEST_RESULT_BUNDLE-}
+while getopts "c:r:o:-" OPT; do
     case $OPT in
         c) TEST_ROOT=$OPTARG ;;
-        l) TEST_RUNNER=ls ;;
+        r) TEST_RESULT_BUNDLE=$OPTARG ;;
+        o) TEST_OUTPUT_DIR=$OPTARG ;;
         -) break ;;
         ?) exit 2 ;;
     esac
 done
 shift $((OPTIND-1))
 
+DEFAULT="\033[0m"
+BLACK="\033[30m"
+RED="\033[31m"
+GREEN="\033[32m"
+
+ID=$(uuidgen)
+echo "test run: $ID"
+
+TMP=$(mktemp -d)
+trap 'rm -rf $TMP' EXIT
+
+BUNDLE_ROOT=$TMP/$PARENT_PROJECT-tests-$ID
+mkdir -p "$BUNDLE_ROOT"
+
 mapfile -t TESTS < <(find "$TEST_ROOT" -name "$TEST_METAFILE")
 
+N=0
+F=0
+S=0
 for t in "${TESTS[@]}"; do
-    $TEST_RUNNER "$t"
+    TID=$(uuidgen)
+    RUN=$TMP/$TID.json
+
+    set +o errexit
+    $TEST_RUNNER "$t" > "$RUN"
+    set -o errexit
+
+    PROJECT=$(jq -r .project "$RUN")
+    NAME=$(jq -r .name "$RUN")
+
+    cp "$RUN" "$BUNDLE_ROOT/$PROJECT.$NAME.json"
+
+    N=$((N+1))
+    if [ "$(jq -r .result "$RUN")" = "true" ]; then
+        S=$((S+1))
+        echo -ne "[ ${GREEN}OK${DEFAULT} ] "
+    else
+        F=$((F+1))
+        echo -ne "[${RED}FAIL${DEFAULT}] "
+    fi
+
+    echo "$PROJECT $NAME"
 done
+
+cat > "$BUNDLE_ROOT/run.json" <<EOF
+{
+    "when": "$(date -Is)",
+    "git": {
+        "ref": "$(git rev-parse HEAD)",
+        "dirty": $([ -n "$(git status --porcelain)" ] && echo true || echo false)
+    },
+    "n": $N, "s": $S, "f": $F
+}
+EOF
+
+if [ -z "$TEST_RESULT_BUNDLE" ] && [ -n "$TEST_OUTPUT_DIR" ]; then
+    TEST_RESULT_BUNDLE=$TEST_OUTPUT_DIR/$(basename "$BUNDLE_ROOT").tar.gz
+fi
+
+if [ -n "$TEST_RESULT_BUNDLE" ]; then
+    tar -cf "$TEST_RESULT_BUNDLE" \
+        -C "$(dirname "$BUNDLE_ROOT")" "$(basename "$BUNDLE_ROOT")"
+fi
+
+if [ "$N" -eq "$S" ]; then
+    echo -e "${GREEN}$N${DEFAULT} tests run"
+else
+    echo -e "$N tests run: ${GREEN}$S${DEFAULT} successfully, ${RED}$F${DEFAULT} failed"
+    exit 1
+fi

@@ -1,0 +1,4 @@
+{
+    "input": "main.lua",
+    "args": ["-s"]
+}

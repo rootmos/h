@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 
 import argparse
+import datetime
 import json
 import logging
 import os
 import subprocess
+import sys
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Yet another test runner")
@@ -44,34 +46,49 @@ if __name__ == "__main__":
         t = json.load(f)
     logger.debug(f"test spec: {t}")
 
-    root = os.path.dirname(fn)
+    res = {}
+
+    res["root"] = root = os.path.dirname(fn)
     logger.debug(f"test root: {root}")
 
     name = t.get("name")
     if name is None:
         name = os.path.basename(root)
+    res["name"] = name
     logger.debug(f"test name: {name}")
+
+    project_root = os.environ.get("PROJECT_ROOT")
+    if project_root is None:
+        project_root = os.path.realpath(os.path.dirname(os.path.dirname(root)))
+    res["project_root"] = project_root
+    res["project"] = os.environ.get("PROJECT", os.path.basename(project_root))
 
     sut = os.environ.get("SUT")
     if sut is None:
-        project_root = os.environ.get("PROJECT_ROOT")
-        if project_root is None:
-            project_root = os.path.dirname(os.path.dirname(root))
-
         exe = os.environ.get("EXE")
         if exe is None:
             exe = os.path.basename(project_root)
 
         sut = os.path.join(project_root, exe)
+    res["sut"] = sut
     logger.debug(f"test sut: {sut}")
 
-    input_ = os.path.join(root, t.get("input"))
+    input_ = os.path.realpath(os.path.join(root, t.get("input")))
+    res["input"] = input_
     logger.debug(f"test input: {input_}")
 
-    p = subprocess.run([sut, input_], capture_output=True)
-    expected_exit = t.get("exit", 0)
-    if p.returncode != expected_exit:
-        raise RuntimeError(f"unexpected exit status: {p.returncode} != {expected_exit}")
+    cmdline = [sut]
+    cmdline += t.get("args", [])
+    cmdline.append(input_)
+    res["cmdline"] = cmdline
+
+    res["when"] = datetime.datetime.now().astimezone().isoformat(timespec="seconds")
+    p = subprocess.run(cmdline, capture_output=True, cwd=root)
+
+    res["stdout"] = p.stdout.decode("UTF-8")
+    res["stderr"] = p.stderr.decode("UTF-8")
+    res["returncode"] = p.returncode
+    res["expected_returncode"] = expected_exit = t.get("exit", 0)
 
     expected_stdout_fn = t.get("stdout")
     if expected_stdout_fn is None:
@@ -80,8 +97,24 @@ if __name__ == "__main__":
             expected_stdout_fn = None
     if expected_stdout_fn is not None:
         logger.debug(f"expected stdout from: {expected_stdout_fn}")
+        res["expected_stdout_fn"] = expected_stdout_fn
+
         with open(expected_stdout_fn, "rb") as f:
-            stdout = p.stdout
             expected_stdout = f.read()
-            if expected_stdout != p.stdout:
-                raise RuntimeError("stdout mismatch", stdout, expected_stdout)
+            res["expected_stdout"] = expected_stdout.decode("UTF-8")
+    else:
+        expected_stdout = None
+
+    res["result"] = True
+    res["messages"] = []
+
+    if p.returncode != expected_exit:
+        res["result"] = False
+        res["messages"].append("unexpected exit status")
+
+    if expected_stdout is not None and expected_stdout != p.stdout:
+        res["result"] = False
+        res["messages"].append("stdout mismatch")
+
+    print(json.dumps(res))
+    sys.exit(0 if res["result"] else 1)

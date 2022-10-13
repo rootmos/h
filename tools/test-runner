@@ -46,10 +46,10 @@ if __name__ == "__main__":
         t = json.load(f)
     logger.debug(f"test spec: {t}")
 
-    root = os.path.dirname(fn)
-    logger.debug(f"test root: {root}")
-
     res = {}
+
+    res["root"] = root = os.path.dirname(fn)
+    logger.debug(f"test root: {root}")
 
     name = t.get("name")
     if name is None:
@@ -59,7 +59,7 @@ if __name__ == "__main__":
 
     project_root = os.environ.get("PROJECT_ROOT")
     if project_root is None:
-        project_root = os.path.dirname(os.path.dirname(root))
+        project_root = os.path.realpath(os.path.dirname(os.path.dirname(root)))
     res["project_root"] = project_root
     res["project"] = os.environ.get("PROJECT", os.path.basename(project_root))
 
@@ -73,12 +73,18 @@ if __name__ == "__main__":
     res["sut"] = sut
     logger.debug(f"test sut: {sut}")
 
-    input_ = os.path.join(root, t.get("input"))
+    input_ = os.path.realpath(os.path.join(root, t.get("input")))
     res["input"] = input_
     logger.debug(f"test input: {input_}")
 
+    cmdline = [sut]
+    cmdline += t.get("args", [])
+    cmdline.append(input_)
+    res["cmdline"] = cmdline
+
     res["when"] = datetime.datetime.now().astimezone().isoformat(timespec="seconds")
-    p = subprocess.run([sut, input_], capture_output=True)
+    p = subprocess.run(cmdline, capture_output=True, cwd=root)
+
     res["stdout"] = p.stdout.decode("UTF-8")
     res["stderr"] = p.stderr.decode("UTF-8")
     res["returncode"] = p.returncode

@@ -68,7 +68,7 @@ if __name__ == "__main__":
     input_ = os.path.join(root, t.get("input"))
     logger.debug(f"test input: {input_}")
 
-    p = subprocess.run([sut, input_], check=True, capture_output=True)
+    p = subprocess.run([sut, input_], capture_output=True)
     expected_exit = t.get("exit", 0)
     if p.returncode != expected_exit:
         raise RuntimeError(f"unexpected exit status: {p.returncode} != {expected_exit}")

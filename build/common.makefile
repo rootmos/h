@@ -3,6 +3,7 @@ ROOT := $(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
 TOOLS ?= $(realpath $(ROOT)/../tools)
 BPFC ?= $(TOOLS)/bpfc
 SINGLE_FILE ?= $(TOOLS)/single-file
+TEST_HARNESS ?= $(TOOLS)/test-harness
 
 CC = gcc
 PKG_CONFIG ?= pkg-config
@@ -18,3 +19,7 @@ EXTRA_LDFLAGS ?=
 
 %: %.c
 	$(CC) $(CFLAGS) $(EXTRA_CFLAGS) -o "$@" "$<" $(LDFLAGS) $(EXTRA_LDFLAGS)
+
+.PHONY: test
+test:
+	@$(TEST_HARNESS)

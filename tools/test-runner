@@ -1,0 +1,36 @@
+#!/usr/bin/env python3
+
+import argparse
+import logging
+import os
+
+def parse_args():
+    parser = argparse.ArgumentParser(description="Yet another test runner")
+
+    parser.add_argument("--log", default=os.environ.get("LOG_LEVEL", "WARN"), help="set log level")
+
+    parser.add_argument("input", metavar="INPUT")
+
+    return parser.parse_args()
+
+logger = None
+def setup_logger(level):
+    l = logging.getLogger("test-runner")
+    l.setLevel(level)
+
+    ch = logging.StreamHandler()
+    ch.setLevel(level)
+
+    f = logging.Formatter(
+        fmt="%(asctime)s:%(name)s:%(levelname)s %(message)s",
+        datefmt="%Y-%m-%dT%H:%M:%S%z")
+    ch.setFormatter(f)
+
+    l.addHandler(ch)
+
+    return l
+
+if __name__ == "__main__":
+    args = parse_args()
+    logger = setup_logger(args.log.upper())
+    logger.debug(f"args: {args}")

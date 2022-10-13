@@ -1,0 +1,24 @@
+#!/bin/bash
+
+set -o nounset -o pipefail -o errexit
+
+SCRIPT_DIR=$(readlink -f "$0" | xargs dirname)
+
+TEST_ROOT=${TEST_ROOT-$PWD}
+TEST_METAFILE=test.json
+TEST_RUNNER=${TEST_RUNNER-$SCRIPT_DIR/test-runner}
+while getopts "lc:-" OPT; do
+    case $OPT in
+        c) TEST_ROOT=$OPTARG ;;
+        l) TEST_RUNNER=ls ;;
+        -) break ;;
+        ?) exit 2 ;;
+    esac
+done
+shift $((OPTIND-1))
+
+mapfile -t TESTS < <(find "$TEST_ROOT" -name "$TEST_METAFILE")
+
+for t in "${TESTS[@]}"; do
+    $TEST_RUNNER "$t"
+done

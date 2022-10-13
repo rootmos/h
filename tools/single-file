@@ -40,7 +40,7 @@ fi
 
 awk '{
 if(/^#include\s+"[^"]*"/) {
-    printf("// %s\n", $2)
+    printf("// #include %s\n", $2)
     system(sprintf("cat %s/%s", "'"$BASE_DIR"'", $2))
 } else {
     print($0)

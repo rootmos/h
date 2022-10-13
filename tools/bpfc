@@ -5,9 +5,11 @@ set -o nounset -o pipefail -o errexit
 SCRIPT_DIR=$(readlink -f "$0" | xargs dirname)
 PP=${PP-$SCRIPT_DIR/pp}
 
+INCLUDE_INPUT=
 OUTPUT=/dev/stdout
-while getopts "o:-" OPT; do
+while getopts "io:-" OPT; do
     case $OPT in
+        i) INCLUDE_INPUT=1 ;;
         o) OUTPUT=$OPTARG ;;
         -) break ;;
         ?) exit 2 ;;
@@ -20,4 +22,15 @@ if ! command -v "$BPF_ASM" > /dev/null; then
     BPF_ASM=$SCRIPT_DIR/bpf/bpf_asm
 fi
 
-"$PP" "$1" | "$BPF_ASM" -c > "$OUTPUT"
+INPUT=$1
+
+cp /dev/null "$OUTPUT"
+
+if [ -n "$INCLUDE_INPUT" ]; then
+    echo "/** bpf_asm $INPUT" >> "$OUTPUT"
+    echo " * " >> "$OUTPUT"
+    sed 's,^, * ,' < "$INPUT" >> "$OUTPUT"
+    echo "**/" >> "$OUTPUT"
+fi
+
+"$PP" "$INPUT" | "$BPF_ASM" -c >> "$OUTPUT"

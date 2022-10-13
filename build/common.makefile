@@ -14,7 +14,7 @@ EXTRA_CFLAGS ?= -DLOG_LEVEL=LOG_$(LOG_LEVEL)
 EXTRA_LDFLAGS ?=
 
 %.bpfc: %.bpf
-	$(BPFC) -o "$@" "$<"
+	$(BPFC) -i -o "$@" "$<"
 
 %: %.c
 	$(CC) $(CFLAGS) $(EXTRA_CFLAGS) -o "$@" "$<" $(LDFLAGS) $(EXTRA_LDFLAGS)

@@ -1,9 +1,12 @@
+INPUT=${INPUT-${K_DIR-.}/test/hello/main.lua}
+EXE=$(readlink -f hlua)
+
 run() {
-    make && (cd example && ../hlua -st main.lua)
+    make && (cd "$(dirname "$INPUT")" && $EXE -st "$(basename "$INPUT")")
 }
 
 trace() {
-    make && (cd example && strace ../hlua -st main.lua)
+    make && (cd "$(dirname "$INPUT")" && strace $EXE -st "$(basename "$INPUT")")
 }
 
 libr() {

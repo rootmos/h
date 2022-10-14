@@ -9,14 +9,26 @@ url=$BUILD_REPO_URL
 source=("$pkgname-$pkgver.zip::$BUILD_SOURCE_TARBALL_URL")
 sha256sums=("$SOURCE_TARBALL_SHA256")
 
+ROOT=$pkgname-$pkgver
+
+prepare() {
+    cat <<EOF > "$ROOT/.build.env"
+GIT_REPO=$BUILD_GIT_REPO
+GIT_REF=$BUILD_GIT_REF
+REPO_URL=$BUILD_REPO_URL
+GIT_DIRTY=$BUILD_GIT_DIRTY
+SOURCE_TARBALL_URL=$BUILD_SOURCE_TARBALL_URL
+EOF
+}
+
 build() {
-    make build -C "$pkgname-$pkgver"
+    make build -C "$ROOT"
 }
 
 check() {
-    make test -C "$pkgname-$pkgver"
+    make test -C "$ROOT"
 }
 
 package() {
-    make install PREFIX="$pkgdir/usr" -C "$pkgname-$pkgver"
+    make install PREFIX="$pkgdir/usr" -C "$ROOT"
 }

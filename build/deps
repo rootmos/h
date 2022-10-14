@@ -10,8 +10,6 @@ if command -v apt-get > /dev/null; then
         linux-libc-dev \
         "lua$LUA_VER" "liblua$LUA_VER-dev" \
         tcc
-elif command -v pacman > /dev/null; then
-    pacman -S bpf lua tcc
 else
     echo 1>&2 "I don't know how to install dependencies on this system"
     exit 1

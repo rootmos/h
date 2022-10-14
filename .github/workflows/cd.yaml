@@ -50,6 +50,8 @@ jobs:
     runs-on: ubuntu-22.04
     container:
       image: archlinux:latest
+    env:
+      UNPRIVILEGED: arch
     steps:
     - name: Install minimal dependencies
       run: pacman -Suy --noconfirm sudo fakeroot binutils which wget
@@ -59,17 +61,17 @@ jobs:
 
     - name: Create an unprivileged user
       run: |
-        useradd -m arch
-        chown -R arch:arch .
-        tee -a /etc/sudoers.d/arch <<< "arch ALL = NOPASSWD: $(which pacman)"
+        useradd -m $UNPRIVILEGED
+        chown -R $UNPRIVILEGED:$UNPRIVILEGED .
+        tee -a /etc/sudoers.d/$UNPRIVILEGED <<< "$UNPRIVILEGED ALL = NOPASSWD: $(which pacman)"
 
     - name: Create PKGBUILD
       run: ./mk
-      working-directory: build/arch
+      working-directory: build/archlinux
 
     - name: Build package
-      run: sudo -u arch env VERBOSE=1 makepkg -si --noconfirm
-      working-directory: build/arch
+      run: sudo -u $UNPRIVILEGED env VERBOSE=1 makepkg -si --noconfirm
+      working-directory: build/archlinux
 
     - name: Test system installation
       run: |
@@ -82,4 +84,4 @@ jobs:
       with:
         name: PKGBUILD.${{github.sha}}
         retention-days: 7
-        path: "build/arch/PKGBUILD"
+        path: "build/archlinux/PKGBUILD"

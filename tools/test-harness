@@ -11,7 +11,7 @@ TEST_RUNNER=${TEST_RUNNER-$TOOLS/test-runner}
 TEST_OUTPUT_DIR=
 TEST_RESULT_BUNDLE=${TEST_RESULT_BUNDLE-}
 VERBOSE=${VERBOSE-}
-while getopts "c:r:o:v:-" OPT; do
+while getopts "c:r:o:v-" OPT; do
     case $OPT in
         c) TEST_ROOT=$OPTARG ;;
         r) TEST_RESULT_BUNDLE=$OPTARG ;;

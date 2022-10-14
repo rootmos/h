@@ -1,13 +1,12 @@
 pkgname=h
-pkgver=92cc378c8a699adabb1e8b1f5275612b0d1d44b0
+pkgver=$BUILD_GIT_REF
 pkgrel=1
 arch=("x86_64")
-owner=rootmos
 depends=("lua" "python")
 makedepends=("make" "gcc" "pkgconf" "bpf")
-url="https://github.com/$owner/$pkgname"
-source=("$pkgname-$pkgver.zip::$url/archive/$pkgver.zip")
-sha256sums=("9b44c529d4bb68e5e2109f601f672f87a20f5e8f3955c241f70258da5bc5f0b5")
+url=$BUILD_REPO_URL
+source=("$pkgname-$pkgver.zip::$BUILD_SOURCE_TARBALL_URL")
+sha256sums=("$SOURCE_TARBALL_SHA256")
 
 build() {
     make build -C "$pkgname-$pkgver"

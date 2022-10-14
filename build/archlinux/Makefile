@@ -1,4 +1,4 @@
-PKGBUILD: PKGBUILD.template
+PKGBUILD: mk PKGBUILD.template
 	./mk
 
 .PHONY: clean

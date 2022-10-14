@@ -1,1 +1,6 @@
 *-tests-*.tar.gz
+
+version.c
+*.bpfc
+*.files
+*.filesc

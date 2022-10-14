@@ -6,6 +6,7 @@ TOOLS ?= $(realpath $(ROOT)/../tools)
 BPFC ?= $(TOOLS)/bpfc
 PATHS ?= $(TOOLS)/paths
 LANDLOCKC ?= $(TOOLS)/landlockc
+VERSION ?= $(TOOLS)/version
 SINGLE_FILE ?= $(TOOLS)/single-file
 TEST_HARNESS ?= $(TOOLS)/test-harness
 
@@ -18,15 +19,6 @@ LOG_LEVEL ?= WARN
 EXTRA_CFLAGS ?= -DLOG_LEVEL=LOG_$(LOG_LEVEL)
 EXTRA_LDFLAGS ?=
 
-%.bpfc: %.bpf
-	$(BPFC) -i -o "$@" "$<"
-
-%: %.c
-	$(CC) $(CFLAGS) $(EXTRA_CFLAGS) -o "$@" "$<" $(LDFLAGS) $(EXTRA_LDFLAGS)
-
-%.filesc: %.files
-	$(LANDLOCKC) "$<" "$@"
-
 .PHONY: all
 all: build
 
@@ -37,3 +29,15 @@ test: build
 .PHONY: install
 install: build
 	install -sD "$(EXE)" "$(PREFIX)/bin/$(EXE)"
+
+%.bpfc: %.bpf
+	$(BPFC) -i -o "$@" "$<"
+
+%: %.c
+	$(CC) $(CFLAGS) $(EXTRA_CFLAGS) -o "$@" "$<" $(LDFLAGS) $(EXTRA_LDFLAGS)
+
+%.filesc: %.files
+	$(LANDLOCKC) "$<" "$@"
+
+version.c: $(VERSION) $(shell $(VERSION) -i)
+	$(VERSION) -o "$@"

@@ -84,7 +84,10 @@ static void print_usage(int fd, const char* prog)
     dprintf(fd, "  -s       allow reading files beneath the input script's directory\n");
     dprintf(fd, "  -t       allow read+write access to %s\n", DEFAULT_TMP);
     dprintf(fd, "  -h       print this message\n");
+    dprintf(fd, "  -v       print version information\n");
 }
+
+#include "version.c"
 
 static void parse_options(struct options* o, int argc, char* argv[])
 {
@@ -97,7 +100,7 @@ static void parse_options(struct options* o, int argc, char* argv[])
     o->tmp = DEFAULT_TMP;
 
     int res;
-    while((res = getopt(argc, argv, "hlst")) != -1) {
+    while((res = getopt(argc, argv, "hlstv")) != -1) {
         switch(res) {
         case 'l':
             o->allow_localtime = 1;
@@ -108,6 +111,9 @@ static void parse_options(struct options* o, int argc, char* argv[])
         case 't':
             o->allow_tmp = 1;
             break;
+        case 'v':
+            print_version(argv[0]);
+            exit(0);
         case 'h':
         default:
             print_usage(res == 'h' ? 1 : 2, argv[0]);

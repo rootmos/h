@@ -11,9 +11,9 @@ SRC ?= main.c
 .PHONY: build
 build: $(EXE)
 
-$(EXE).c: $(SRC) filter.bpfc r.h
+$(EXE).c: $(SRC) filter.bpfc version.c r.h
 	$(SINGLE_FILE) -o "$@" "$<"
 
 .PHONY: clean
 clean:
-	rm -f $(EXE) $(EXE).c *.bpfc
+	rm -f $(EXE) $(EXE).c *.bpfc version.c

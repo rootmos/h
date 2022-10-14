@@ -1,4 +1,4 @@
-pkgname=h
+pkgname=$BUILD_PROJECT
 pkgver=$BUILD_GIT_REF
 pkgrel=1
 arch=("x86_64")

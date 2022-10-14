@@ -11,7 +11,7 @@ SRC ?= main.c
 .PHONY: build
 build: $(EXE)
 
-$(EXE).c: $(SRC) filter.bpfc landlock.filesc r.h
+$(EXE).c: $(SRC) filter.bpfc landlock.filesc version.c r.h
 	$(SINGLE_FILE) -o "$@" "$<"
 
 landlock.files: Makefile
@@ -19,4 +19,4 @@ landlock.files: Makefile
 
 .PHONY: clean
 clean:
-	rm -f $(EXE) $(EXE).c *.bpfc *.filesc *.files
+	rm -f $(EXE) $(EXE).c *.bpfc *.filesc *.files version.c

@@ -30,13 +30,18 @@ static void print_usage(int fd, const char* prog)
     dprintf(fd, "  -h       print this message\n");
 }
 
+#include "version.c"
+
 static void parse_options(struct options* o, int argc, char* argv[])
 {
     memset(o, 0, sizeof(*o));
 
     int res;
-    while((res = getopt(argc, argv, "h")) != -1) {
+    while((res = getopt(argc, argv, "hv")) != -1) {
         switch(res) {
+        case 'v':
+            print_version(argv[0]);
+            exit(0);
         case 'h':
         default:
             print_usage(res == 'h' ? 1 : 2, argv[0]);

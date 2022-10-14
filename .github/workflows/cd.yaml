@@ -36,7 +36,7 @@ jobs:
           hpython/hpython.c
 
     - name: Test
-      run: tools/test-harness -o.
+      run: tools/test-harness -vo.
 
     - name: Archive test results
       uses: actions/upload-artifact@v3
@@ -68,7 +68,7 @@ jobs:
       working-directory: build/arch
 
     - name: Build package
-      run: sudo -u arch makepkg -si --noconfirm
+      run: sudo -u arch env VERBOSE=1 makepkg -si --noconfirm
       working-directory: build/arch
 
     - name: Archive PKGBUILD

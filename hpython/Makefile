@@ -11,9 +11,12 @@ SRC ?= main.c
 .PHONY: build
 build: $(EXE)
 
-$(EXE).c: $(SRC) filter.bpfc r.h
+$(EXE).c: $(SRC) filter.bpfc landlock.filesc r.h
 	$(SINGLE_FILE) -o "$@" "$<"
+
+landlock.files: Makefile
+	$(PATHS) -o"$@" --python-site -lz
 
 .PHONY: clean
 clean:
-	rm -f $(EXE) $(EXE).c *.bpfc
+	rm -f $(EXE) $(EXE).c *.bpfc *.filesc *.files

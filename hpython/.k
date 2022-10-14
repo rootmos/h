@@ -1,12 +1,12 @@
-INPUT=${INPUT-${K_DIR-.}/test/hello/main.py}
-EXE=$(readlink -f hpython)
+INPUT=${INPUT-${K_DIR-.}/test/socket}
+TEST_RUNNER=$K_DIR/../tools/test-runner
 
 run() {
-    make && $EXE "$INPUT"
+    make build && $TEST_RUNNER "$INPUT" | jq -r .
 }
 
 trace() {
-    make && strace $EXE "$INPUT"
+    make build && $TEST_RUNNER "$INPUT" --trace | jq -r .trace
 }
 
 libr() {

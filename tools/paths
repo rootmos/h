@@ -1,0 +1,85 @@
+#!/usr/bin/env -S python3 -I
+
+import argparse
+import logging
+import os
+import sys
+
+from ctypes import *
+from ctypes.util import find_library
+
+def python_site():
+    for p in sys.path:
+        if os.path.isdir(p):
+            logger.info(f"chosen site: {p}")
+            return p
+        else:
+            logger.debug(f"disregarding site: {p}")
+
+# https://stackoverflow.com/a/35683698
+libdl = cdll.LoadLibrary(find_library('dl'))
+class LINKMAP(Structure):
+    _fields_ = [ ("l_addr", c_void_p), ("l_name", c_char_p) ]
+dlinfo = libdl.dlinfo
+dlinfo.argtypes  = c_void_p, c_int, c_void_p
+dlinfo.restype = c_int
+
+def lib(l):
+    logger.debug(f"resolving library: {l}")
+    ln = find_library(l)
+    logger.debug(f"resolving library: {l} -> {ln}")
+    lib = cdll.LoadLibrary(ln)
+    p = c_void_p()
+    dlinfo(lib._handle, 2, byref(p))
+
+    path = os.fsdecode(cast(p, POINTER(LINKMAP)).contents.l_name)
+    logger.debug(f"resolved library: {l} -> {ln} -> {path}")
+
+    return path
+
+def parse_args():
+    parser = argparse.ArgumentParser(description="Path-resolution tool")
+
+    parser.add_argument("--log", default=os.environ.get("LOG_LEVEL", "WARN"), help="set log level")
+
+    parser.add_argument("-o", "--output")
+    parser.add_argument("-l", "--lib", nargs="*")
+    parser.add_argument("-p", "--python-site", action="store_true")
+
+    return parser.parse_args()
+
+logger = None
+def setup_logger(level):
+    l = logging.getLogger("paths")
+    l.setLevel(level)
+
+    ch = logging.StreamHandler()
+    ch.setLevel(level)
+
+    f = logging.Formatter(
+        fmt="%(asctime)s:%(name)s:%(levelname)s %(message)s",
+        datefmt="%Y-%m-%dT%H:%M:%S%z")
+    ch.setFormatter(f)
+
+    l.addHandler(ch)
+
+    return l
+
+if __name__ == "__main__":
+    args = parse_args()
+    logger = setup_logger(args.log.upper())
+    logger.debug(f"args: {args}")
+
+    if args.output is not None:
+        f = open(args.output, "w")
+        def out(s):
+            f.write(s)
+            f.write("\n")
+    else:
+        out = print
+
+    if args.python_site:
+        out(python_site())
+
+    for l in args.lib:
+        out(lib(l))

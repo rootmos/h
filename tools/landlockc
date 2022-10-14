@@ -1,0 +1,24 @@
+#!/bin/bash
+
+set -o nounset -o pipefail -o errexit
+
+FD=${FD-rsfd}
+INPUT=${1--}
+OUTPUT=${2-/dev/stdout}
+
+cp /dev/null "$OUTPUT"
+
+cat "$INPUT" | while read F; do
+    if [ -f "$F" ]; then
+        cat <<EOF >> "$OUTPUT"
+landlock_allow($FD, "$F", LANDLOCK_ACCESS_FS_READ_FILE);
+EOF
+    elif [ -d "$F" ]; then
+        cat <<EOF >> "$OUTPUT"
+landlock_allow($FD, "$F", LANDLOCK_ACCESS_FS_READ_FILE|LANDLOCK_ACCESS_FS_READ_DIR);
+EOF
+    else
+        echo 1>&2 "unsupported filetype: $F"
+        exit 1
+    fi
+done

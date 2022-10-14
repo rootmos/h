@@ -1,5 +1,5 @@
 pkgname=$BUILD_PROJECT
-pkgver=$BUILD_GIT_REF
+pkgver=$BUILD_VERSION
 pkgrel=1
 arch=("x86_64")
 depends=("lua" "python")

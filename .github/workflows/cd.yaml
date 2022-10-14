@@ -51,8 +51,8 @@ jobs:
     container:
       image: archlinux:latest
     steps:
-    - name: Install base dependencies
-      run: pacman -Suy --noconfirm sudo fakeroot binutils
+    - name: Install minimal dependencies
+      run: pacman -Suy --noconfirm sudo fakeroot binutils which
 
     - name: Check out repository code
       uses: actions/checkout@v3
@@ -61,7 +61,8 @@ jobs:
       run: |
         useradd -m arch
         chown -R arch:arch .
+        tee -a /etc/sudoers.d/arch <<< "arch ALL = NOPASSWD: $(which pacman)"
 
     - name: Build package
-      run: sudo -u arch makepkg -s
+      run: sudo -u arch makepkg -si
       working-directory: build/arch

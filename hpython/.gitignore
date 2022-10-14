@@ -1,3 +1,6 @@
 hpython
 hpython.c
+
 *.bpfc
+*.files
+*.filesc

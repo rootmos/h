@@ -1,0 +1,15 @@
+#!/bin/bash
+
+set -o nounset -o pipefail -o errexit
+
+FD=${FD-rsfd}
+INPUT=${1--}
+OUTPUT=${2-/dev/stdout}
+
+cp /dev/null "$OUTPUT"
+
+cat "$INPUT" | while read F; do
+    cat <<EOF >> "$OUTPUT"
+landlock_allow($FD, "$F", LANDLOCK_ACCESS_FS_READ_FILE);
+EOF
+done

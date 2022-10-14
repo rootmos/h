@@ -2,6 +2,8 @@ ROOT := $(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
 
 TOOLS ?= $(realpath $(ROOT)/../tools)
 BPFC ?= $(TOOLS)/bpfc
+PATHS ?= $(TOOLS)/paths
+LANDLOCKC ?= $(TOOLS)/landlockc
 SINGLE_FILE ?= $(TOOLS)/single-file
 TEST_HARNESS ?= $(TOOLS)/test-harness
 
@@ -19,6 +21,9 @@ EXTRA_LDFLAGS ?=
 
 %: %.c
 	$(CC) $(CFLAGS) $(EXTRA_CFLAGS) -o "$@" "$<" $(LDFLAGS) $(EXTRA_LDFLAGS)
+
+%.filesc: %.files
+	$(LANDLOCKC) "$<" "$@"
 
 .PHONY: test
 test:

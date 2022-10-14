@@ -1,5 +1,7 @@
 ROOT := $(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
 
+PREFIX ?= /usr
+
 TOOLS ?= $(realpath $(ROOT)/../tools)
 BPFC ?= $(TOOLS)/bpfc
 PATHS ?= $(TOOLS)/paths
@@ -25,6 +27,13 @@ EXTRA_LDFLAGS ?=
 %.filesc: %.files
 	$(LANDLOCKC) "$<" "$@"
 
+.PHONY: all
+all: build
+
 .PHONY: test
-test:
+test: build
 	@$(TEST_HARNESS)
+
+.PHONY: install
+install: build
+	install -sD "$(EXE)" "$(PREFIX)/bin/$(EXE)"

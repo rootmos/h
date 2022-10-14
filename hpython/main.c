@@ -64,6 +64,8 @@ int main(int argc, char* argv[])
 
     int rsfd = landlock_new_ruleset();
     landlock_allow_read(rsfd, o.input);
+    landlock_allow(rsfd, "/usr/lib/libz.so.1",
+        LANDLOCK_ACCESS_FS_READ_FILE);
     landlock_allow(rsfd, "/usr/lib/python3.10", // TODO: how to retrieve this properly?
         LANDLOCK_ACCESS_FS_READ_FILE | LANDLOCK_ACCESS_FS_READ_DIR );
 

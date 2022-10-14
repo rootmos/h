@@ -17,12 +17,22 @@ jeq #$__NR_openat, good
 jeq #$__NR_newfstatat, good
 
 jeq #$__NR_getpid, good
+jeq #$__NR_gettid, good
 
 jne #$__NR_mmap, mmap_end
 ld [$$offsetof(struct seccomp_data, args[3])$$]
 jeq #$$(MAP_PRIVATE|MAP_ANONYMOUS)$$, good
+jeq #$$(MAP_PRIVATE|MAP_DENYWRITE)$$, good
+jeq #$$(MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE)$$, good
 jmp bad
 mmap_end:
+
+jne #$__NR_mprotect, mprotect_end
+ld [$$offsetof(struct seccomp_data, args[2])$$]
+jeq #$PROT_READ, good
+jeq #$PROT_NONE, good
+jmp bad
+mprotect_end:
 
 jeq #$__NR_getcwd, good
 jeq #$__NR_readlink, good
@@ -39,6 +49,7 @@ jne #$__NR_fcntl, fcntl_end
 ld [$$offsetof(struct seccomp_data, args[1])$$]
 jeq #$F_GETFL, good
 jeq #$F_GETFD, good
+jeq #$F_DUPFD_CLOEXEC, good
 jmp bad
 fcntl_end:
 

@@ -42,7 +42,7 @@ if [ -n "${CI-}" ]; then
     kv "GITHUB_REPO" "$GITHUB_REPOSITORY"
     REPO_URL=$GITHUB_SERVER_URL/$GITHUB_REPOSITORY
     SOURCE_TARBALL_URL=$REPO_URL/archive/$GIT_REF.zip
-elif command -v git > /dev/null; then
+elif command -v git > /dev/null && git rev-parse --show-toplevel > /dev/null; then
     GIT_REF=$(git rev-parse HEAD)
     GIT_DIRTY=$([ -n "$(git status --porcelain)" ] && echo "1")
 

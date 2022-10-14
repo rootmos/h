@@ -22,7 +22,11 @@ INPUT=$1
 
 BASE_DIR=$(dirname "$INPUT")
 if [ -z "$VERSION" ]; then
-    VERSION=$(git -C "$BASE_DIR" rev-parse HEAD)
+    if command -v git > /dev/null; then
+        VERSION=$(git -C "$BASE_DIR" rev-parse HEAD)
+    else
+        VERSION=unknown # TODO: proper build info generator
+    fi
 fi
 
 cp /dev/null "$OUTPUT"

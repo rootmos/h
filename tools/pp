@@ -5,6 +5,7 @@ set -o nounset -o pipefail -o errexit
 INCLUDE=()
 INCLUDE+=("stddef.h")
 INCLUDE+=("fcntl.h")
+INCLUDE+=("signal.h")
 INCLUDE+=("linux/unistd.h")
 INCLUDE+=("linux/seccomp.h" "linux/audit.h")
 INCLUDE+=("sys/mman.h" "sys/ioctl.h")

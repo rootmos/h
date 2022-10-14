@@ -53,10 +53,13 @@ jeq #$F_DUPFD_CLOEXEC, good
 jmp bad
 fcntl_end:
 
-jne #$__NR_ioctl, bad
+jne #$__NR_ioctl, ioctl_end
 ld [$$offsetof(struct seccomp_data, args[1])$$]
 jeq #$TCGETS, good
 jmp bad
+ioctl_end:
+
+jeq #$__NR_epoll_create1, good
 
 bad: ret #$SECCOMP_RET_KILL_THREAD
 good: ret #$SECCOMP_RET_ALLOW

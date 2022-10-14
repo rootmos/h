@@ -5,6 +5,7 @@ import datetime
 import json
 import logging
 import os
+import signal
 import subprocess
 import sys
 import tempfile
@@ -101,7 +102,11 @@ if __name__ == "__main__":
     res["stdout"] = p.stdout.decode("UTF-8")
     res["stderr"] = p.stderr.decode("UTF-8")
     res["returncode"] = p.returncode
-    res["expected_returncode"] = expected_exit = t.get("exit", 0)
+    expected_exit = t.get("exit", 0)
+    if isinstance(expected_exit, str):
+        expected_exit = -int(signal.__dict__[expected_exit])
+    res["expected_returncode"] = expected_exit
+
     if trace:
         trace.seek(0)
         res["trace"] = trace.read().decode("UTF-8")

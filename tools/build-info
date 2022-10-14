@@ -71,7 +71,7 @@ elif command -v git > /dev/null && git rev-parse --show-toplevel > /dev/null; th
     fi
 else
     echo 1>&2 "unable to figure out build context"
-exit 1
+    exit 1
 fi
 
 kv "PROJECT" "$(basename "$GIT_REPO")"

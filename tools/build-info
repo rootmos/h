@@ -38,11 +38,13 @@ EOF
 
 if [ -n "${CI-}" ]; then
     GIT_REF=$GITHUB_SHA
+    GIT_DIRTY= # HACK: assumption
     kv "GITHUB_REPO" "$GITHUB_REPOSITORY"
     REPO_URL=$GITHUB_SERVER_URL/$GITHUB_REPOSITORY
     SOURCE_TARBALL_URL=$REPO_URL/archive/$GIT_REF.zip
 elif command -v git > /dev/null; then
     GIT_REF=$(git rev-parse HEAD)
+    GIT_DIRTY=$([ -n "$(git status --porcelain)" ] && echo "1")
 
     ORIGIN=$(git remote get-url origin)
     if grep -cq "^git@github.com:" <<< "$ORIGIN"; then
@@ -57,5 +59,6 @@ elif command -v git > /dev/null; then
 fi
 
 kv "GIT_REF" "$GIT_REF"
+kv "GIT_DIRTY" "$GIT_DIRTY"
 kv "REPO_URL" "$REPO_URL"
 kv "SOURCE_TARBALL_URL" "$SOURCE_TARBALL_URL"

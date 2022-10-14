@@ -2,12 +2,12 @@
 
 set -o nounset -o pipefail -o errexit
 
-SCRIPT_DIR=$(readlink -f "$0" | xargs dirname)
+TOOLS=${TOOLS-$(readlink -f "$0" | xargs dirname)}
 
 TEST_ROOT=${TEST_ROOT-$PWD}
 PARENT_PROJECT=${PARENT_PROJECT-$(basename "$TEST_ROOT")}
 export TEST_METAFILE=${TEST_METAFILE-test.json}
-TEST_RUNNER=${TEST_RUNNER-$SCRIPT_DIR/test-runner}
+TEST_RUNNER=${TEST_RUNNER-$TOOLS/test-runner}
 TEST_OUTPUT_DIR=
 TEST_RESULT_BUNDLE=${TEST_RESULT_BUNDLE-}
 while getopts "c:r:o:-" OPT; do
@@ -20,6 +20,8 @@ while getopts "c:r:o:-" OPT; do
     esac
 done
 shift $((OPTIND-1))
+
+. <("$TOOLS/build-info" -e)
 
 DEFAULT="\033[0m"
 BLACK="\033[30m"
@@ -68,9 +70,9 @@ done
 cat > "$BUNDLE_ROOT/run.json" <<EOF
 {
     "when": "$(date -Is)",
-    "git": {
-        "ref": "$(git rev-parse HEAD)",
-        "dirty": $([ -n "$(git status --porcelain)" ] && echo true || echo false)
+    "git":
+        "ref": "${BUILD_GIT_REF}",
+        "dirty": $([ -n "$BUILD_GIT_DIRTY" ] && echo true || echo false)
     },
     "n": $N, "s": $S, "f": $F
 }

@@ -64,5 +64,5 @@ jobs:
         tee -a /etc/sudoers.d/arch <<< "arch ALL = NOPASSWD: $(which pacman)"
 
     - name: Build package
-      run: sudo -u arch makepkg -si
+      run: sudo -u arch makepkg -si --noconfirm
       working-directory: build/arch

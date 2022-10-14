@@ -1,0 +1,40 @@
+#!/bin/bash
+
+set -o nounset -o pipefail -o errexit
+
+SCRIPT_DIR=$(readlink -f "$0" | xargs dirname)
+ROOT=${ROOT-$SCRIPT_DIR/..}
+VERSION_FILE=${VERSION_FILE-$ROOT/.version}
+
+OUTPUT=${OUTPUT-/dev/stdout}
+ACTION=c
+while getopts "o:i-" OPT; do
+    case $OPT in
+        o) OUTPUT=$OPTARG ;;
+        i) ACTION=i ;;
+        -) break ;;
+        ?) exit 2 ;;
+    esac
+done
+shift $((OPTIND-1))
+
+if [ "$ACTION" = "i" ]; then
+    echo "$VERSION_FILE" > "$OUTPUT"
+    exit 0
+fi
+
+cp /dev/null "$OUTPUT"
+"$SCRIPT_DIR/build-info" -c >> "$OUTPUT"
+cat <<EOF >> "$OUTPUT"
+
+static void print_version(const char* prog)
+{
+    printf("%s (%s.%s.%s)\\n",
+           prog,
+           BUILD_VERSION_MAJOR,
+           BUILD_VERSION_MINOR,
+           BUILD_VERSION_PATCH);
+    printf("url %s\\n", BUILD_REPO_URL);
+    printf("gitref %s%s\\n", BUILD_GIT_REF, BUILD_GIT_DIRTY[0] ? " (dirty)" : "");
+}
+EOF

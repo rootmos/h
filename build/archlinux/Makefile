@@ -1,6 +1,6 @@
-PKGBUILD: PKGBUILD.template
+PKGBUILD: mk PKGBUILD.template
 	./mk
 
 .PHONY: clean
 clean:
-	rm -f PKGBUILD
+	rm -rf PKGBUILD pkg src *.zst *.zip

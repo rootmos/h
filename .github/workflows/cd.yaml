@@ -51,8 +51,17 @@ jobs:
     container:
       image: archlinux:latest
     steps:
+    - name: Install base dependencies
+      run: pacman -Suy --noconfirm sudo fakeroot binutils
+
     - name: Check out repository code
       uses: actions/checkout@v3
 
+    - name: Create an unprivileged user
+      run: |
+        useradd -m arch
+        chown -R arch:arch .
+
     - name: Build package
-      run: (cd build/arch && makepkg)
+      run: sudo -u arch makepkg
+      working-directory: build/arch

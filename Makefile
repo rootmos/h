@@ -1,5 +1,5 @@
 PROJECTS = hlua hpython
-TARGETS = build clean test
+TARGETS = build clean test install
 
 define mk_rule
 .PHONY: $(strip $(1)).$(strip $(2))

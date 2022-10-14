@@ -2,24 +2,28 @@
 
 set -o nounset -o pipefail -o errexit
 
-SCRIPT_DIR=$(readlink -f "$0" | xargs dirname)
+TOOLS=${TOOLS-$(readlink -f "$0" | xargs dirname)}
 
 TEST_ROOT=${TEST_ROOT-$PWD}
 PARENT_PROJECT=${PARENT_PROJECT-$(basename "$TEST_ROOT")}
 export TEST_METAFILE=${TEST_METAFILE-test.json}
-TEST_RUNNER=${TEST_RUNNER-$SCRIPT_DIR/test-runner}
+TEST_RUNNER=${TEST_RUNNER-$TOOLS/test-runner}
 TEST_OUTPUT_DIR=
 TEST_RESULT_BUNDLE=${TEST_RESULT_BUNDLE-}
-while getopts "c:r:o:-" OPT; do
+VERBOSE=${VERBOSE-}
+while getopts "c:r:o:v-" OPT; do
     case $OPT in
         c) TEST_ROOT=$OPTARG ;;
         r) TEST_RESULT_BUNDLE=$OPTARG ;;
         o) TEST_OUTPUT_DIR=$OPTARG ;;
+        v) VERBOSE=1 ;;
         -) break ;;
         ?) exit 2 ;;
     esac
 done
 shift $((OPTIND-1))
+
+. <("$TOOLS/build-info" -e || cat /dev/null)
 
 DEFAULT="\033[0m"
 BLACK="\033[30m"
@@ -63,16 +67,27 @@ for t in "${TESTS[@]}"; do
     fi
 
     echo "$PROJECT $NAME"
+
+    if ([ "$VERBOSE" = "1" ] && [ "$(jq -r .result "$RUN")" != "true" ]) \
+        || [ "$VERBOSE" = "2" ]; then
+        sed 's/^/       /' < "$RUN"
+    fi
 done
 
 cat > "$BUNDLE_ROOT/run.json" <<EOF
 {
     "when": "$(date -Is)",
-    "git": {
-        "ref": "$(git rev-parse HEAD)",
-        "dirty": $([ -n "$(git status --porcelain)" ] && echo true || echo false)
-    },
     "n": $N, "s": $S, "f": $F
+EOF
+if [ -n "${BUILD_GIT_REF-}" ]; then
+cat >> "$BUNDLE_ROOT/run.json" <<EOF
+    "git":
+        "ref": "${BUILD_GIT_REF}",
+        "dirty": $([ -n "$BUILD_GIT_DIRTY" ] && echo true || echo false)
+    },
+EOF
+fi
+cat > "$BUNDLE_ROOT/run.json" <<EOF
 }
 EOF
 

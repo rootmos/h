@@ -2,7 +2,7 @@ name: Continuous Dissemination
 on: [ push ]
 
 jobs:
-  build:
+  ubuntu:
     runs-on: ubuntu-22.04
     steps:
     - name: Check out repository code
@@ -36,7 +36,7 @@ jobs:
           hpython/hpython.c
 
     - name: Test
-      run: tools/test-harness -o.
+      run: tools/test-harness -vo.
 
     - name: Archive test results
       uses: actions/upload-artifact@v3
@@ -45,3 +45,43 @@ jobs:
         name: tests.${{github.sha}}
         retention-days: 7
         path: "*-tests-*.tar.gz"
+
+  archlinux:
+    runs-on: ubuntu-22.04
+    container:
+      image: archlinux:latest
+    env:
+      UNPRIVILEGED: arch
+    steps:
+    - name: Install minimal dependencies
+      run: pacman -Suy --noconfirm sudo fakeroot binutils which wget
+
+    - name: Check out repository code
+      uses: actions/checkout@v3
+
+    - name: Create an unprivileged user
+      run: |
+        useradd -m $UNPRIVILEGED
+        chown -R $UNPRIVILEGED:$UNPRIVILEGED .
+        tee -a /etc/sudoers.d/$UNPRIVILEGED <<< "$UNPRIVILEGED ALL = NOPASSWD: $(which pacman)"
+
+    - name: Create PKGBUILD
+      run: ./mk
+      working-directory: build/archlinux
+
+    - name: Build package
+      run: sudo -u $UNPRIVILEGED env VERBOSE=1 makepkg -si --noconfirm
+      working-directory: build/archlinux
+
+    - name: Test system installation
+      run: |
+        make -C hlua test EXE=$(which hlua) VERBOSE=2
+        make -C hpython test EXE=$(which hpython) VERBOSE=2
+
+    - name: Archive PKGBUILD
+      uses: actions/upload-artifact@v3
+      if: success() || failure()
+      with:
+        name: PKGBUILD.${{github.sha}}
+        retention-days: 7
+        path: "build/archlinux/PKGBUILD"

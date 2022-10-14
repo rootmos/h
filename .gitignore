@@ -1,3 +1,5 @@
+.build.env
+
 *-tests-*.tar.gz
 
 version.c

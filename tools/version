@@ -24,8 +24,8 @@ if [ "$ACTION" = "i" ]; then
 fi
 
 cp /dev/null "$OUTPUT"
-if "$SCRIPT_DIR/build-info" -c >> "$OUTPUT"; then
-    cat <<EOF >> "$OUTPUT"
+"$SCRIPT_DIR/build-info" -c >> "$OUTPUT"
+cat <<EOF >> "$OUTPUT"
 
 static void print_version(const char* prog)
 {
@@ -38,11 +38,3 @@ static void print_version(const char* prog)
     printf("gitref %s%s\\n", BUILD_GIT_REF, BUILD_GIT_DIRTY[0] ? " (dirty)" : "");
 }
 EOF
-else
-    cat <<EOF >> "$OUTPUT"
-static void print_version(const char* prog)
-{
-    printf("%s (unknown)\\n", prog);
-}
-EOF
-fi

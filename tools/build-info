@@ -56,6 +56,10 @@ elif command -v git > /dev/null; then
         echo 1>&2 "unable to figure out repository url"
         exit 1
     fi
+else
+    echo 1>&2 "unable to figure out build context"
+    env 1>&2
+    exit 1
 fi
 
 kv "GIT_REF" "$GIT_REF"

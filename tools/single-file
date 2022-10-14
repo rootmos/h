@@ -2,6 +2,7 @@
 
 set -o nounset -o pipefail -o errexit
 
+TOOLS=${TOOLS-$(readlink -f "$0" | xargs dirname)}
 LIBS=()
 OUTPUT=${OUTPUT-/dev/stdout}
 VERSION=${VERSION-}
@@ -18,14 +19,16 @@ while getopts "l:o:t-" OPT; do
 done
 shift $((OPTIND-1))
 
+. <("$TOOLS/build-info" -e || cat /dev/null)
+
 INPUT=$1
 
 BASE_DIR=$(dirname "$INPUT")
 if [ -z "$VERSION" ]; then
-    if command -v git > /dev/null; then
-        VERSION=$(git -C "$BASE_DIR" rev-parse HEAD)
+    if [ -n "${BUILD_GIT_REF-}" ]; then
+        VERSION=$BUILD_GIT_REF
     else
-        VERSION=unknown # TODO: proper build info generator
+        VERSION=unknown
     fi
 fi
 

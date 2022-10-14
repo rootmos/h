@@ -37,7 +37,7 @@ EOF
 }
 
 if [ -n "${CI-}" ]; then
-    kv "GIT_REF" "$GITHUB_REF"
+    kv "GIT_REF" "$GITHUB_SHA"
     kv "GITHUB_REPO" "$GITHUB_REPOSITORY"
     REPO_URL=$GITHUB_SERVER_URL/$GITHUB_REPOSITORY
     kv "REPO_URL" "$REPO_URL"

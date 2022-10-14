@@ -52,7 +52,7 @@ jobs:
       image: archlinux:latest
     steps:
     - name: Install minimal dependencies
-      run: pacman -Suy --noconfirm sudo fakeroot binutils which
+      run: pacman -Suy --noconfirm sudo fakeroot binutils which wget
 
     - name: Check out repository code
       uses: actions/checkout@v3
@@ -70,3 +70,11 @@ jobs:
     - name: Build package
       run: sudo -u arch makepkg -si --noconfirm
       working-directory: build/arch
+
+    - name: Archive PKGBUILD
+      uses: actions/upload-artifact@v3
+      if: success() || failure()
+      with:
+        name: PKGBUILD.${{github.sha}}
+        retention-days: 7
+        path: "build/arch/PKGBUILD"

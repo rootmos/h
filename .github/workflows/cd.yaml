@@ -45,3 +45,14 @@ jobs:
         name: tests.${{github.sha}}
         retention-days: 7
         path: "*-tests-*.tar.gz"
+
+  archlinux:
+    runs-on: ubuntu-latest
+    container:
+      image: archlinux:latest
+    steps:
+    - name: Check out repository code
+      uses: actions/checkout@v3
+
+    - name: Build package
+      run: (cd build/arch && makepkg)

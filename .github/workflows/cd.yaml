@@ -63,5 +63,5 @@ jobs:
         chown -R arch:arch .
 
     - name: Build package
-      run: sudo -u arch makepkg
+      run: sudo -u arch makepkg -s
       working-directory: build/arch

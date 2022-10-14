@@ -21,7 +21,7 @@ while getopts "c:r:o:-" OPT; do
 done
 shift $((OPTIND-1))
 
-. <("$TOOLS/build-info" -e)
+. <("$TOOLS/build-info" -e || cat /dev/null)
 
 DEFAULT="\033[0m"
 BLACK="\033[30m"
@@ -70,11 +70,17 @@ done
 cat > "$BUNDLE_ROOT/run.json" <<EOF
 {
     "when": "$(date -Is)",
+    "n": $N, "s": $S, "f": $F
+EOF
+if [ -n "${BUILD_GIT_REF-}" ]; then
+cat >> "$BUNDLE_ROOT/run.json" <<EOF
     "git":
         "ref": "${BUILD_GIT_REF}",
         "dirty": $([ -n "$BUILD_GIT_DIRTY" ] && echo true || echo false)
     },
-    "n": $N, "s": $S, "f": $F
+EOF
+fi
+cat > "$BUNDLE_ROOT/run.json" <<EOF
 }
 EOF
 

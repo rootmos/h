@@ -71,6 +71,11 @@ jobs:
       run: sudo -u arch env VERBOSE=1 makepkg -si --noconfirm
       working-directory: build/arch
 
+    - name: Test system installation
+      run: |
+        make -C hlua test EXE=$(which hlua) VERBOSE=2
+        make -C hpython test EXE=$(which hpython) VERBOSE=2
+
     - name: Archive PKGBUILD
       uses: actions/upload-artifact@v3
       if: success() || failure()

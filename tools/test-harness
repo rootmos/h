@@ -68,7 +68,8 @@ for t in "${TESTS[@]}"; do
 
     echo "$PROJECT $NAME"
 
-    if [ -n "$VERBOSE" ] && [ "$(jq -r .result "$RUN")" != "true" ]; then
+    if ([ "$VERBOSE" = "1" ] && [ "$(jq -r .result "$RUN")" != "true" ]) \
+        || [ "$VERBOSE" = "2" ]; then
         sed 's/^/       /' < "$RUN"
     fi
 done

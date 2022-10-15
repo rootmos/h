@@ -38,9 +38,14 @@ jobs:
           unzip stand-alone-c-files.*.zip
           unzip PKGBUILD.*.zip
 
-      - uses: actions/github-script@v6
-        with:
-          script: console.log(context)
-
       - name: Check out repository code
         uses: actions/checkout@v3
+
+      - name: Create release
+        run: |
+          gh release create \
+            --draft --target=${{github.sha}} \
+            "v$(tools/version -p)" \
+            PKGBUILD hlua/hlua.c hpython/hpython.c
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

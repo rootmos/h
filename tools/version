@@ -8,10 +8,12 @@ VERSION_FILE=${VERSION_FILE-$ROOT/.version}
 
 OUTPUT=${OUTPUT-/dev/stdout}
 ACTION=c
-while getopts "o:i-" OPT; do
+while getopts "o:cip-" OPT; do
     case $OPT in
         o) OUTPUT=$OPTARG ;;
+        c) ACTION=c ;;
         i) ACTION=i ;;
+        p) ACTION=p ;;
         -) break ;;
         ?) exit 2 ;;
     esac
@@ -20,6 +22,10 @@ shift $((OPTIND-1))
 
 if [ "$ACTION" = "i" ]; then
     echo "$VERSION_FILE" > "$OUTPUT"
+    exit 0
+elif [ "$ACTION" = "p" ]; then
+    . <("$SCRIPT_DIR/build-info" -e)
+    echo "$BUILD_VERSION" > "$OUTPUT"
     exit 0
 fi
 

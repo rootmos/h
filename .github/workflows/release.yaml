@@ -10,6 +10,14 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
     steps:
+      - name: Check out repository code
+        uses: actions/checkout@v3
+
+      - run: |
+          ARTIFACTS=$GITHUB_WORKSPACE/artifacts
+          mkdir -p "$ARTIFACTS"
+          echo "ARTIFACTS=$ARTIFACTS" >> "$GITHUB_ENV"
+
       - name: Download artifacts
         uses: actions/github-script@v6
         with:
@@ -20,7 +28,7 @@ jobs:
               run_id: context.payload.workflow_run.id,
             });
             let matchedArtifacts = allArtifacts.data.artifacts.filter((artifact) => {
-              return artifact.name.startsWith("stand-alone-c-files") || artifact.name.startsWith("PKGBUILD")
+              return artifact.name.startsWith("dist")
             });
             let fs = require('fs');
             for(const artifact of matchedArtifacts) {
@@ -30,22 +38,11 @@ jobs:
                 artifact_id: artifact.id,
                 archive_format: 'zip',
               });
-              fs.writeFileSync(`${process.env.GITHUB_WORKSPACE}/${artifact.name}.zip`, Buffer.from(download.data));
+              console.log(`${process.env.ARTIFACTS}/${artifact.name}.zip`)
+              fs.writeFileSync(`${process.env.ARTIFACTS}/${artifact.name}.zip`, Buffer.from(download.data));
             }
 
-      - name: Unpack artifacts
-        run: |
-          unzip stand-alone-c-files.*.zip
-          unzip PKGBUILD.*.zip
-
-      - name: Check out repository code
-        uses: actions/checkout@v3
-
       - name: Create release
-        run: |
-          gh release create \
-            --draft --target=${{github.sha}} \
-            "v$(tools/version -p)" \
-            PKGBUILD hlua/hlua.c hpython/hpython.c
+        run: build/release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

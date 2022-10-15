@@ -1,7 +1,7 @@
 name: Release
 on:
   workflow_run:
-    workflows: [ Test ]
+    workflows: [ Build and test ]
     types: [ completed ]
     branches: [ master ]
 
@@ -10,15 +10,23 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
     steps:
-      - name: Check out repository code
+      - name: Checkout repository code
         uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
 
-      - run: |
+      - name: Check version
+        run: (tools/version -C && echo "RELEASE=1" || echo "RELEASE=") >> "$GITHUB_ENV"
+
+      - name: Create artifacts directory
+        if: ${{env.RELEASE == '1'}}
+        run: |
           ARTIFACTS=$GITHUB_WORKSPACE/artifacts
           mkdir -p "$ARTIFACTS"
           echo "ARTIFACTS=$ARTIFACTS" >> "$GITHUB_ENV"
 
       - name: Download artifacts
+        if: ${{env.RELEASE == '1'}}
         uses: actions/github-script@v6
         with:
           script: |
@@ -43,6 +51,7 @@ jobs:
             }
 
       - name: Create release
+        if: ${{env.RELEASE == '1'}}
         run: build/release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

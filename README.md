@@ -1,4 +1,5 @@
 # *h*ardened script host programs
+[![Build and test](https://github.com/rootmos/h/actions/workflows/build-test.yaml/badge.svg)](https://github.com/rootmos/h/actions/workflows/build-test.yaml)
 
 Unprivileged sandboxing of popular script languages.
 

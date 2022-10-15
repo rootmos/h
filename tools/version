@@ -4,14 +4,15 @@ set -o nounset -o pipefail -o errexit
 
 SCRIPT_DIR=$(readlink -f "$0" | xargs dirname)
 ROOT=${ROOT-$SCRIPT_DIR/..}
-VERSION_FILE=${VERSION_FILE-$ROOT/.version}
+VERSION_FILE=${VERSION_FILE-.version}
 
 OUTPUT=${OUTPUT-/dev/stdout}
 ACTION=c
-while getopts "o:cip-" OPT; do
+while getopts "o:cCip-" OPT; do
     case $OPT in
         o) OUTPUT=$OPTARG ;;
         c) ACTION=c ;;
+        C) ACTION=compare ;;
         i) ACTION=i ;;
         p) ACTION=p ;;
         -) break ;;
@@ -21,12 +22,24 @@ done
 shift $((OPTIND-1))
 
 if [ "$ACTION" = "i" ]; then
-    echo "$VERSION_FILE" > "$OUTPUT"
+    echo "$ROOT/$VERSION_FILE" > "$OUTPUT"
     exit 0
 elif [ "$ACTION" = "p" ]; then
     . <("$SCRIPT_DIR/build-info" -e)
     echo "$BUILD_VERSION" > "$OUTPUT"
     exit 0
+elif [ "$ACTION" = "compare" ]; then
+    set +o errexit
+    diff -c3 <(git show HEAD^:"$VERSION_FILE") "$ROOT/$VERSION_FILE" 1>&2 
+    EC=$?
+    set -o errexit
+    if [ "$EC" -eq 0 ]; then
+       echo 1>&2 "version not updated"
+       exit 1
+    else
+       echo 1>&2 "version has changed"
+       exit 0
+    fi
 fi
 
 cp /dev/null "$OUTPUT"

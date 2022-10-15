@@ -1,4 +1,4 @@
-name: Continuous Dissemination
+name: Test
 on: [ push ]
 
 jobs:

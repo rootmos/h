@@ -1,0 +1,28 @@
+#!/bin/bash
+
+set -o nounset -o pipefail -o errexit
+
+SCRIPT_DIR=$(readlink -f "$0" | xargs dirname)
+TOOLS=${TOOLS-$(readlink -f "$SCRIPT_DIR/../tools")}
+
+ARTIFACTS=${ARTIFACTS-$1}
+
+ASSETS=$(mktemp -d)
+trap 'rm -rf $ASSETS' EXIT
+
+if [ -f "$ARTIFACTS" ]; then
+    unzip "$ARTIFACTS" -d "$ASSETS"
+elif [ -d "$ARTIFACTS" ]; then
+    find "$ARTIFACTS" -iname "*.zip" -exec unzip {} -d "$ASSETS" \;
+else
+    echo 1>&2 "unable to process: $ARTIFACTS"
+    file "$ARTIFACTS" 1>&2
+    exit 1
+fi
+
+. <("$TOOLS/build-info" -e)
+
+gh release create \
+    --target=$BUILD_GIT_REF \
+    "v$BUILD_VERSION" \
+    "$ASSETS"/*

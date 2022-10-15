@@ -1,9 +1,11 @@
-name: Continuous Dissemination
+name: Test
 on: [ push ]
 
 jobs:
   ubuntu:
     runs-on: ubuntu-22.04
+    env:
+      ARCH: ubuntu2204
     steps:
     - name: Check out repository code
       uses: actions/checkout@v3
@@ -26,14 +28,15 @@ jobs:
     - name: Build
       run: make build LUA_PKG=lua54
 
-    - name: Archive bundled stand-alone c-files
+    - name: Bundle distribution files
+      run: build/dist -ddist
+
+    - name: Archive distribution files
       uses: actions/upload-artifact@v3
       with:
-        name: stand-alone-c-files.${{github.sha}}
+        name: dist.${{github.sha}}.${{env.ARCH}}
         retention-days: 7
-        path: |
-          hlua/hlua.c
-          hpython/hpython.c
+        path: dist
 
     - name: Test
       run: tools/test-harness -vo.
@@ -52,6 +55,7 @@ jobs:
       image: archlinux:latest
     env:
       UNPRIVILEGED: arch
+      ARCH: archlinux
     steps:
     - name: Install minimal dependencies
       run: pacman -Suy --noconfirm sudo fakeroot binutils which wget
@@ -69,19 +73,28 @@ jobs:
       run: ./mk
       working-directory: build/archlinux
 
+    - name: Archive PKGBUILD
+      uses: actions/upload-artifact@v3
+      with:
+        name: PKGBUILD.${{github.sha}}
+        retention-days: 7
+        path: "build/archlinux/PKGBUILD"
+
     - name: Build package
       run: sudo -u $UNPRIVILEGED env VERBOSE=1 makepkg -si --noconfirm
       working-directory: build/archlinux
+
+    - name: Bundle distribution files
+      run: build/dist -ddist
+
+    - name: Archive distribution files
+      uses: actions/upload-artifact@v3
+      with:
+        name: dist.${{github.sha}}.${{env.ARCH}}
+        retention-days: 7
+        path: dist
 
     - name: Test system installation
       run: |
         make -C hlua test EXE=$(which hlua) VERBOSE=2
         make -C hpython test EXE=$(which hpython) VERBOSE=2
-
-    - name: Archive PKGBUILD
-      uses: actions/upload-artifact@v3
-      if: success() || failure()
-      with:
-        name: PKGBUILD.${{github.sha}}
-        retention-days: 7
-        path: "build/archlinux/PKGBUILD"

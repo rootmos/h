@@ -37,4 +37,10 @@ jobs:
         run: |
           unzip stand-alone-c-files.*.zip
           unzip PKGBUILD.*.zip
-      - run: find .
+
+      - uses: actions/github-script@v6
+        with:
+          script: console.log(context)
+
+      - name: Check out repository code
+        uses: actions/checkout@v3

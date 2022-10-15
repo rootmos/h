@@ -6,3 +6,5 @@ version.c
 *.bpfc
 *.files
 *.filesc
+
+dist

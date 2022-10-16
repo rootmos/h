@@ -16,8 +16,10 @@ jobs:
       env:
         cache-name: cache-tools
       with:
-        path: tools/bpf/bpf_*
-        key: ${{runner.os}}-${{env.cache-name}}-${{hashFiles('tools/**/build')}}
+        path: |
+          tools/bpf/bpf_*
+          tools/lib
+        key: ${{runner.os}}-${{env.cache-name}}-${{hashFiles('tools/lib.c')}}-${{hashFiles('tools/**/build')}}
     - if: ${{steps.cache-tools.outputs.cache-hit != 'true'}}
       name: Build tools
       run: make -C tools

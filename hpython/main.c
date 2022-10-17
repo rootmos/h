@@ -1,23 +1,10 @@
-#include <linux/seccomp.h>
-#include <linux/filter.h>
-
 #define PY_SSIZE_T_CLEAN
 #include <Python.h>
 
 #define LIBR_IMPLEMENTATION
 #include "r.h"
 
-void seccomp_apply_filter()
-{
-    struct sock_filter filter[] = {
-#include "filter.bpfc"
-    };
-
-    struct sock_fprog p = { .len = LENGTH(filter), .filter = filter };
-    int r = prctl(PR_SET_SECCOMP, SECCOMP_MODE_FILTER, &p);
-    CHECK(r, "prctl(PR_SET_SECCOMP, SECCOMP_MODE_FILTER)");
-}
-
+#include "seccomp.c"
 #include "capabilities.c"
 
 struct options {
@@ -82,6 +69,7 @@ int main(int argc, char* argv[])
     wchar_t *pgr = Py_DecodeLocale(argv[0], NULL);
     CHECK_NOT(pgr, NULL, "Py_DecodeLocale(%s)", argv[0]);
     Py_SetProgramName(pgr);
+    PyMem_RawFree(pgr);
 
     // TODO: error handling
     PyPreConfig preconfig;
@@ -103,8 +91,6 @@ int main(int argc, char* argv[])
 
     Py_FinalizeEx();
     CHECK_NOT(r, -1, "Py_FinalizeEx()");
-
-    PyMem_RawFree(pgr);
 
     return 0;
 }

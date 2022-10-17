@@ -1,7 +1,4 @@
 #include <libgen.h>
-#include <sys/prctl.h>
-#include <linux/seccomp.h>
-#include <linux/filter.h>
 
 #include <lua.h>
 #include <lualib.h>
@@ -10,16 +7,8 @@
 #define LIBR_IMPLEMENTATION
 #include "r.h"
 
-void seccomp_apply_filter()
-{
-    struct sock_filter filter[] = {
-#include "filter.bpfc"
-    };
-
-    struct sock_fprog p = { .len = LENGTH(filter), .filter = filter };
-    int r = prctl(PR_SET_SECCOMP, SECCOMP_MODE_FILTER, &p);
-    CHECK(r, "prctl(PR_SET_SECCOMP, SECCOMP_MODE_FILTER)");
-}
+#include "seccomp.c"
+#include "capabilities.c"
 
 void openlibs(struct lua_State* L)
 {
@@ -61,8 +50,6 @@ void remove_stdlib_function(struct lua_State* L,
 
     lua_stack_neutral_end(L);
 }
-
-#include "capabilities.c"
 
 #define DEFAULT_TMP "/tmp"
 

@@ -43,7 +43,7 @@ expression() {
         trap 'rm -rf $TMP' EXIT
 
         src "$1" > "$TMP/a.c"
-        cc -o "$TMP/a" "$TMP/a.c"
+        cc -w -o "$TMP/a" "$TMP/a.c"
         "$TMP/a"
     fi
 }

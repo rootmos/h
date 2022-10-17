@@ -30,7 +30,7 @@ elif [ "$ACTION" = "p" ]; then
     exit 0
 elif [ "$ACTION" = "compare" ]; then
     set +o errexit
-    diff -c3 <(git show HEAD^:"$VERSION_FILE") "$ROOT/$VERSION_FILE" 1>&2 
+    diff -c3 <(git show HEAD^:"$VERSION_FILE") "$ROOT/$VERSION_FILE" 1>&2
     EC=$?
     set -o errexit
     if [ "$EC" -eq 0 ]; then
@@ -55,5 +55,15 @@ static void print_version(const char* prog)
            BUILD_VERSION_PATCH);
     printf("url %s\\n", BUILD_REPO_URL);
     printf("gitref %s%s\\n", BUILD_GIT_REF, BUILD_GIT_DIRTY[0] ? " (dirty)" : "");
+
+#ifdef PY_VERSION
+    printf("python %s\\n", PY_VERSION);
+#endif
+
+#ifdef LUA_VERSION_MAJOR
+    printf("lua %s.%s.%s\\n", LUA_VERSION_MAJOR, LUA_VERSION_MINOR, LUA_VERSION_RELEASE);
+#endif
+
+    printf("buildtime %s\\n", BUILD_TIME);
 }
 EOF

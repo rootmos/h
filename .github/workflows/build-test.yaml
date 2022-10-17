@@ -4,11 +4,16 @@ on: [ push ]
 jobs:
   ubuntu:
     runs-on: ubuntu-22.04
+    container:
+      image: ubuntu:22.04
     env:
       ARCH: ubuntu2204
     steps:
     - name: Check out repository code
       uses: actions/checkout@v3
+
+    - name: Install dependencies
+      run: build/deps
 
     - name: Cache tools
       id: cache-tools
@@ -19,13 +24,10 @@ jobs:
         path: |
           tools/bpf/bpf_*
           tools/lib
-        key: ${{runner.os}}-${{env.cache-name}}-${{hashFiles('tools/lib.c')}}-${{hashFiles('tools/**/build')}}
+        key: ${{env.ARCH}}-${{env.cache-name}}-${{hashFiles('tools/lib.c')}}-${{hashFiles('tools/**/build')}}
     - if: ${{steps.cache-tools.outputs.cache-hit != 'true'}}
       name: Build tools
       run: make tools
-
-    - name: Install dependencies
-      run: sudo build/deps
 
     - name: Build
       run: make build LUA_PKG=lua54

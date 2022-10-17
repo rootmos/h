@@ -64,5 +64,6 @@ static void print_version(const char* prog)
     printf("lua %s.%s.%s\\n", LUA_VERSION_MAJOR, LUA_VERSION_MINOR, LUA_VERSION_RELEASE);
 #endif
 
+    printf("buildtime %s\\n", BUILD_TIME);
 }
 EOF

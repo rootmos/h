@@ -83,3 +83,5 @@ kv "GIT_REF" "$GIT_REF"
 kv "GIT_DIRTY" "$GIT_DIRTY"
 kv "REPO_URL" "$REPO_URL"
 kv "SOURCE_TARBALL_URL" "$SOURCE_TARBALL_URL"
+
+kv "TIME" "$(date -Is)"

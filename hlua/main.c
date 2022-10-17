@@ -188,7 +188,15 @@ int main(int argc, char* argv[])
     }
 
     r = lua_pcall(L, 0, LUA_MULTRET, 0);
-    CHECK_LUA(L, r, "lua_pcall");
+    switch(r) {
+    case LUA_OK: break;
+    case LUA_ERRRUN:
+        dprintf(2, "runtime error: %s\n", lua_tostring(L, -1));
+        // TODO: stack trace
+        exit(2);
+    default:
+        CHECK_LUA(L, r, "lua_pcall");
+    }
 
     lua_close(L);
 

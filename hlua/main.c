@@ -178,7 +178,14 @@ int main(int argc, char* argv[])
     remove_stdlib_function(L, "package", "loadlib");
 
     r = luaL_loadfile(L, o.input);
-    CHECK_LUA(L, r, "luaL_loadfile(%s)", o.input);
+    switch(r) {
+    case LUA_OK: break;
+    case LUA_ERRSYNTAX:
+        dprintf(2, "syntax error: %s\n", lua_tostring(L, -1));
+        exit(2);
+    default:
+        CHECK_LUA(L, r, "luaL_loadfile(%s)", o.input);
+    }
 
     r = lua_pcall(L, 0, LUA_MULTRET, 0);
     CHECK_LUA(L, r, "lua_pcall");

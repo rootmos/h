@@ -4,8 +4,8 @@ import argparse
 import logging
 import os
 import sys
+import subprocess
 
-from ctypes import *
 from ctypes.util import find_library
 
 def python_site():
@@ -16,24 +16,15 @@ def python_site():
         else:
             logger.debug(f"disregarding site: {p}")
 
-# https://stackoverflow.com/a/35683698
-libdl = cdll.LoadLibrary(find_library('dl'))
-class LINKMAP(Structure):
-    _fields_ = [ ("l_addr", c_void_p), ("l_name", c_char_p) ]
-dlinfo = libdl.dlinfo
-dlinfo.argtypes  = c_void_p, c_int, c_void_p
-dlinfo.restype = c_int
-
 def lib(l):
     logger.debug(f"resolving library: {l}")
-    ln = find_library(l)
-    logger.debug(f"resolving library: {l} -> {ln}")
-    lib = cdll.LoadLibrary(ln)
-    p = c_void_p()
-    dlinfo(lib._handle, 2, byref(p))
+    resolved = find_library(l)
+    logger.debug(f"resolving library: {l} -> {resolved}")
 
-    path = os.fsdecode(cast(p, POINTER(LINKMAP)).contents.l_name)
-    logger.debug(f"resolved library: {l} -> {ln} -> {path}")
+    lib = os.path.join(os.path.dirname(os.path.realpath(__file__)), "lib")
+    p = subprocess.run([lib, resolved], check=True, capture_output=True, text=True)
+    path = p.stdout.splitlines()[0]
+    logger.debug(f"resolving library: {l} -> {resolved} -> {path}")
 
     return path
 

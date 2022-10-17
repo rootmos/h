@@ -2,6 +2,25 @@
 
 set -o nounset -o pipefail -o errexit
 
+PREFIX=${1-$PWD}
+
+TOOLS=("bpf_asm" "bpf_dbg")
+
+BUILD_TOOLS=()
+for t in "${TOOLS[@]}"; do
+    if [ -e "$PREFIX/$t" ]; then
+        true
+    elif command -v "$t" > /dev/null; then
+        cp "$(which "$t")" "$PREFIX/$t"
+    else
+        BUILD_TOOLS+=("$t")
+    fi
+done
+
+if [ "${#BUILD_TOOLS[@]}" -eq 0 ]; then
+    exit 0
+fi
+
 SCRIPT_DIR=$(readlink -f "$0" | xargs dirname)
 . "$SCRIPT_DIR/../fetch.sh"
 
@@ -22,12 +41,9 @@ tar -xvf "$TARBALL" -C "$ROOT" --strip-components=1 \
     "linux-$VER/tools/bpf" \
     "linux-$VER/tools/scripts"
 
-TOOLS=("bpf_asm" "bpf_dbg")
-
 make -C "$ROOT/tools/bpf" "${TOOLS[@]}"
 
-PREFIX=${1-$PWD}
 mkdir -p "$PREFIX"
-for t in "${TOOLS[@]}"; do
+for t in "${BUILD_TOOLS[@]}"; do
     cp -v "$ROOT/tools/bpf/$t" "$PREFIX"
 done

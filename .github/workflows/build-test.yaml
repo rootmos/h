@@ -16,11 +16,13 @@ jobs:
       env:
         cache-name: cache-tools
       with:
-        path: tools/bpf/bpf_*
-        key: ${{runner.os}}-${{env.cache-name}}-${{hashFiles('tools/**/build')}}
+        path: |
+          tools/bpf/bpf_*
+          tools/lib
+        key: ${{runner.os}}-${{env.cache-name}}-${{hashFiles('tools/lib.c')}}-${{hashFiles('tools/**/build')}}
     - if: ${{steps.cache-tools.outputs.cache-hit != 'true'}}
       name: Build tools
-      run: make -C tools
+      run: make tools
 
     - name: Install dependencies
       run: sudo build/deps
@@ -39,13 +41,13 @@ jobs:
         path: dist
 
     - name: Test
-      run: tools/test-harness -vo.
+      run: tools/test-harness -o.
 
     - name: Archive test results
       uses: actions/upload-artifact@v3
       if: success() || failure()
       with:
-        name: tests.${{github.sha}}
+        name: tests.${{github.sha}}.${{env.ARCH}}
         retention-days: 7
         path: "*-tests-*.tar.gz"
 
@@ -55,6 +57,7 @@ jobs:
       image: archlinux:latest
     env:
       UNPRIVILEGED: arch
+      TEST_OUTPUT_DIR: /tmp/tests
       ARCH: archlinux
     steps:
     - name: Install minimal dependencies
@@ -81,7 +84,7 @@ jobs:
         path: "build/archlinux/PKGBUILD"
 
     - name: Build package
-      run: sudo -u $UNPRIVILEGED env VERBOSE=1 makepkg -si --noconfirm
+      run: sudo -u $UNPRIVILEGED makepkg -si --noconfirm
       working-directory: build/archlinux
 
     - name: Bundle distribution files
@@ -96,5 +99,13 @@ jobs:
 
     - name: Test system installation
       run: |
-        make -C hlua test EXE=$(which hlua) VERBOSE=2
-        make -C hpython test EXE=$(which hpython) VERBOSE=2
+        sudo -u $UNPRIVILEGED --preserve-env=TEST_OUTPUT_DIR env SUT=$(which hlua) tools/test-harness -c hlua
+        sudo -u $UNPRIVILEGED --preserve-env=TEST_OUTPUT_DIR env SUT=$(which hpython) tools/test-harness -c hpython -o "$TEST_OUTPUT_DIR"
+
+    - name: Archive test results
+      uses: actions/upload-artifact@v3
+      if: success() || failure()
+      with:
+        name: tests.${{github.sha}}.${{env.ARCH}}
+        retention-days: 7
+        path: "${{env.TEST_OUTPUT_DIR}}/*-tests-*.tar.gz"

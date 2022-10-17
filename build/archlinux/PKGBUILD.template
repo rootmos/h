@@ -22,7 +22,7 @@ EOF
 }
 
 build() {
-    make build -C "$ROOT"
+    make tools build -C "$ROOT"
 }
 
 check() {

@@ -8,15 +8,17 @@ TEST_ROOT=${TEST_ROOT-$PWD}
 PARENT_PROJECT=${PARENT_PROJECT-$(basename "$TEST_ROOT")}
 export TEST_METAFILE=${TEST_METAFILE-test.json}
 TEST_RUNNER=${TEST_RUNNER-$TOOLS/test-runner}
-TEST_OUTPUT_DIR=
+TEST_OUTPUT_DIR=${TEST_OUTPUT_DIR-}
 TEST_RESULT_BUNDLE=${TEST_RESULT_BUNDLE-}
-VERBOSE=${VERBOSE-}
-while getopts "c:r:o:v-" OPT; do
+VERBOSE=${VERBOSE-1}
+while getopts "c:r:o:qvV-" OPT; do
     case $OPT in
         c) TEST_ROOT=$OPTARG ;;
         r) TEST_RESULT_BUNDLE=$OPTARG ;;
         o) TEST_OUTPUT_DIR=$OPTARG ;;
+        q) VERBOSE= ;;
         v) VERBOSE=1 ;;
+        V) VERBOSE=2 ;;
         -) break ;;
         ?) exit 2 ;;
     esac
@@ -96,6 +98,7 @@ if [ -z "$TEST_RESULT_BUNDLE" ] && [ -n "$TEST_OUTPUT_DIR" ]; then
 fi
 
 if [ -n "$TEST_RESULT_BUNDLE" ]; then
+    mkdir -p "$(dirname "$TEST_RESULT_BUNDLE")"
     tar -cf "$TEST_RESULT_BUNDLE" \
         -C "$(dirname "$BUNDLE_ROOT")" "$(basename "$BUNDLE_ROOT")"
 fi

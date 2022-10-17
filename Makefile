@@ -18,3 +18,7 @@ endef
 
 $(foreach t, $(TARGETS), $(eval $(call mk_target, $t)))
 $(foreach p, $(PROJECTS), $(eval $(call mk_project, $p)))
+
+.PHONY: tools
+tools:
+	$(MAKE) -C tools

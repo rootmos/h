@@ -50,10 +50,17 @@ else
     SRC=$ROOT
 fi
 
+lang_ver() {
+    "$SRC/h$1/h$1" -v | grep '^'"$1" | sed 's/\s//' | sed 's/\.[0-9]\+$//'
+}
+
+LUA_VERSION=$(lang_ver lua)
+PYTHON_VERSION=$(lang_ver python)
+
 SUFFIX="-$BUILD_VERSION-$ARCH"
 
-cp -v "$SRC/hlua/hlua.c" "$DIST/hlua$SUFFIX.c"
-cp -v "$SRC/hpython/hpython.c" "$DIST/hpython$SUFFIX.c"
+cp -v "$SRC/hlua/hlua.c" "$DIST/hlua$SUFFIX-$LUA_VERSION.c"
+cp -v "$SRC/hpython/hpython.c" "$DIST/hpython$SUFFIX-$PYTHON_VERSION.c"
 
 if [ -n "$TARBALL" ]; then
     tar -cf "$TARBALL" -C "$DIST" .

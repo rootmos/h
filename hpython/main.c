@@ -60,6 +60,16 @@ static void parse_options(struct options* o, int argc, char* argv[])
     debug("input: %s", o->input);
 }
 
+#define CHECK_PYTHON(status, format, ...) do { \
+    if(PyStatus_Exception(status)) { \
+        r_failwith(__extension__ __FUNCTION__, __extension__ __FILE__, \
+                   __extension__ __LINE__, 0, \
+                   format " (%s: %s)\n", ##__VA_ARGS__, \
+                   status.func, status.err_msg); \
+    } \
+} while(0)
+
+
 int main(int argc, char* argv[])
 {
     drop_capabilities();
@@ -82,14 +92,15 @@ int main(int argc, char* argv[])
     Py_SetProgramName(pgr);
     PyMem_RawFree(pgr);
 
-    // TODO: error handling
     PyPreConfig preconfig;
     PyPreConfig_InitIsolatedConfig(&preconfig);
-    Py_PreInitialize(&preconfig);
+    PyStatus s = Py_PreInitialize(&preconfig);
+    CHECK_PYTHON(s, "Py_PreInitialize");
 
     PyConfig config;
     PyConfig_InitIsolatedConfig(&config);
-    Py_InitializeFromConfig(&config);
+    s = Py_InitializeFromConfig(&config);
+    CHECK_PYTHON(s, "Py_InitializeFromConfig");
     PyConfig_Clear(&config);
 
     debug("opening input file: %s", o.input);

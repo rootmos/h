@@ -22,7 +22,7 @@ jobs:
         key: ${{runner.os}}-${{env.cache-name}}-${{hashFiles('tools/lib.c')}}-${{hashFiles('tools/**/build')}}
     - if: ${{steps.cache-tools.outputs.cache-hit != 'true'}}
       name: Build tools
-      run: make -C tools
+      run: make tools
 
     - name: Install dependencies
       run: sudo build/deps
@@ -98,5 +98,5 @@ jobs:
 
     - name: Test system installation
       run: |
-        make -C hlua test EXE=$(which hlua) VERBOSE=2
-        make -C hpython test EXE=$(which hpython) VERBOSE=2
+        sudo -u $UNPRIVILEGED env SUT=$(which hlua) tools/test-harness -c hlua -V
+        sudo -u $UNPRIVILEGED env SUT=$(which hpython) tools/test-harness -c hpython -V

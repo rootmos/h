@@ -98,7 +98,12 @@ int main(int argc, char* argv[])
 
     debug("running file: %s", o.input);
     r = PyRun_SimpleFileExFlags(f, o.input, /*closeit*/ 1, NULL);
-    CHECK_NOT(r, -1, "PyRun_SimpleFileExFlags(%s)", o.input);
+    if(r == -1) {
+        debug("PyRun_SimpleFileExFlags(%s) == -1", o.input);
+        exit(2);
+    } else {
+        CHECK_NOT(r, -1, "PyRun_SimpleFileExFlags(%s)", o.input);
+    }
 
     Py_FinalizeEx();
     CHECK_NOT(r, -1, "Py_FinalizeEx()");

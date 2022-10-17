@@ -47,15 +47,13 @@ jeq #$__NR_exit_group, good
 
 jne #$__NR_fcntl, fcntl_end
 ld [$$offsetof(struct seccomp_data, args[1])$$]
-jeq #$F_GETFL, good
-jeq #$F_GETFD, good
-jeq #$F_DUPFD_CLOEXEC, good
+jset #$$(F_GETFL|F_GETFD|F_DUPFD_CLOEXEC)$$, good
 jmp bad
 fcntl_end:
 
 jne #$__NR_ioctl, ioctl_end
 ld [$$offsetof(struct seccomp_data, args[1])$$]
-jeq #$TCGETS, good
+jset #$$(TCGETS|FIOCLEX)$$, good
 jmp bad
 ioctl_end:
 

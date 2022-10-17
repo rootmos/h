@@ -48,7 +48,8 @@ fi
 awk '{
 if(/^#include\s+"[^"]*"/) {
     printf("// #include %s\n", $2)
-    system(sprintf("cat %s/%s", "'"$BASE_DIR"'", $2))
+    rc = system(sprintf("cat %s/%s", "'"$BASE_DIR"'", $2))
+    if(rc != 0) exit(rc)
 } else {
     print($0)
 } }' "$INPUT" >> "$OUTPUT"

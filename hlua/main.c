@@ -62,6 +62,7 @@ void remove_stdlib_function(struct lua_State* L,
     lua_stack_neutral_end(L);
 }
 
+#include "capabilities.c"
 
 #define DEFAULT_TMP "/tmp"
 
@@ -134,6 +135,7 @@ static void parse_options(struct options* o, int argc, char* argv[])
 
 int main(int argc, char* argv[])
 {
+    drop_capabilities();
     no_new_privs();
 
     struct options o;

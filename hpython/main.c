@@ -18,6 +18,8 @@ void seccomp_apply_filter()
     CHECK(r, "prctl(PR_SET_SECCOMP, SECCOMP_MODE_FILTER)");
 }
 
+#include "capabilities.c"
+
 struct options {
     const char* input;
 };
@@ -62,6 +64,7 @@ static void parse_options(struct options* o, int argc, char* argv[])
 
 int main(int argc, char* argv[])
 {
+    drop_capabilities();
     no_new_privs();
 
     struct options o;

@@ -10,6 +10,7 @@ if command -v apt-get > /dev/null; then
     apt-get install -y \
         make wget uuid-runtime jq \
         gcc bison flex \
+        libcap-dev \
         "python$PYTHON_VER" "libpython$PYTHON_VER-dev" \
         "lua$LUA_VER" "liblua$LUA_VER-dev"
 else

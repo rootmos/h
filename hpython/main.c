@@ -1,3 +1,5 @@
+#include <sys/stat.h>
+
 #define PY_SSIZE_T_CLEAN
 #include <Python.h>
 
@@ -40,6 +42,15 @@ static void parse_options(struct options* o, int argc, char* argv[])
 
     if(optind < argc) {
         o->input = argv[optind];
+        debug("input: %s", o->input);
+
+        struct stat st;
+        int r = stat(o->input, &st);
+        if(r == -1 && errno == ENOENT) {
+            dprintf(2, "error; unable to access input file: %s\n", o->input);
+            exit(1);
+        }
+        CHECK(r, "stat(%s)", o->input);
     } else {
         dprintf(2, "error: no input file specified\n");
         print_usage(2, argv[0]);

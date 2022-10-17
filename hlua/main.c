@@ -1,7 +1,5 @@
+#include <sys/stat.h>
 #include <libgen.h>
-#include <sys/prctl.h>
-#include <linux/seccomp.h>
-#include <linux/filter.h>
 
 #include <lua.h>
 #include <lualib.h>
@@ -10,16 +8,8 @@
 #define LIBR_IMPLEMENTATION
 #include "r.h"
 
-void seccomp_apply_filter()
-{
-    struct sock_filter filter[] = {
-#include "filter.bpfc"
-    };
-
-    struct sock_fprog p = { .len = LENGTH(filter), .filter = filter };
-    int r = prctl(PR_SET_SECCOMP, SECCOMP_MODE_FILTER, &p);
-    CHECK(r, "prctl(PR_SET_SECCOMP, SECCOMP_MODE_FILTER)");
-}
+#include "seccomp.c"
+#include "capabilities.c"
 
 void openlibs(struct lua_State* L)
 {
@@ -61,8 +51,6 @@ void remove_stdlib_function(struct lua_State* L,
 
     lua_stack_neutral_end(L);
 }
-
-#include "capabilities.c"
 
 #define DEFAULT_TMP "/tmp"
 
@@ -124,13 +112,20 @@ static void parse_options(struct options* o, int argc, char* argv[])
 
     if(optind < argc) {
         o->input = argv[optind];
+        debug("input: %s", o->input);
+
+        struct stat st;
+        int r = stat(o->input, &st);
+        if(r == -1 && errno == ENOENT) {
+            dprintf(2, "error; unable to access input file: %s\n", o->input);
+            exit(1);
+        }
+        CHECK(r, "stat(%s)", o->input);
     } else {
         dprintf(2, "error: no input file specified\n");
         print_usage(2, argv[0]);
         exit(1);
     }
-
-    debug("input: %s", o->input);
 }
 
 int main(int argc, char* argv[])
@@ -183,10 +178,25 @@ int main(int argc, char* argv[])
     remove_stdlib_function(L, "package", "loadlib");
 
     r = luaL_loadfile(L, o.input);
-    CHECK_LUA(L, r, "luaL_loadfile(%s)", o.input);
+    switch(r) {
+    case LUA_OK: break;
+    case LUA_ERRSYNTAX:
+        dprintf(2, "syntax error: %s\n", lua_tostring(L, -1));
+        exit(2);
+    default:
+        CHECK_LUA(L, r, "luaL_loadfile(%s)", o.input);
+    }
 
     r = lua_pcall(L, 0, LUA_MULTRET, 0);
-    CHECK_LUA(L, r, "lua_pcall");
+    switch(r) {
+    case LUA_OK: break;
+    case LUA_ERRRUN:
+        dprintf(2, "runtime error: %s\n", lua_tostring(L, -1));
+        // TODO: stack trace
+        exit(2);
+    default:
+        CHECK_LUA(L, r, "lua_pcall");
+    }
 
     lua_close(L);
 

@@ -13,6 +13,9 @@ void drop_capabilities(void)
     int r = cap_get_flag(c, CAP_SETPCAP, CAP_EFFECTIVE, &allowed);
     CHECK(r, "cap_get_flag");
 
+    r = cap_free(c);
+    CHECK(r, "cap_free");
+
     if(allowed) {
         r = cap_set_mode(CAP_MODE_NOPRIV);
         CHECK(r, "cap_set_mode(CAP_MODE_NOPRIV)");

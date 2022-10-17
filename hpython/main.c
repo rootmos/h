@@ -1,5 +1,4 @@
-#include <linux/seccomp.h>
-#include <linux/filter.h>
+#include <sys/stat.h>
 
 #define PY_SSIZE_T_CLEAN
 #include <Python.h>
@@ -7,17 +6,7 @@
 #define LIBR_IMPLEMENTATION
 #include "r.h"
 
-void seccomp_apply_filter()
-{
-    struct sock_filter filter[] = {
-#include "filter.bpfc"
-    };
-
-    struct sock_fprog p = { .len = LENGTH(filter), .filter = filter };
-    int r = prctl(PR_SET_SECCOMP, SECCOMP_MODE_FILTER, &p);
-    CHECK(r, "prctl(PR_SET_SECCOMP, SECCOMP_MODE_FILTER)");
-}
-
+#include "seccomp.c"
 #include "capabilities.c"
 
 struct options {
@@ -53,6 +42,15 @@ static void parse_options(struct options* o, int argc, char* argv[])
 
     if(optind < argc) {
         o->input = argv[optind];
+        debug("input: %s", o->input);
+
+        struct stat st;
+        int r = stat(o->input, &st);
+        if(r == -1 && errno == ENOENT) {
+            dprintf(2, "error; unable to access input file: %s\n", o->input);
+            exit(1);
+        }
+        CHECK(r, "stat(%s)", o->input);
     } else {
         dprintf(2, "error: no input file specified\n");
         print_usage(2, argv[0]);
@@ -61,6 +59,16 @@ static void parse_options(struct options* o, int argc, char* argv[])
 
     debug("input: %s", o->input);
 }
+
+#define CHECK_PYTHON(status, format, ...) do { \
+    if(PyStatus_Exception(status)) { \
+        r_failwith(__extension__ __FUNCTION__, __extension__ __FILE__, \
+                   __extension__ __LINE__, 0, \
+                   format " (%s: %s)\n", ##__VA_ARGS__, \
+                   status.func, status.err_msg); \
+    } \
+} while(0)
+
 
 int main(int argc, char* argv[])
 {
@@ -82,15 +90,17 @@ int main(int argc, char* argv[])
     wchar_t *pgr = Py_DecodeLocale(argv[0], NULL);
     CHECK_NOT(pgr, NULL, "Py_DecodeLocale(%s)", argv[0]);
     Py_SetProgramName(pgr);
+    PyMem_RawFree(pgr);
 
-    // TODO: error handling
     PyPreConfig preconfig;
     PyPreConfig_InitIsolatedConfig(&preconfig);
-    Py_PreInitialize(&preconfig);
+    PyStatus s = Py_PreInitialize(&preconfig);
+    CHECK_PYTHON(s, "Py_PreInitialize");
 
     PyConfig config;
     PyConfig_InitIsolatedConfig(&config);
-    Py_InitializeFromConfig(&config);
+    s = Py_InitializeFromConfig(&config);
+    CHECK_PYTHON(s, "Py_InitializeFromConfig");
     PyConfig_Clear(&config);
 
     debug("opening input file: %s", o.input);
@@ -99,12 +109,15 @@ int main(int argc, char* argv[])
 
     debug("running file: %s", o.input);
     r = PyRun_SimpleFileExFlags(f, o.input, /*closeit*/ 1, NULL);
-    CHECK_NOT(r, -1, "PyRun_SimpleFileExFlags(%s)", o.input);
+    if(r == -1) {
+        debug("PyRun_SimpleFileExFlags(%s) == -1", o.input);
+        exit(2);
+    } else {
+        CHECK_NOT(r, -1, "PyRun_SimpleFileExFlags(%s)", o.input);
+    }
 
     Py_FinalizeEx();
     CHECK_NOT(r, -1, "Py_FinalizeEx()");
-
-    PyMem_RawFree(pgr);
 
     return 0;
 }

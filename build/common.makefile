@@ -1,5 +1,6 @@
 ROOT := $(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
 
+DESTDIR ?=
 PREFIX ?= /usr
 
 TOOLS ?= $(realpath $(ROOT)/../tools)
@@ -28,7 +29,7 @@ test: build
 
 .PHONY: install
 install: build
-	install -sD "$(EXE)" "$(PREFIX)/bin/$(EXE)"
+	install -sD "$(EXE)" "$(DESTDIR)$(PREFIX)/bin/$(EXE)"
 
 %.bpfc: %.bpf
 	$(BPFC) -i -o "$@" "$<"

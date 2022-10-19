@@ -5,20 +5,33 @@ set -o nounset -o pipefail -o errexit
 PREFIX=${1-$PWD}
 
 TOOLS=("bpf_asm" "bpf_dbg")
-
-BUILD_TOOLS=()
-for t in "${TOOLS[@]}"; do
-    if [ -e "$PREFIX/$t" ]; then
-        true
-    elif command -v "$t" > /dev/null; then
-        cp "$(which "$t")" "$PREFIX/$t"
-    else
-        BUILD_TOOLS+=("$t")
-    fi
+FORCE=
+while getopts "f-" OPT; do
+    case $OPT in
+        f) FORCE=1 ;;
+        -) break ;;
+        ?) exit 2 ;;
+    esac
 done
+shift $((OPTIND-1))
 
-if [ "${#BUILD_TOOLS[@]}" -eq 0 ]; then
-    exit 0
+if [ -z "$FORCE" ]; then
+    BUILD_TOOLS=()
+    for t in "${TOOLS[@]}"; do
+        if [ -e "$PREFIX/$t" ]; then
+            true
+        elif command -v "$t" > /dev/null; then
+            cp "$(which "$t")" "$PREFIX/$t"
+        else
+            BUILD_TOOLS+=("$t")
+        fi
+    done
+
+    if [ "${#BUILD_TOOLS[@]}" -eq 0 ]; then
+        exit 0
+    fi
+else
+    BUILD_TOOLS=$TOOLS
 fi
 
 SCRIPT_DIR=$(readlink -f "$0" | xargs dirname)
@@ -29,7 +42,7 @@ trap 'rm -rf $WD' EXIT
 TARBALL="$WD/linux.tar.gz"
 
 VER=5.15.72
-fetch -s \
+fetch -s -Sgiga \
     "https://mirrors.edge.kernel.org/pub/linux/kernel/v5.x/linux-$VER.tar.gz" \
     "dada7fcc6fa0810300ec6d8e1f75bd4c8c935ca06ed39d74307f2a85674c1140" \
     "$TARBALL"

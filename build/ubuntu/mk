@@ -1,0 +1,79 @@
+#!/bin/bash
+
+set -o nounset -o pipefail -o errexit
+
+SCRIPT_DIR=$(readlink -f "$0" | xargs dirname)
+ROOT=${ROOT-$(readlink -f "$SCRIPT_DIR/../..")}
+TOOLS=${TOOLS-$ROOT/tools}
+
+. <("$TOOLS/build-info" -e)
+
+WORKDIR=$(mktemp -d)
+trap 'sudo -A rm -rf $WORKDIR' EXIT
+
+PROJECT_NAME=$(tr '/' '-' <<< "$BUILD_GIT_REPO")
+
+PACKAGE_ROOT=$WORKDIR/$PROJECT_NAME-$BUILD_VERSION
+git clone --depth=1 --single-branch "file://$ROOT" "$PACKAGE_ROOT"
+
+rm -rf "$PACKAGE_ROOT/.git" "$PACKAGE_ROOT/.github"
+find "$PACKAGE_ROOT" -name ".gitignore" -delete
+
+rm -rf "$PACKAGE_ROOT/build/archlinux" "$PACKAGE_ROOT/doc"
+
+#DEBIAN_SRC=$PACKAGE_ROOT/build/ubuntu/debian
+DEBIAN_SRC=$SCRIPT_DIR/debian
+DEBIAN_DST=$WORKDIR/$PROJECT_NAME-$BUILD_VERSION/debian
+mkdir -p "$DEBIAN_DST"
+
+FILES=(control changelog rules)
+
+VARS=(PROJECT_NAME BUILD_VERSION)
+export "${VARS[@]}"
+
+SH_VARS=""
+for v in "${VARS[@]}"; do
+    SH_VARS="$SH_VARS"'$'"$v"
+done
+for f in "${FILES[@]}"; do
+    envsubst "${SH_VARS[@]}" < "$DEBIAN_SRC/$f" > "$DEBIAN_DST/$f"
+    if [ -x "$DEBIAN_SRC/$f" ]; then
+        chmod +x "$DEBIAN_DST/$f"
+    fi
+done
+
+mkdir -p "$DEBIAN_DST/source"
+echo "3.0 (quilt)" > "$DEBIAN_DST/source/format"
+
+cat <<EOF > "$PACKAGE_ROOT/.build.env"
+GIT_REPO=$BUILD_GIT_REPO
+GIT_REF=$BUILD_GIT_REF
+REPO_URL=$BUILD_REPO_URL
+GIT_DIRTY=$BUILD_GIT_DIRTY
+SOURCE_TARBALL_URL=$BUILD_SOURCE_TARBALL_URL
+EOF
+
+tar -czf "$WORKDIR/${PROJECT_NAME}_$BUILD_VERSION.orig.tar.gz" \
+    -C "$PACKAGE_ROOT" .
+
+UNPRIVILEGED=ubuntu
+
+cat <<EOF > "$WORKDIR/run"
+#!/bin/sh
+
+set -o nounset -o errexit
+
+cd "$PROJECT_NAME-$BUILD_VERSION"
+
+useradd -m $UNPRIVILEGED
+chown -R $UNPRIVILEGED:$UNPRIVILEGED .
+
+build/deps -rbcy # TODO: remove buildtime dependency on lua
+
+sudo -u $UNPRIVILEGED dpkg-buildpackage
+
+cp -v ../*.deb /out
+EOF
+chmod +x "$WORKDIR/run"
+
+dorker -i -v "$WORKDIR:/workdir" -v"$PWD/out:/out"

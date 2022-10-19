@@ -15,7 +15,7 @@ def parse_args():
 
     parser.add_argument("--log", default=os.environ.get("LOG_LEVEL", "WARN"), help="set log level")
 
-    parser.add_argument("--trace", action="store_true")
+    parser.add_argument("--trace", action="store_true", default=os.environ.get("TRACE") != None)
 
     parser.add_argument("input", metavar="INPUT")
 

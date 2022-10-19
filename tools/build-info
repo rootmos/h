@@ -9,7 +9,8 @@ VERSION_FILE=${VERSION_FILE-$ROOT/.version}
 STYLE=env
 OUTPUT=/dev/stdout
 PREFIX=BUILD_
-while getopts "ceo:p:-" OPT; do
+TARBALL_SUFFIX=.tar.gz
+while getopts "ceo:p:z-" OPT; do
     case $OPT in
         c) STYLE=c ;;
         e) STYLE=env ;;
@@ -51,8 +52,9 @@ if [ -n "${CI-}" ]; then
     GIT_DIRTY= # HACK: assumption
     GIT_REPO=$GITHUB_REPOSITORY
     REPO_URL=$GITHUB_SERVER_URL/$GITHUB_REPOSITORY
-    SOURCE_TARBALL_URL=$REPO_URL/archive/$GIT_REF.zip
-elif command -v git > /dev/null && git rev-parse --show-toplevel > /dev/null; then
+    SOURCE_TARBALL_URL=$REPO_URL/archive/$GIT_REF$TARBALL_SUFFIX
+elif command -v git > /dev/null \
+    && git rev-parse --show-toplevel >/dev/null 2>&1; then
     GIT_REF=$(git rev-parse HEAD)
     GIT_DIRTY=$([ -n "$(git status --porcelain)" ] && echo "1" || echo)
 
@@ -61,11 +63,11 @@ elif command -v git > /dev/null && git rev-parse --show-toplevel > /dev/null; th
     if grep -cq "^git@$DOMAIN:" <<< "$ORIGIN"; then
         GIT_REPO=$(sed 's/^git@'"$DOMAIN"':\(.*\).git$/\1/' <<< "$ORIGIN")
         REPO_URL=https://$DOMAIN/$GIT_REPO
-        SOURCE_TARBALL_URL=$REPO_URL/archive/$GIT_REF.zip
+        SOURCE_TARBALL_URL=$REPO_URL/archive/$GIT_REF$TARBALL_SUFFIX
     elif grep -cq "^https://$DOMAIN/" <<< "$ORIGIN"; then
         GIT_REPO=$(sed 's,^https://'"$DOMAIN"'/\(.*\).git$,\1,' <<< "$ORIGIN")
         REPO_URL=https://$DOMAIN/$GIT_REPO
-        SOURCE_TARBALL_URL=$REPO_URL/archive/$GIT_REF.zip
+        SOURCE_TARBALL_URL=$REPO_URL/archive/$GIT_REF$TARBALL_SUFFIX
     else
         echo 1>&2 "unable to figure out repository url"
         exit 1

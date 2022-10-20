@@ -125,7 +125,4 @@ dropping all capabilities could be useful.
 
 ## Installation and build instructions
 
-| | runtime | build | check |
-|-|---------|-------|-------|
-|Ubuntu 22.04| `libcap2 lua5.4 python3` | `make pkg-config gcc libcap-dev wget ca-certificates bison flex liblua5.4-dev python3 libpython3-dev` | `uuid-runtime jq` |
-|Arch Linux| `lua python` | `make gcc pkgconf bpf` | `jq` |
+@include "deps-table.md"

@@ -1,0 +1,20 @@
+#!/bin/bash
+
+set -o nounset -o pipefail -o errexit
+
+INPUT=$1
+OUTPUT=${2-/dev/stdout}
+
+BASE_DIR=$(dirname "$INPUT")
+
+TMP=$(mktemp)
+trap 'rm -f $TMP' EXIT
+
+awk '{
+if(/^@include\s+"[^"]*"/) {
+    rc = system(sprintf("cat %s/%s", "'"$BASE_DIR"'", $2))
+    if(rc != 0) exit(rc)
+} else {
+    print($0)
+} }' "$INPUT" > "$TMP"
+cp "$TMP" "$OUTPUT"

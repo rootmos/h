@@ -1,0 +1,22 @@
+#!/bin/bash
+
+set -o nounset -o pipefail -o errexit
+
+SCRIPT_DIR=$(readlink -f "$0" | xargs dirname)
+BUILD=${BUILD-$SCRIPT_DIR/../build}
+
+cat <<EOF
+| | runtime | build | check |
+|-|---------|-------|-------|
+EOF
+
+arch() {
+    export ARCH=$2
+    DEPS=$BUILD/$ARCH/deps
+    cat <<EOF
+|$1| \`$("$DEPS" -r)\` | \`$("$DEPS" -b)\` | \`$("$DEPS" -c)\` |
+EOF
+}
+
+arch "Ubuntu 22.04" ubuntu
+arch "Arch Linux" archlinux

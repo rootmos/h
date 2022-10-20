@@ -18,6 +18,8 @@ jobs:
 
     - name: Check out repository code
       uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
 
     - name: Create an unprivileged user
       run: |
@@ -68,6 +70,8 @@ jobs:
 
     - name: Check out repository code
       uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
 
     - name: Create an unprivileged user
       run: |

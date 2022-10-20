@@ -23,8 +23,12 @@ DEBIAN_SRC=$SCRIPT_DIR/debian
 DEBIAN_DST=$PACKAGE_ROOT/debian
 mkdir -p "$DEBIAN_DST"
 
+RUNTIME_DEPS=$($SCRIPT_DIR/deps -r | sed 's/ /, /g')
+BUILD_DEPS=$($SCRIPT_DIR/deps -bc | sed 's/ /, /g')
+
 FILES=(control changelog rules missing-deps)
 VARS=(PROJECT_NAME BUILD_VERSION)
+VARS+=(RUNTIME_DEPS BUILD_DEPS)
 export "${VARS[@]}"
 
 SH_VARS=""
@@ -55,8 +59,6 @@ chown -R $UNPRIVILEGED:$UNPRIVILEGED .
 
 cd "$(basename "$PACKAGE_ROOT")"
 
-#apt-get update
-debian/missing-deps -i
 debian/missing-deps -i
 
 sudo -u $UNPRIVILEGED dpkg-buildpackage

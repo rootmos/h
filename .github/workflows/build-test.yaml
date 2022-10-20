@@ -9,6 +9,7 @@ jobs:
     env:
       ARCH: ubuntu2204
       UNPRIVILEGED: ubuntu
+      TEST_OUTPUT_DIR: /tmp/tests
     steps:
     - name: Install minimal dependencies
       run: |
@@ -27,14 +28,30 @@ jobs:
     - name: Build package
       run: sudo -u $UNPRIVILEGED env SUDO=sudo build/ubuntu/mk
 
+    - name: Install package
+      run: dpkg -i build/ubuntu/out/*.deb
+
+    - name: Test system installation
+      run: |
+        sudo -u $UNPRIVILEGED --preserve-env=TEST_OUTPUT_DIR env SUT=$(which hlua) tools/test-harness -c hlua
+        sudo -u $UNPRIVILEGED --preserve-env=TEST_OUTPUT_DIR env SUT=$(which hpython) tools/test-harness -c hpython
+
+    - name: Archive test results
+      uses: actions/upload-artifact@v3
+      if: success() || failure()
+      with:
+        name: tests.${{github.sha}}.${{env.ARCH}}
+        retention-days: 7
+        path: "${{env.TEST_OUTPUT_DIR}}/*-tests-*.tar.gz"
+
   archlinux:
     runs-on: ubuntu-22.04
     container:
       image: archlinux:latest
     env:
+      ARCH: archlinux
       UNPRIVILEGED: arch
       TEST_OUTPUT_DIR: /tmp/tests
-      ARCH: archlinux
     steps:
     - name: Install minimal dependencies
       run: pacman -Suy --noconfirm sudo fakeroot binutils which wget git
@@ -76,7 +93,7 @@ jobs:
     - name: Test system installation
       run: |
         sudo -u $UNPRIVILEGED --preserve-env=TEST_OUTPUT_DIR env SUT=$(which hlua) tools/test-harness -c hlua
-        sudo -u $UNPRIVILEGED --preserve-env=TEST_OUTPUT_DIR env SUT=$(which hpython) tools/test-harness -c hpython -o "$TEST_OUTPUT_DIR"
+        sudo -u $UNPRIVILEGED --preserve-env=TEST_OUTPUT_DIR env SUT=$(which hpython) tools/test-harness -c hpython
 
     - name: Archive test results
       uses: actions/upload-artifact@v3

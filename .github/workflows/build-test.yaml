@@ -37,6 +37,7 @@ jobs:
         retention-days: 7
         path: |
           build/ubuntu/out/*.dsc
+          build/ubuntu/out/*.buildinfo
           build/ubuntu/out/*.debian.*
           build/ubuntu/out/*.orig.*
 

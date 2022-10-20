@@ -1,0 +1,14 @@
+#!/bin/bash
+
+set -o nounset -o pipefail -o errexit
+
+INPUT=$($1-source-package-*.zip)
+
+WORKDIR=$(mktemp -d)
+trap 'rm -rf $WORKDIR' EXIT
+
+unzip "$INPUT" -d "$WORKDIR"
+
+tar -xf "$WORKDIR/"*.orig.* -C "$WORKDIR"
+ROOT=$(find "$WORKDIR" -name ".build.env" -exec dirname {} \;)
+tar -xf "$WORKDIR/"*.debian.* -C "$ROOT"

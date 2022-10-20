@@ -34,8 +34,6 @@ if [ -n "$BUILD" ]; then
     PKGS+=("liblua$LUA_VER-dev")
     PKGS+=("python$PYTHON_VER")
     PKGS+=("libpython$PYTHON_VER-dev")
-
-    PKGS+=("lua$LUA_VER") # TODO: remove
 fi
 
 if [ -n "$CHECK" ]; then

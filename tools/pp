@@ -49,12 +49,19 @@ expression() {
 }
 
 if [ "${1--}" == "-" ] || [ -f "$1" ]; then
-    cat "${1--}" | lua <(cat <<EOF
-local function f(s)
-    return io.popen("$0 -nx '" .. s .. "'"):read("*a")
-end
-local bs = io.read("*a"):gsub("%$%\$([^$]+)%$%$",f):gsub("%\$([a-zA-Z0-9_]+)",f)
-io.write(bs)
+    cat "${1--}" | python3 <(cat <<EOF
+import re
+import sys
+import subprocess
+
+def expr(m):
+    p = subprocess.run(["$0", "-nx", m.group(1)], check=True, capture_output=True, text=True)
+    return p.stdout
+
+i = sys.stdin.read()
+o = re.sub(r'\\$\\\$([^\\$]+)\\$\\$', expr, i)
+o = re.sub(r'\\\$([a-zA-Z0-9_]+)', expr, o)
+sys.stdout.write(o)
 EOF
 )
 else

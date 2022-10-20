@@ -41,7 +41,9 @@ jobs:
           build/ubuntu/out/*.orig.*
 
     - name: Install package
-      run: dpkg -i build/ubuntu/out/*.deb
+      run: |
+        dpkg -i build/ubuntu/out/*.deb || true
+        apt-get install -fy
 
     - name: Test system installation
       run: |

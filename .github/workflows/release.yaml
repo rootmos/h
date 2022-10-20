@@ -52,6 +52,6 @@ jobs:
 
       - name: Create release
         if: ${{env.RELEASE == '1'}}
-        run: build/release
+        run: .github/release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

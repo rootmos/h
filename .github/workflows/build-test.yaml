@@ -89,16 +89,6 @@ jobs:
       run: sudo -u $UNPRIVILEGED makepkg -si --noconfirm
       working-directory: build/archlinux
 
-    - name: Bundle distribution files
-      run: build/dist -ddist
-
-    - name: Archive distribution files
-      uses: actions/upload-artifact@v3
-      with:
-        name: dist.${{github.sha}}.${{env.ARCH}}
-        retention-days: 7
-        path: dist
-
     - name: Test system installation
       run: |
         sudo -u $UNPRIVILEGED --preserve-env=TEST_OUTPUT_DIR env SUT=$(which hlua) tools/test-harness -c hlua

@@ -14,8 +14,9 @@ trap 'rm -rf $ASSETS' EXIT
 
 unzip "$ARTIFACTS/PKGBUILD.$BUILD_GIT_REF.zip" -d "$ASSETS"
 
-cp -v "$ARTIFACTS/source-package.$BUILD_GIT_REF.ubuntu2204.zip" \
-    "$ASSETS/source-package.$BUILD_VERSION.zip"
+for f in "$ARTIFACTS/source-package.$BUILD_GIT_REF."*.zip; do
+    cp -v "$f" "$ASSETS/$(sed 's/'"$BUILD_GIT_REF"'/'"$BUILD_VERSION"'/' <<< "$(basename "$f")")"
+done
 
 gh release create \
     --target=$BUILD_GIT_REF \

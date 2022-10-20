@@ -25,14 +25,33 @@ jobs:
           mkdir -p "$ARTIFACTS"
           echo "ARTIFACTS=$ARTIFACTS" >> "$GITHUB_ENV"
 
-      - uses: actions/download-artifact@v3
+      - name: Download artifacts
         if: ${{env.RELEASE == '1'}}
+        uses: actions/github-script@v6
         with:
-          path: artifacts
+          script: |
+            let allArtifacts = await github.rest.actions.listWorkflowRunArtifacts({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              run_id: context.payload.workflow_run.id,
+            });
+            let matchedArtifacts = allArtifacts.data.artifacts.filter((artifact) => {
+              return artifact.name.startsWith("PKGBUILD") || artifact.name.startsWith("source-package")
+            });
+            let fs = require('fs');
+            for(const artifact of matchedArtifacts) {
+              let download = await github.rest.actions.downloadArtifact({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                artifact_id: artifact.id,
+                archive_format: 'zip',
+              });
+              console.log(`${process.env.ARTIFACTS}/${artifact.name}.zip`)
+              fs.writeFileSync(`${process.env.ARTIFACTS}/${artifact.name}.zip`, Buffer.from(download.data));
+            }
 
       - name: Create release
         if: ${{env.RELEASE == '1'}}
         run: .github/release
         env:
-          ARTIFACTS: artifacts
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

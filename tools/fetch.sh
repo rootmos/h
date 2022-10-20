@@ -1,8 +1,10 @@
 fetch() {
     SYMLINK=
-    while getopts "s-" OPT; do
+    FETCH_STYLE=${FETCH_STYLE-default}
+    while getopts "sS:-" OPT; do
         case $OPT in
             s) SYMLINK=1 ;;
+            S) FETCH_STYLE=$OPTARG ;;
             -) break ;;
             ?) return 2 ;;
         esac
@@ -18,7 +20,8 @@ fetch() {
     if [ ! -f "$CACHE" ]; then
         UNVERIFIED=$FETCH_CACHE/unverified/$SHA256
         mkdir -p "$(dirname "$UNVERIFIED")"
-        wget --progress=dot --output-document="$UNVERIFIED" "$URL"
+        wget --progress=dot:$FETCH_STYLE \
+            --output-document="$UNVERIFIED" "$URL"
 
         SHA256_UNVERIFIED=$(sha256sum "$UNVERIFIED" | cut -f1 -d' ')
         if [ "$SHA256_UNVERIFIED" = "$SHA256" ]; then

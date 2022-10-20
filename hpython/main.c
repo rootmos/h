@@ -72,7 +72,7 @@ static void parse_options(struct options* o, int argc, char* argv[])
 
 int main(int argc, char* argv[])
 {
-    drop_capabilities();
+    /*drop_capabilities();*/
     no_new_privs();
 
     struct options o;

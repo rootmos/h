@@ -8,42 +8,45 @@ jobs:
       image: ubuntu:22.04
     env:
       ARCH: ubuntu2204
+      UNPRIVILEGED: ubuntu
+      TEST_OUTPUT_DIR: /tmp/tests
     steps:
+    - name: Install minimal dependencies
+      run: |
+        apt-get update
+        apt-get install -y --no-install-recommends git sudo dpkg-dev gettext-base ca-certificates
+
     - name: Check out repository code
       uses: actions/checkout@v3
-
-    - name: Install dependencies
-      run: build/deps
-
-    - name: Cache tools
-      id: cache-tools
-      uses: actions/cache@v3
-      env:
-        cache-name: cache-tools
       with:
-        path: |
-          tools/bpf/bpf_*
-          tools/lib
-        key: ${{env.ARCH}}-${{env.cache-name}}-${{hashFiles('tools/lib.c')}}-${{hashFiles('tools/**/build')}}
-    - if: ${{steps.cache-tools.outputs.cache-hit != 'true'}}
-      name: Build tools
-      run: make tools
+        fetch-depth: 0
 
-    - name: Build
-      run: make build LUA_PKG=lua54
+    - name: Create an unprivileged user
+      run: |
+        useradd -m $UNPRIVILEGED
+        chown -R $UNPRIVILEGED:$UNPRIVILEGED .
+        echo "$UNPRIVILEGED ALL = NOPASSWD: $(which apt-get)" | tee -a /etc/sudoers
 
-    - name: Bundle distribution files
-      run: build/dist -ddist
+    - name: Build package
+      run: sudo -u $UNPRIVILEGED env SUDO=sudo build/ubuntu/mk
 
-    - name: Archive distribution files
+    - name: Archive source package
       uses: actions/upload-artifact@v3
       with:
-        name: dist.${{github.sha}}.${{env.ARCH}}
+        name: source-package.${{github.sha}}.${{env.ARCH}}
         retention-days: 7
-        path: dist
+        path: |
+          build/ubuntu/out/*.dsc
+          build/ubuntu/out/*.debian.*
+          build/ubuntu/out/*.orig.*
 
-    - name: Test
-      run: tools/test-harness -o.
+    - name: Install package
+      run: dpkg -i build/ubuntu/out/*.deb
+
+    - name: Test system installation
+      run: |
+        sudo -u $UNPRIVILEGED --preserve-env=TEST_OUTPUT_DIR env SUT=$(which hlua) tools/test-harness -c hlua
+        sudo -u $UNPRIVILEGED --preserve-env=TEST_OUTPUT_DIR env SUT=$(which hpython) tools/test-harness -c hpython
 
     - name: Archive test results
       uses: actions/upload-artifact@v3
@@ -51,22 +54,24 @@ jobs:
       with:
         name: tests.${{github.sha}}.${{env.ARCH}}
         retention-days: 7
-        path: "*-tests-*.tar.gz"
+        path: "${{env.TEST_OUTPUT_DIR}}/*-tests-*.tar.gz"
 
   archlinux:
     runs-on: ubuntu-22.04
     container:
       image: archlinux:latest
     env:
+      ARCH: archlinux
       UNPRIVILEGED: arch
       TEST_OUTPUT_DIR: /tmp/tests
-      ARCH: archlinux
     steps:
     - name: Install minimal dependencies
-      run: pacman -Suy --noconfirm sudo fakeroot binutils which wget
+      run: pacman -Suy --noconfirm sudo fakeroot binutils which wget git
 
     - name: Check out repository code
       uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
 
     - name: Create an unprivileged user
       run: |
@@ -75,8 +80,7 @@ jobs:
         tee -a /etc/sudoers.d/$UNPRIVILEGED <<< "$UNPRIVILEGED ALL = NOPASSWD: $(which pacman)"
 
     - name: Create PKGBUILD
-      run: ./mk
-      working-directory: build/archlinux
+      run: build/archlinux/mk
 
     - name: Archive PKGBUILD
       uses: actions/upload-artifact@v3
@@ -89,20 +93,10 @@ jobs:
       run: sudo -u $UNPRIVILEGED makepkg -si --noconfirm
       working-directory: build/archlinux
 
-    - name: Bundle distribution files
-      run: build/dist -ddist
-
-    - name: Archive distribution files
-      uses: actions/upload-artifact@v3
-      with:
-        name: dist.${{github.sha}}.${{env.ARCH}}
-        retention-days: 7
-        path: dist
-
     - name: Test system installation
       run: |
         sudo -u $UNPRIVILEGED --preserve-env=TEST_OUTPUT_DIR env SUT=$(which hlua) tools/test-harness -c hlua
-        sudo -u $UNPRIVILEGED --preserve-env=TEST_OUTPUT_DIR env SUT=$(which hpython) tools/test-harness -c hpython -o "$TEST_OUTPUT_DIR"
+        sudo -u $UNPRIVILEGED --preserve-env=TEST_OUTPUT_DIR env SUT=$(which hpython) tools/test-harness -c hpython
 
     - name: Archive test results
       uses: actions/upload-artifact@v3

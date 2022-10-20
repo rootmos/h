@@ -1,0 +1,45 @@
+#!/bin/bash
+
+set -o nounset -o pipefail -o errexit
+
+SCRIPT_DIR=$(readlink -f "$0" | xargs dirname)
+
+RUNTIME=
+BUILD=
+CHECK=
+while getopts "rbc-" OPT; do
+    case $OPT in
+        r) RUNTIME=1 ;;
+        b) BUILD=1 ;;
+        c) CHECK=1 ;;
+        -) break ;;
+        ?) exit 2 ;;
+    esac
+done
+shift $((OPTIND-1))
+
+LUA_VER=5.4
+PYTHON_VER=3
+
+PKGS=()
+
+if [ -n "$RUNTIME" ]; then
+    PKGS+=(libcap2)
+    PKGS+=("lua$LUA_VER")
+    PKGS+=("python$PYTHON_VER")
+fi
+
+if [ -n "$BUILD" ]; then
+    PKGS+=(make wget pkg-config gcc bison flex libcap-dev)
+    PKGS+=("liblua$LUA_VER-dev")
+    PKGS+=("python$PYTHON_VER")
+    PKGS+=("libpython$PYTHON_VER-dev")
+
+    PKGS+=("lua$LUA_VER") # TODO: remove
+fi
+
+if [ -n "$CHECK" ]; then
+    PKGS+=(uuid-runtime jq)
+fi
+
+echo "${PKGS[@]}"

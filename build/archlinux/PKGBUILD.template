@@ -30,5 +30,5 @@ check() {
 }
 
 package() {
-    make install PREFIX="$pkgdir/usr" -C "$ROOT"
+    make install DESTDIR="$pkgdir" -C "$ROOT"
 }

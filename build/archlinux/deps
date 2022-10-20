@@ -1,0 +1,36 @@
+#!/bin/bash
+
+set -o nounset -o pipefail -o errexit
+
+SCRIPT_DIR=$(readlink -f "$0" | xargs dirname)
+
+RUNTIME=
+BUILD=
+CHECK=
+while getopts "rbc-" OPT; do
+    case $OPT in
+        r) RUNTIME=1 ;;
+        b) BUILD=1 ;;
+        c) CHECK=1 ;;
+        -) break ;;
+        ?) exit 2 ;;
+    esac
+done
+shift $((OPTIND-1))
+
+PKGBUILD=$SCRIPT_DIR/PKGBUILD.template
+PKGS=()
+
+if [ -n "$RUNTIME" ]; then
+    . <(grep '^depends' "$PKGBUILD" | sed 's/^\s*\w\+\s*/PKGS+/')
+fi
+
+if [ -n "$BUILD" ]; then
+    . <(grep '^makedepends' "$PKGBUILD" | sed 's/^\s*\w\+\s*/PKGS+/')
+fi
+
+if [ -n "$CHECK" ]; then
+    . <(grep '^checkdepends' "$PKGBUILD" | sed 's/^\s*\w\+\s*/PKGS+/')
+fi
+
+echo "${PKGS[@]}"

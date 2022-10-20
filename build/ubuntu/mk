@@ -1,0 +1,65 @@
+#!/bin/bash
+
+set -o nounset -o pipefail -o errexit
+
+SCRIPT_DIR=$(readlink -f "$0" | xargs dirname)
+OUTPUT_DIR=${OUTPUT_DIR-$SCRIPT_DIR/out}
+
+HOST_TOOLS=${HOST_TOOLS-$(readlink -f "$SCRIPT_DIR/../../tools")}
+
+WORKDIR=$(mktemp -d)
+trap 'rm -rf $WORKDIR' EXIT
+
+read SHA256 TARBALL < <("$HOST_TOOLS/archive" -O "$WORKDIR")
+echo 1>&2 "- source tarball: $(basename "$TARBALL") $SHA256"
+
+tar -xzf "$TARBALL" -C "$WORKDIR"
+
+BUILD_ENV=$(find "$WORKDIR" -name ".build.env")
+PACKAGE_ROOT=$(dirname "$BUILD_ENV")
+TOOLS=$PACKAGE_ROOT/tools
+
+. <("$TOOLS/build-info" -e)
+PROJECT_NAME=$(tr '/' '-' <<< "$BUILD_GIT_REPO")
+
+DEBIAN_SRC=$SCRIPT_DIR/debian
+DEBIAN_DST=$PACKAGE_ROOT/debian
+mkdir -p "$DEBIAN_DST"
+
+RUNTIME_DEPS=$($SCRIPT_DIR/deps -r | sed 's/ /, /g')
+BUILD_DEPS=$($SCRIPT_DIR/deps -bc | sed 's/ /, /g')
+
+FILES=(control changelog rules missing-deps)
+VARS=(PROJECT_NAME BUILD_VERSION)
+VARS+=(RUNTIME_DEPS BUILD_DEPS)
+export "${VARS[@]}"
+
+SH_VARS=""
+for v in "${VARS[@]}"; do
+    SH_VARS="$SH_VARS"'$'"$v"
+done
+for f in "${FILES[@]}"; do
+    envsubst "${SH_VARS[@]}" < "$DEBIAN_SRC/$f" > "$DEBIAN_DST/$f"
+    if [ -x "$DEBIAN_SRC/$f" ]; then
+        chmod +x "$DEBIAN_DST/$f"
+    fi
+done
+
+mkdir -p "$DEBIAN_DST/source"
+echo "3.0 (quilt)" > "$DEBIAN_DST/source/format"
+
+mv "$TARBALL" "$WORKDIR/${PROJECT_NAME}_$BUILD_VERSION.orig.tar.gz"
+
+cd "$PACKAGE_ROOT"
+
+echo 1>&2 "- installing deps"
+debian/missing-deps -i
+
+echo 1>&2 "- build package"
+dpkg-buildpackage
+
+mkdir -p "$OUTPUT_DIR"
+cp -v "$WORKDIR"/*.dsc "$OUTPUT_DIR"
+cp -v "$WORKDIR"/*.deb "$OUTPUT_DIR"
+cp -v "$WORKDIR"/*.debian.* "$OUTPUT_DIR"
+cp -v "$WORKDIR"/*.orig.* "$OUTPUT_DIR"

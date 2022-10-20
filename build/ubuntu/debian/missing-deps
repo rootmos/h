@@ -1,0 +1,28 @@
+#!/bin/bash
+
+set -o nounset -o pipefail -o errexit
+
+INSTALL=${INSTALL-}
+SUDO=${SUDO-}
+while getopts "is:-" OPT; do
+    case $OPT in
+        i) INSTALL=1 ;;
+        s) SUDO=$OPTARG ;;
+        -) break ;;
+        ?) exit 2 ;;
+    esac
+done
+shift $((OPTIND-1))
+
+PKGS=($( (dpkg-checkbuilddeps 2>&1 || true) \
+    | grep "Unmet build dependencies" \
+    | sed 's/dpkg-checkbuilddeps:\serror:\sUnmet build dependencies: //g' \
+    | sed 's/[\(][^)]*[\)] //g'))
+
+[ "${#PKGS[@]}" -eq 0 ] && exit 0
+
+if [ -n "$INSTALL" ]; then
+    $SUDO apt-get install -y --no-install-recommends "${PKGS[@]}"
+else
+    echo "${PKGS[@]}"
+fi

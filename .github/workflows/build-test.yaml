@@ -13,7 +13,9 @@ jobs:
       uses: actions/checkout@v3
 
     - name: Install dependencies
-      run: build/deps
+      run: |
+        apt-get update -y
+        build/deps -rbc -y
 
     - name: Cache tools
       id: cache-tools

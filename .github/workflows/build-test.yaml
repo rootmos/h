@@ -28,6 +28,16 @@ jobs:
     - name: Build package
       run: sudo -u $UNPRIVILEGED env SUDO=sudo build/ubuntu/mk
 
+    - name: Archive source package
+      uses: actions/upload-artifact@v3
+      with:
+        name: source-package.${{github.sha}}.${{env.ARCH}}
+        retention-days: 7
+        path: |
+          build/ubuntu/out/*.dsc
+          build/ubuntu/out/*.debian.*
+          build/ubuntu/out/*.orig.*
+
     - name: Install package
       run: dpkg -i build/ubuntu/out/*.deb
 
@@ -66,8 +76,7 @@ jobs:
         tee -a /etc/sudoers.d/$UNPRIVILEGED <<< "$UNPRIVILEGED ALL = NOPASSWD: $(which pacman)"
 
     - name: Create PKGBUILD
-      run: ./mk
-      working-directory: build/archlinux
+      run: build/archlinux/mk
 
     - name: Archive PKGBUILD
       uses: actions/upload-artifact@v3

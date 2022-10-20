@@ -3,14 +3,26 @@
 set -o nounset -o pipefail -o errexit
 
 SCRIPT_DIR=$(readlink -f "$0" | xargs dirname)
+TOOLS=${TOOLS-$SCRIPT_DIR}
 ROOT=${ROOT-$(readlink -f "$SCRIPT_DIR/..")}
-TOOLS=${TOOLS-$ROOT/tools}
 
 . <("$TOOLS/build-info" -e)
 
-PROJECT_NAME=$(tr '/' '-' <<< "$BUILD_GIT_REPO")
+OUTPUT_DIR=${OUTPUT_DIR-$PWD}
+OUTPUT=${OUTPUT-}
+while getopts "o:O:-" OPT; do
+    case $OPT in
+        o) OUTPUT=$OPTARG ;;
+        O) OUTPUT_DIR=$OPTARG ;;
+        -) break ;;
+        ?) exit 2 ;;
+    esac
+done
+shift $((OPTIND-1))
 
-OUTPUT=${OUTPUT-$PWD/${PROJECT_NAME}_$BUILD_VERSION.tar.gz}
+if [ -z "$OUTPUT" ]; then
+    OUTPUT=$OUTPUT_DIR/$BUILD_PROJECT-$BUILD_VERSION.tar.gz
+fi
 
 TMP=$(mktemp -d)
 trap 'rm -rf $TMP' EXIT

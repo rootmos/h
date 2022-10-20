@@ -3,31 +3,27 @@
 set -o nounset -o pipefail -o errexit
 
 SCRIPT_DIR=$(readlink -f "$0" | xargs dirname)
-ROOT=${ROOT-$(readlink -f "$SCRIPT_DIR/../..")}
-TOOLS=${TOOLS-$ROOT/tools}
-
-. <("$TOOLS/build-info" -e)
+HOST_TOOLS=${TOOLS-$(readlink -f "$SCRIPT_DIR/../../tools")}
 
 WORKDIR=$(mktemp -d)
 trap 'sudo -A rm -rf $WORKDIR' EXIT
 
+read SHA256 TARBALL < <("$HOST_TOOLS/archive" -O "$WORKDIR")
+
+tar -xzf "$TARBALL" -C "$WORKDIR"
+
+BUILD_ENV=$(find "$WORKDIR" -name ".build.env")
+PACKAGE_ROOT=$(dirname "$BUILD_ENV")
+TOOLS=${TOOLS-$PACKAGE_ROOT/tools}
+
+. <("$TOOLS/build-info" -e)
 PROJECT_NAME=$(tr '/' '-' <<< "$BUILD_GIT_REPO")
 
-PACKAGE_ROOT=$WORKDIR/$PROJECT_NAME-$BUILD_VERSION
-git clone --depth=1 --single-branch "file://$ROOT" "$PACKAGE_ROOT"
-
-rm -rf "$PACKAGE_ROOT/.git" "$PACKAGE_ROOT/.github"
-find "$PACKAGE_ROOT" -name ".gitignore" -delete
-
-rm -rf "$PACKAGE_ROOT/build/archlinux" "$PACKAGE_ROOT/doc"
-
-#DEBIAN_SRC=$PACKAGE_ROOT/build/ubuntu/debian
 DEBIAN_SRC=$SCRIPT_DIR/debian
-DEBIAN_DST=$WORKDIR/$PROJECT_NAME-$BUILD_VERSION/debian
+DEBIAN_DST=$PACKAGE_ROOT/debian
 mkdir -p "$DEBIAN_DST"
 
-FILES=(control changelog rules)
-
+FILES=(control changelog rules missing-deps)
 VARS=(PROJECT_NAME BUILD_VERSION)
 export "${VARS[@]}"
 
@@ -45,16 +41,7 @@ done
 mkdir -p "$DEBIAN_DST/source"
 echo "3.0 (quilt)" > "$DEBIAN_DST/source/format"
 
-cat <<EOF > "$PACKAGE_ROOT/.build.env"
-GIT_REPO=$BUILD_GIT_REPO
-GIT_REF=$BUILD_GIT_REF
-REPO_URL=$BUILD_REPO_URL
-GIT_DIRTY=$BUILD_GIT_DIRTY
-SOURCE_TARBALL_URL=$BUILD_SOURCE_TARBALL_URL
-EOF
-
-tar -czf "$WORKDIR/${PROJECT_NAME}_$BUILD_VERSION.orig.tar.gz" \
-    -C "$PACKAGE_ROOT" .
+mv "$TARBALL" "$WORKDIR/${PROJECT_NAME}_$BUILD_VERSION.orig.tar.gz"
 
 UNPRIVILEGED=ubuntu
 
@@ -63,12 +50,14 @@ cat <<EOF > "$WORKDIR/run"
 
 set -o nounset -o errexit
 
-cd "$PROJECT_NAME-$BUILD_VERSION"
-
 useradd -m $UNPRIVILEGED
 chown -R $UNPRIVILEGED:$UNPRIVILEGED .
 
-build/deps -rbcy # TODO: remove buildtime dependency on lua
+cd "$(basename "$PACKAGE_ROOT")"
+
+#apt-get update
+debian/missing-deps -i
+debian/missing-deps -i
 
 sudo -u $UNPRIVILEGED dpkg-buildpackage
 
@@ -76,4 +65,4 @@ cp -v ../*.deb /out
 EOF
 chmod +x "$WORKDIR/run"
 
-dorker -i -v "$WORKDIR:/workdir" -v"$PWD/out:/out"
+dorker -v "$WORKDIR:/workdir" -v"$PWD/out:/out"

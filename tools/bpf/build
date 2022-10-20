@@ -4,7 +4,7 @@ set -o nounset -o pipefail -o errexit
 
 PREFIX=${1-$PWD}
 
-TOOLS=("bpf_asm" "bpf_dbg")
+TOOLS=("bpf_asm") # "bpf_dbg"
 FORCE=
 while getopts "f-" OPT; do
     case $OPT in

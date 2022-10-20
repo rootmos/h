@@ -8,52 +8,24 @@ jobs:
       image: ubuntu:22.04
     env:
       ARCH: ubuntu2204
+      UNPRIVILEGED: ubuntu
     steps:
+    - name: Install minimal dependencies
+      run: |
+        apt-get update
+        apt-get install -y --no-install-recommends git sudo dpkg-dev gettext-base ca-certificates
+
     - name: Check out repository code
       uses: actions/checkout@v3
 
-    - name: Install dependencies
+    - name: Create an unprivileged user
       run: |
-        apt-get update -y
-        build/deps -rbc -y
+        useradd -m $UNPRIVILEGED
+        chown -R $UNPRIVILEGED:$UNPRIVILEGED .
+        echo "$UNPRIVILEGED ALL = NOPASSWD: $(which apt-get)" | tee -a /etc/sudoers
 
-    - name: Cache tools
-      id: cache-tools
-      uses: actions/cache@v3
-      env:
-        cache-name: cache-tools
-      with:
-        path: |
-          tools/bpf/bpf_*
-          tools/lib
-        key: ${{env.ARCH}}-${{env.cache-name}}-${{hashFiles('tools/lib.c')}}-${{hashFiles('tools/**/build')}}
-    - if: ${{steps.cache-tools.outputs.cache-hit != 'true'}}
-      name: Build tools
-      run: make tools
-
-    - name: Build
-      run: make build LUA_PKG=lua54
-
-    - name: Bundle distribution files
-      run: build/dist -ddist
-
-    - name: Archive distribution files
-      uses: actions/upload-artifact@v3
-      with:
-        name: dist.${{github.sha}}.${{env.ARCH}}
-        retention-days: 7
-        path: dist
-
-    - name: Test
-      run: tools/test-harness -o.
-
-    - name: Archive test results
-      uses: actions/upload-artifact@v3
-      if: success() || failure()
-      with:
-        name: tests.${{github.sha}}.${{env.ARCH}}
-        retention-days: 7
-        path: "*-tests-*.tar.gz"
+    - name: Build package
+      run: sudo -u $UNPRIVILEGED env SUDO=sudo build/ubuntu/mk
 
   archlinux:
     runs-on: ubuntu-22.04
@@ -65,7 +37,7 @@ jobs:
       ARCH: archlinux
     steps:
     - name: Install minimal dependencies
-      run: pacman -Suy --noconfirm sudo fakeroot binutils which wget
+      run: pacman -Suy --noconfirm sudo fakeroot binutils which wget git
 
     - name: Check out repository code
       uses: actions/checkout@v3

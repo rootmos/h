@@ -30,8 +30,9 @@ if [ -n "$RUNTIME" ]; then
 fi
 
 if [ -n "$BUILD" ]; then
-    PKGS+=(make wget gcc bison flex libcap-dev)
+    PKGS+=(make wget pkg-config gcc bison flex libcap-dev)
     PKGS+=("liblua$LUA_VER-dev")
+    PKGS+=("python$PYTHON_VER")
     PKGS+=("libpython$PYTHON_VER-dev")
 
     PKGS+=("lua$LUA_VER") # TODO: remove

@@ -3,18 +3,21 @@
 set -o nounset -o pipefail -o errexit
 
 SCRIPT_DIR=$(readlink -f "$0" | xargs dirname)
-HOST_TOOLS=${TOOLS-$(readlink -f "$SCRIPT_DIR/../../tools")}
+OUTPUT_DIR=${OUTPUT_DIR-$SCRIPT_DIR/out}
+
+HOST_TOOLS=${HOST_TOOLS-$(readlink -f "$SCRIPT_DIR/../../tools")}
 
 WORKDIR=$(mktemp -d)
-trap 'sudo -A rm -rf $WORKDIR' EXIT
+trap 'rm -rf $WORKDIR' EXIT
 
 read SHA256 TARBALL < <("$HOST_TOOLS/archive" -O "$WORKDIR")
+echo 1>&2 "- source tarball: $(basename "$TARBALL") $SHA256"
 
 tar -xzf "$TARBALL" -C "$WORKDIR"
 
 BUILD_ENV=$(find "$WORKDIR" -name ".build.env")
 PACKAGE_ROOT=$(dirname "$BUILD_ENV")
-TOOLS=${TOOLS-$PACKAGE_ROOT/tools}
+TOOLS=$PACKAGE_ROOT/tools
 
 . <("$TOOLS/build-info" -e)
 PROJECT_NAME=$(tr '/' '-' <<< "$BUILD_GIT_REPO")
@@ -47,24 +50,16 @@ echo "3.0 (quilt)" > "$DEBIAN_DST/source/format"
 
 mv "$TARBALL" "$WORKDIR/${PROJECT_NAME}_$BUILD_VERSION.orig.tar.gz"
 
-UNPRIVILEGED=ubuntu
+cd "$PACKAGE_ROOT"
 
-cat <<EOF > "$WORKDIR/run"
-#!/bin/sh
-
-set -o nounset -o errexit
-
-useradd -m $UNPRIVILEGED
-chown -R $UNPRIVILEGED:$UNPRIVILEGED .
-
-cd "$(basename "$PACKAGE_ROOT")"
-
+echo 1>&2 "- installing deps"
 debian/missing-deps -i
 
-sudo -u $UNPRIVILEGED dpkg-buildpackage
+echo 1>&2 "- build package"
+dpkg-buildpackage
 
-cp -v ../*.deb /out
-EOF
-chmod +x "$WORKDIR/run"
-
-dorker -v "$WORKDIR:/workdir" -v"$PWD/out:/out"
+mkdir -p "$OUTPUT_DIR"
+cp -v "$WORKDIR"/*.dsc "$OUTPUT_DIR"
+cp -v "$WORKDIR"/*.deb "$OUTPUT_DIR"
+cp -v "$WORKDIR"/*.debian.* "$OUTPUT_DIR"
+cp -v "$WORKDIR"/*.orig.* "$OUTPUT_DIR"

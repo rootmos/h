@@ -15,10 +15,12 @@ SCRIPT_DIR=$(readlink -f "$0" | xargs dirname)
 export PACKAGE_ROOT=${PACKAGE_ROOT-$SCRIPT_DIR}
 
 export SUDO=${SUDO-}
-while getopts "sS:-" OPT; do
+export YES=${YES-$([ -t 0 ] && echo || echo "-y")}
+while getopts "sS:y-" OPT; do
     case $OPT in
         s) SUDO=sudo ;;
         S) SUDO=$OPTARG ;;
+        y) YES=-y ;;
         -) break ;;
         ?) exit 2 ;;
     esac
@@ -31,7 +33,7 @@ if [ -z "$PKG" ]; then
     mapfile -t PKGS < <(find "$PACKAGE_ROOT" -type f -name "*.deb")
     if [ "${#PKGS[@]}" -eq 0 ]; then
         echo 1>&2 "- no package found, will attempt to build package"
-        $SCRIPT_DIR/build-package
+        "$SCRIPT_DIR/build-package"
         mapfile -t PKGS < <(find "$PACKAGE_ROOT" -type f -name "*.deb")
     fi
 
@@ -53,7 +55,7 @@ PKG=$(readlink -f "$PKG")
 
 echo 1>&2 "- installing package: $PKG"
 set +o errexit
-$SUDO apt-get install -y "$PKG"
+$SUDO apt-get install $YES "$PKG"
 EC=$?
 set -o errexit
 if [ "$EC" -ne 0 ]; then

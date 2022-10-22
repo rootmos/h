@@ -7,11 +7,13 @@ ROOT=${ROOT-$(readlink -f "$SCRIPT_DIR/../")}
 
 INSTALL=${INSTALL-}
 SUDO=${SUDO-}
-while getopts "isS:-" OPT; do
+YES=${YES-$([ -t 0 ] && echo || echo "-y")}
+while getopts "isS:y-" OPT; do
     case $OPT in
         i) INSTALL=1 ;;
         s) SUDO=sudo ;;
         S) SUDO=$OPTARG ;;
+        y) YES=-y ;;
         -) break ;;
         ?) exit 2 ;;
     esac
@@ -30,7 +32,7 @@ if ! command -v dpkg-checkbuilddeps >/dev/null ; then
     PRELIM_DEPS=(dpkg-dev)
     if [ -n "$INSTALL" ]; then
         set +o errexit
-        $SUDO apt-get install -y --no-install-recommends "${PRELIM_DEPS[@]}"
+        $SUDO apt-get install $YES --no-install-recommends "${PRELIM_DEPS[@]}"
         EC=$?
         set -o errexit
         if [ "$EC" -ne 0 ]; then
@@ -63,7 +65,7 @@ done
 
 if [ -n "$INSTALL" ]; then
     set +o errexit
-    $SUDO apt-get install -y --no-install-recommends "${PKGS[@]}"
+    $SUDO apt-get install $YES --no-install-recommends "${PKGS[@]}"
     EC=$?
     set -o errexit
     if [ "$EC" -ne 0 ]; then

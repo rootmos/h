@@ -2,42 +2,13 @@
 
 set -o nounset -o pipefail -o errexit
 
-WORKDIR=${WORKDIR-$PWD}
-mkdir -p "$WORKDIR"
-
-if [ -n "${1-}" ]; then
-    if grep -cq 'source-package.*.zip' <<< "$1"; then
-        SRC_PKG=$1
-    elif [ -d "$1" ]; then
-        ROOT=$1
-    else
-        echo 1>&2 "don't know how to build: $1"
-    fi
-fi
+SCRIPT_DIR=$(readlink -f "$0" | xargs dirname)
+PACKAGE_ROOT=${PACKAGE_ROOT-$SCRIPT_DIR}
 
 if [ -z "${ROOT-}" ]; then
-    if [ -z "${SRC_PKG-}" ]; then
-        ARCH=${ARCH-ubuntu*}
-        PATTERN="source-package.*.$ARCH.zip"
-        mapfile -t SRC_PKGS < <(find -type f -name "$PATTERN")
-        if [ "${#SRC_PKGS[@]}" -eq 0 ]; then
-            echo 1>&2 "no suitable packages found: $PATTERN"
-            exit 1
-        elif [ "${#SRC_PKGS[@]}" -gt 1 ]; then
-            echo 1>&2 "ambiguous source packages found:"
-            for pkg in "${SRC_PKGS[@]}"; do
-                echo 1>&2 "  $pkg"
-            done
-            exit 1
-        fi
-        SRC_PKG=${SRC_PKGS[0]}
-    fi
-
-    unzip "$SRC_PKG" -d "$WORKDIR"
-
-    mapfile -t BUILD_ENVS < <(find -type f -name ".build.env")
+    mapfile -t BUILD_ENVS < <(find "$PACKAGE_ROOT" -type f -name ".build.env")
     if [ "${#BUILD_ENVS[@]}" -eq 0 ]; then
-        mapfile -t ORIG < <(find -type f -name "*.orig.*")
+        mapfile -t ORIG < <(find "$PACKAGE_ROOT" -type f -name "*.orig.*")
         if [ "${#ORIG[@]}" -eq 0 ]; then
             echo 1>&2 "no suitable source bundle found"
             exit 1
@@ -49,10 +20,10 @@ if [ -z "${ROOT-}" ]; then
             exit 1
         fi
 
-        tar -xf "${ORIG[0]}" -C "$WORKDIR"
+        tar -xf "${ORIG[0]}" -C "$PACKAGE_ROOT"
     fi
 
-    mapfile -t BUILD_ENVS < <(find -type f -name ".build.env")
+    mapfile -t BUILD_ENVS < <(find "$PACKAGE_ROOT" -type f -name ".build.env")
     if [ "${#BUILD_ENVS[@]}" -eq 0 ]; then
         echo 1>&2 "unable to figure out package root"
         exit 1
@@ -67,7 +38,7 @@ if [ -z "${ROOT-}" ]; then
 fi
 
 if [ ! -d "$ROOT/debian" ]; then
-    mapfile -t DEBIAN < <(find -type f -name "*.debian*")
+    mapfile -t DEBIAN < <(find "$PACKAGE_ROOT" -type f -name "*.debian*")
     if [ "${#DEBIAN[@]}" -eq 0 ]; then
         echo 1>&2 "no suitable debian bundle found"
         exit 1
@@ -82,5 +53,5 @@ if [ ! -d "$ROOT/debian" ]; then
 fi
 
 cd "$ROOT"
-bash -x debian/missing-deps -i
+debian/missing-deps -i
 dpkg-buildpackage

@@ -56,7 +56,7 @@ echo 1>&2 "- installing deps"
 debian/missing-deps -i
 
 echo 1>&2 "- build package"
-dpkg-buildpackage
+dpkg-buildpackage -Zgzip
 
 mkdir -p "$OUTPUT_DIR"
 cp -v "$WORKDIR"/*.deb "$OUTPUT_DIR"

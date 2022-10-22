@@ -2,6 +2,9 @@
 
 set -o nounset -o pipefail -o errexit
 
+SCRIPT_DIR=$(readlink -f "$0" | xargs dirname)
+ROOT=${ROOT-$(readlink -f "$SCRIPT_DIR/../")}
+
 INSTALL=${INSTALL-}
 SUDO=${SUDO-}
 while getopts "is:-" OPT; do
@@ -14,7 +17,7 @@ while getopts "is:-" OPT; do
 done
 shift $((OPTIND-1))
 
-if ! command -v dpkg-checkbuilddeps; then
+if ! command -v dpkg-checkbuilddeps >/dev/null ; then
     if [ -n "$INSTALL" ]; then
         $SUDO apt-get install -y --no-install-recommends dpkg-dev
     else
@@ -23,7 +26,7 @@ if ! command -v dpkg-checkbuilddeps; then
     fi
 fi
 
-PKGS=($( (dpkg-checkbuilddeps 2>&1 || true) \
+PKGS=($( (cd "$ROOT" && dpkg-checkbuilddeps 2>&1 || true) \
     | grep "Unmet build dependencies" \
     | sed 's/dpkg-checkbuilddeps:\serror:\sUnmet build dependencies: //g' \
     | sed 's/[\(][^)]*[\)] //g'))

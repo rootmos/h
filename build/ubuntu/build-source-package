@@ -2,6 +2,15 @@
 
 set -o nounset -o pipefail -o errexit
 
+if [ "$(id -u)" -eq 0 ]; then
+    echo -n 1>&2 "aviod running this script as root"
+    for i in $(seq 5); do
+        sleep 1
+        echo -n 1>&2 "."
+    done
+    echo 1>&2 ""
+fi
+
 SCRIPT_DIR=$(readlink -f "$0" | xargs dirname)
 PACKAGE_ROOT=${PACKAGE_ROOT-$SCRIPT_DIR}
 

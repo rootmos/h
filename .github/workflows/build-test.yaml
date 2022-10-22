@@ -35,11 +35,7 @@ jobs:
       with:
         name: source-package.${{github.sha}}.${{env.ARCH}}
         retention-days: 7
-        path: |
-          build/ubuntu/out/*.dsc
-          build/ubuntu/out/*.buildinfo
-          build/ubuntu/out/*.debian.*
-          build/ubuntu/out/*.orig.*
+        path: build/ubuntu/out/*
 
     - name: Install package
       run: |

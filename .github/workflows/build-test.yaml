@@ -35,7 +35,7 @@ jobs:
       with:
         name: source-package.${{github.sha}}.${{env.ARCH}}
         retention-days: 7
-        path: build/ubuntu/out/*
+        path: build/ubuntu/out/*.tar
 
     - name: Install package
       run: |

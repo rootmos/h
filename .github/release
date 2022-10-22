@@ -24,5 +24,5 @@ done
 
 gh release create --target=$BUILD_GIT_REF \
     "v$BUILD_VERSION" \
-    "PKGBUILD#Arch Linux PKGBUILD" \
-    "$UBUNTU_FILENAME#Ubuntu source package"
+    "$ASSETS/PKGBUILD#Arch Linux PKGBUILD" \
+    "$ASSETS/$UBUNTU_FILENAME#Ubuntu source package"

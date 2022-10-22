@@ -31,7 +31,17 @@ PKGS=($( (dpkg-checkbuilddeps 2>&1 || true) \
 [ "${#PKGS[@]}" -eq 0 ] && exit 0
 
 if [ -n "$INSTALL" ]; then
+    set +o errexit
     $SUDO apt-get install -y --no-install-recommends "${PKGS[@]}"
+    EC=$?
+    set -o errexit
+    if [ "$EC" -ne 0 ]; then
+        echo 1>&2 "unable to install missing dependencies: ${PKGS[@]}"
+        if [ -z "$SUDO" ]; then
+            echo 1>&2 "try setting SUDO environment variable (e.g. SUDO=sudo) or install packages manually"
+        fi
+        exit 1
+    fi
 else
     echo "${PKGS[@]}"
 fi

@@ -67,7 +67,8 @@ mkdir -p "$TARBALL_ROOT"
 cp -v "$WORKDIR"/*.dsc "$TARBALL_ROOT"
 cp -v "$WORKDIR"/*.debian.* "$TARBALL_ROOT"
 cp -v "$WORKDIR"/*.orig.* "$TARBALL_ROOT"
-cp "$SCRIPT_DIR/build-package" "$SCRIPT_DIR/install-package" "$TARBALL_ROOT"
+cp "$SCRIPT_DIR/src/build-package" \
+    "$SCRIPT_DIR/src/install-package" "$TARBALL_ROOT"
 
 tar -cf "$TARBALL" \
     -C "$(dirname "$TARBALL_ROOT")" "$(basename "$TARBALL_ROOT")"

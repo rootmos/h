@@ -7,10 +7,11 @@ ROOT=${ROOT-$(readlink -f "$SCRIPT_DIR/../")}
 
 INSTALL=${INSTALL-}
 SUDO=${SUDO-}
-while getopts "is:-" OPT; do
+while getopts "isS:-" OPT; do
     case $OPT in
         i) INSTALL=1 ;;
-        s) SUDO=$OPTARG ;;
+        s) SUDO=sudo ;;
+        S) SUDO=$OPTARG ;;
         -) break ;;
         ?) exit 2 ;;
     esac
@@ -19,17 +20,38 @@ shift $((OPTIND-1))
 
 if ! command -v dpkg-checkbuilddeps >/dev/null ; then
     if [ -n "$INSTALL" ]; then
+        set +o errexit
         $SUDO apt-get install -y --no-install-recommends dpkg-dev
+        EC=$?
+        set -o errexit
+        if [ "$EC" -ne 0 ]; then
+            echo 1>&2 "unable to install: dpkg-dev"
+            if [ -z "$SUDO" ]; then
+                echo 1>&2 "try setting SUDO environment variable (e.g. SUDO=sudo) or install packages manually"
+            fi
+            exit $EC
+        fi
     else
         echo 1>&2 "unable to proceed without dpkg-dev package"
         exit 1
     fi
 fi
 
-PKGS=($( (cd "$ROOT" && dpkg-checkbuilddeps 2>&1 || true) \
-    | grep "Unmet build dependencies" \
-    | sed 's/dpkg-checkbuilddeps:\serror:\sUnmet build dependencies: //g' \
-    | sed 's/[\(][^)]*[\)] //g'))
+PKGS=()
+mapfile -t CHECK_DEPS < <(cd "$ROOT" && dpkg-checkbuilddeps 2>&1 || true)
+EXIT=0
+for l in "${CHECK_DEPS[@]}"; do
+    if grep -cq "Unmet build dependencies" <<< "$l"; then
+        PKGS+=($(sed 's/^dpkg-checkbuilddeps:\serror:\sUnmet build dependencies: //g' <<< "$l" \
+            | sed 's/[\(][^)]*[\)] //g'))
+    elif grep -cq "warning: cannot determine CC system type" <<< "$l"; then
+        true
+    else
+        echo "$l" 1>&2
+        EXIT=1
+    fi
+done
+[ "$EXIT" -ne 0 ] && exit $EXIT
 
 [ "${#PKGS[@]}" -eq 0 ] && exit 0
 
@@ -43,7 +65,7 @@ if [ -n "$INSTALL" ]; then
         if [ -z "$SUDO" ]; then
             echo 1>&2 "try setting SUDO environment variable (e.g. SUDO=sudo) or install packages manually"
         fi
-        exit 1
+        exit $EC
     fi
 else
     echo "${PKGS[@]}"

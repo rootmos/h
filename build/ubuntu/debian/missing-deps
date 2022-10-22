@@ -21,7 +21,7 @@ done
 shift $((OPTIND-1))
 
 apt-get-oopsie() {
-    echo 1>&2 "unable to install: $@"
+    echo 1>&2 "unable to install: $*"
     echo 1>&2 "you may try to:"
     echo 1>&2 "  - use the -s option, or"
     echo 1>&2 "  - set the SUDO environment variable (e.g. SUDO=sudo), or"
@@ -40,18 +40,18 @@ if ! command -v dpkg-checkbuilddeps >/dev/null ; then
             exit $EC
         fi
     else
-        echo 1>&2 "unable to proceed without: ${PRELIM_DEPS[@]}"
+        echo 1>&2 "unable to proceed without: ${PRELIM_DEPS[*]}"
         exit 1
     fi
 fi
 
 PKGS=()
-mapfile -t CHECK_DEPS < <(cd "$ROOT" && dpkg-checkbuilddeps 2>&1 || true)
+mapfile -t CHECK_DEPS < <( (cd "$ROOT" && dpkg-checkbuilddeps 2>&1) || true)
 EXIT=0
 for l in "${CHECK_DEPS[@]}"; do
     if grep -cq "Unmet build dependencies" <<< "$l"; then
-        PKGS+=($(sed 's/^dpkg-checkbuilddeps:\serror:\sUnmet build dependencies: //g' <<< "$l" \
-            | sed 's/[\(][^)]*[\)] //g'))
+        read -ra PKGS < <(sed 's/^dpkg-checkbuilddeps:\serror:\sUnmet build dependencies: //g' <<< "$l" \
+            | sed 's/[\(][^)]*[\)] //g')
     elif grep -cq "warning: cannot determine CC system type" <<< "$l"; then
         true
     else

@@ -56,10 +56,18 @@ echo 1>&2 "- installing deps"
 debian/missing-deps -i
 
 echo 1>&2 "- build package"
-dpkg-buildpackage
+dpkg-buildpackage -Zgzip
 
 mkdir -p "$OUTPUT_DIR"
-cp -v "$WORKDIR"/*.dsc "$OUTPUT_DIR"
 cp -v "$WORKDIR"/*.deb "$OUTPUT_DIR"
-cp -v "$WORKDIR"/*.debian.* "$OUTPUT_DIR"
-cp -v "$WORKDIR"/*.orig.* "$OUTPUT_DIR"
+
+TARBALL=$OUTPUT_DIR/${PROJECT_NAME}_${BUILD_VERSION}.tar
+TARBALL_ROOT=$WORKDIR/source-package/${PROJECT_NAME}_${BUILD_VERSION}
+mkdir -p "$TARBALL_ROOT"
+cp -v "$WORKDIR"/*.dsc "$TARBALL_ROOT"
+cp -v "$WORKDIR"/*.debian.* "$TARBALL_ROOT"
+cp -v "$WORKDIR"/*.orig.* "$TARBALL_ROOT"
+cp "$SCRIPT_DIR/build-source-package" "$TARBALL_ROOT"
+
+tar -cf "$TARBALL" \
+    -C "$(dirname "$TARBALL_ROOT")" "$(basename "$TARBALL_ROOT")"

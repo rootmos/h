@@ -1,0 +1,57 @@
+#!/bin/bash
+
+set -o nounset -o pipefail -o errexit
+
+SCRIPT_DIR=$(readlink -f "$0" | xargs dirname)
+PACKAGE_ROOT=${PACKAGE_ROOT-$SCRIPT_DIR}
+
+if [ -z "${ROOT-}" ]; then
+    mapfile -t BUILD_ENVS < <(find "$PACKAGE_ROOT" -type f -name ".build.env")
+    if [ "${#BUILD_ENVS[@]}" -eq 0 ]; then
+        mapfile -t ORIG < <(find "$PACKAGE_ROOT" -type f -name "*.orig.*")
+        if [ "${#ORIG[@]}" -eq 0 ]; then
+            echo 1>&2 "no suitable source bundle found"
+            exit 1
+        elif [ "${#ORIG[@]}" -gt 1 ]; then
+            echo 1>&2 "ambiguous source bundles found:"
+            for orig in "${ORIG[@]}"; do
+                echo 1>&2 "  $orig"
+            done
+            exit 1
+        fi
+
+        tar -xf "${ORIG[0]}" -C "$PACKAGE_ROOT"
+    fi
+
+    mapfile -t BUILD_ENVS < <(find "$PACKAGE_ROOT" -type f -name ".build.env")
+    if [ "${#BUILD_ENVS[@]}" -eq 0 ]; then
+        echo 1>&2 "unable to figure out package root"
+        exit 1
+    elif [ "${#BUILD_ENVS[@]}" -gt 1 ]; then
+        echo 1>&2 "ambiguous package roots found:"
+        for env in "${BUILD_ENVS[@]}"; do
+            echo 1>&2 "  $(dirname "$env")"
+        done
+    fi
+
+    ROOT=$(dirname "${BUILD_ENVS[0]}")
+fi
+
+if [ ! -d "$ROOT/debian" ]; then
+    mapfile -t DEBIAN < <(find "$PACKAGE_ROOT" -type f -name "*.debian*")
+    if [ "${#DEBIAN[@]}" -eq 0 ]; then
+        echo 1>&2 "no suitable debian bundle found"
+        exit 1
+    elif [ "${#DEBIAN[@]}" -gt 1 ]; then
+        echo 1>&2 "ambiguous debian bundles found:"
+        for debian in "${DEBIAN[@]}"; do
+            echo 1>&2 "  $debian"
+        done
+    fi
+
+    tar -xf "${DEBIAN[0]}" -C "$ROOT"
+fi
+
+cd "$ROOT"
+debian/missing-deps -i
+dpkg-buildpackage

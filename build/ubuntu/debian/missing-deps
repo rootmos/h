@@ -14,6 +14,15 @@ while getopts "is:-" OPT; do
 done
 shift $((OPTIND-1))
 
+if ! command -v dpkg-checkbuilddeps; then
+    if [ -n "$INSTALL" ]; then
+        $SUDO apt-get install -y --no-install-recommends dpkg-dev
+    else
+        echo 1>&2 "unable to proceed without dpkg-dev package"
+        exit 1
+    fi
+fi
+
 PKGS=($( (dpkg-checkbuilddeps 2>&1 || true) \
     | grep "Unmet build dependencies" \
     | sed 's/dpkg-checkbuilddeps:\serror:\sUnmet build dependencies: //g' \

@@ -6,7 +6,7 @@ SCRIPT_DIR=$(readlink -f "$0" | xargs dirname)
 PP=${PP-$SCRIPT_DIR/pp}
 
 INCLUDE_INPUT=
-OUTPUT=/dev/stdout
+OUTPUT=${OUTPUT-/dev/stdout}
 while getopts "io:-" OPT; do
     case $OPT in
         i) INCLUDE_INPUT=1 ;;
@@ -24,13 +24,16 @@ fi
 
 INPUT=$1
 
-cp /dev/null "$OUTPUT"
+TMP=$(mktemp)
+trap 'rm -f $TMP' EXIT
 
 if [ -n "$INCLUDE_INPUT" ]; then
-    echo "/** bpf_asm $INPUT" >> "$OUTPUT"
-    echo " * " >> "$OUTPUT"
-    sed 's,^, * ,' < "$INPUT" >> "$OUTPUT"
-    echo "**/" >> "$OUTPUT"
+    echo "/** bpf_asm $INPUT" >> "$TMP"
+    echo " * " >> "$TMP"
+    sed 's,^, * ,' < "$INPUT" >> "$TMP"
+    echo "**/" >> "$TMP"
 fi
 
-"$PP" "$INPUT" | "$BPF_ASM" -c >> "$OUTPUT"
+"$PP" "$INPUT" | "$BPF_ASM" -c >> "$TMP"
+
+cp "$TMP" "$OUTPUT"

@@ -6,15 +6,16 @@ FD=${FD-rsfd}
 INPUT=${1--}
 OUTPUT=${2-/dev/stdout}
 
-cp /dev/null "$OUTPUT"
+TMP=$(mktemp)
+trap 'rm -f $TMP' EXIT
 
 cat "$INPUT" | while read F; do
     if [ -f "$F" ]; then
-        cat <<EOF >> "$OUTPUT"
+        cat <<EOF >> "$TMP"
 landlock_allow($FD, "$F", LANDLOCK_ACCESS_FS_READ_FILE);
 EOF
     elif [ -d "$F" ]; then
-        cat <<EOF >> "$OUTPUT"
+        cat <<EOF >> "$TMP"
 landlock_allow($FD, "$F", LANDLOCK_ACCESS_FS_READ_FILE|LANDLOCK_ACCESS_FS_READ_DIR);
 EOF
     else
@@ -22,3 +23,5 @@ EOF
         exit 1
     fi
 done
+
+cp "$TMP" "$OUTPUT"

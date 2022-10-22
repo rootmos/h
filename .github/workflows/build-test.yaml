@@ -14,7 +14,7 @@ jobs:
     - name: Install minimal dependencies
       run: |
         apt-get update
-        apt-get install -y --no-install-recommends git sudo dpkg-dev gettext-base ca-certificates
+        apt-get install -y --no-install-recommends git sudo gettext-base ca-certificates
 
     - name: Check out repository code
       uses: actions/checkout@v3
@@ -38,9 +38,7 @@ jobs:
         path: build/ubuntu/out/*.tar
 
     - name: Install package
-      run: |
-        dpkg -i build/ubuntu/out/*.deb || true
-        apt-get install -fy
+      run: apt-get install -y ./build/ubuntu/out/*.deb
 
     - name: Test system installation
       run: |

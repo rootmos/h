@@ -2,8 +2,28 @@
 
 set -o nounset -o pipefail -o errexit
 
+if [ "$(id -u)" -eq 0 ]; then
+    echo -n 1>&2 "avoid running this script as root"
+    for i in $(seq 5); do
+        sleep 1
+        echo -n 1>&2 "."
+    done
+    echo 1>&2 ""
+fi
+
 SCRIPT_DIR=$(readlink -f "$0" | xargs dirname)
 PACKAGE_ROOT=${PACKAGE_ROOT-$SCRIPT_DIR}
+
+export SUDO=${SUDO-}
+while getopts "sS:-" OPT; do
+    case $OPT in
+        s) SUDO=sudo ;;
+        S) SUDO=$OPTARG ;;
+        -) break ;;
+        ?) exit 2 ;;
+    esac
+done
+shift $((OPTIND-1))
 
 if [ -z "${ROOT-}" ]; then
     mapfile -t BUILD_ENVS < <(find "$PACKAGE_ROOT" -type f -name ".build.env")
@@ -20,6 +40,7 @@ if [ -z "${ROOT-}" ]; then
             exit 1
         fi
 
+        echo 1>&2 "- extracting original source tarball: ${ORIG[0]}"
         tar -xf "${ORIG[0]}" -C "$PACKAGE_ROOT"
     fi
 
@@ -35,6 +56,7 @@ if [ -z "${ROOT-}" ]; then
     fi
 
     ROOT=$(dirname "${BUILD_ENVS[0]}")
+    echo 1>&2 "- package root: $ROOT"
 fi
 
 if [ ! -d "$ROOT/debian" ]; then
@@ -49,9 +71,14 @@ if [ ! -d "$ROOT/debian" ]; then
         done
     fi
 
+    echo 1>&2 "- extracting debian-specifics: ${DEBIAN[0]}"
     tar -xf "${DEBIAN[0]}" -C "$ROOT"
 fi
 
 cd "$ROOT"
+
+echo 1>&2 "- installing missing dependencies"
 debian/missing-deps -i
+
+echo 1>&2 "- building package"
 dpkg-buildpackage

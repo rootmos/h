@@ -42,9 +42,11 @@ elif [ "$ACTION" = "compare" ]; then
     fi
 fi
 
-cp /dev/null "$OUTPUT"
-"$SCRIPT_DIR/build-info" -c >> "$OUTPUT"
-cat <<EOF >> "$OUTPUT"
+TMP=$(mktemp)
+trap 'rm -f $TMP' EXIT
+
+"$SCRIPT_DIR/build-info" -c > "$TMP"
+cat <<EOF >> "$TMP"
 
 static void print_version(const char* prog)
 {
@@ -67,3 +69,5 @@ static void print_version(const char* prog)
     printf("buildtime %s\\n", BUILD_TIME);
 }
 EOF
+
+cp "$TMP" "$OUTPUT"

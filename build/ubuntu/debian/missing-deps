@@ -2,36 +2,76 @@
 
 set -o nounset -o pipefail -o errexit
 
+SCRIPT_DIR=$(readlink -f "$0" | xargs dirname)
+ROOT=${ROOT-$(readlink -f "$SCRIPT_DIR/../")}
+
 INSTALL=${INSTALL-}
 SUDO=${SUDO-}
-while getopts "is:-" OPT; do
+YES=${YES-$([ -t 0 ] && echo || echo "-y")}
+while getopts "isS:y-" OPT; do
     case $OPT in
         i) INSTALL=1 ;;
-        s) SUDO=$OPTARG ;;
+        s) SUDO=sudo ;;
+        S) SUDO=$OPTARG ;;
+        y) YES=-y ;;
         -) break ;;
         ?) exit 2 ;;
     esac
 done
 shift $((OPTIND-1))
 
-if ! command -v dpkg-checkbuilddeps; then
+apt-get-oopsie() {
+    echo 1>&2 "unable to install: $*"
+    echo 1>&2 "you may try to:"
+    echo 1>&2 "  - use the -s option, or"
+    echo 1>&2 "  - set the SUDO environment variable (e.g. SUDO=sudo), or"
+    echo 1>&2 "  - install packages manually"
+}
+
+if ! command -v dpkg-checkbuilddeps >/dev/null ; then
+    PRELIM_DEPS=(dpkg-dev)
     if [ -n "$INSTALL" ]; then
-        $SUDO apt-get install -y --no-install-recommends dpkg-dev
+        set +o errexit
+        $SUDO apt-get install $YES --no-install-recommends "${PRELIM_DEPS[@]}"
+        EC=$?
+        set -o errexit
+        if [ "$EC" -ne 0 ]; then
+            apt-get-oopsie "${PRELIM_DEPS[@]}"
+            exit $EC
+        fi
     else
-        echo 1>&2 "unable to proceed without dpkg-dev package"
+        echo 1>&2 "unable to proceed without: ${PRELIM_DEPS[*]}"
         exit 1
     fi
 fi
 
-PKGS=($( (dpkg-checkbuilddeps 2>&1 || true) \
-    | grep "Unmet build dependencies" \
-    | sed 's/dpkg-checkbuilddeps:\serror:\sUnmet build dependencies: //g' \
-    | sed 's/[\(][^)]*[\)] //g'))
+PKGS=()
+mapfile -t CHECK_DEPS < <( (cd "$ROOT" && dpkg-checkbuilddeps 2>&1) || true)
+EXIT=0
+for l in "${CHECK_DEPS[@]}"; do
+    if grep -cq "Unmet build dependencies" <<< "$l"; then
+        read -ra PKGS < <(sed 's/^dpkg-checkbuilddeps:\serror:\sUnmet build dependencies: //g' <<< "$l" \
+            | sed 's/[\(][^)]*[\)] //g')
+    elif grep -cq "warning: cannot determine CC system type" <<< "$l"; then
+        true
+    else
+        echo "$l" 1>&2
+        EXIT=1
+    fi
+done
+[ "$EXIT" -ne 0 ] && exit $EXIT
 
 [ "${#PKGS[@]}" -eq 0 ] && exit 0
 
 if [ -n "$INSTALL" ]; then
-    $SUDO apt-get install -y --no-install-recommends "${PKGS[@]}"
+    set +o errexit
+    $SUDO apt-get install $YES --no-install-recommends "${PKGS[@]}"
+    EC=$?
+    set -o errexit
+    if [ "$EC" -ne 0 ]; then
+        apt-get-oopsie "${PKGS[@]}"
+        exit $EC
+    fi
 else
     echo "${PKGS[@]}"
 fi

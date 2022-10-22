@@ -1,0 +1,68 @@
+#!/bin/bash
+
+set -o nounset -o pipefail -o errexit
+
+if [ "$(id -u)" -eq 0 ]; then
+    echo -n 1>&2 "avoid running this script as root"
+    for i in $(seq 5); do
+        sleep 1
+        echo -n 1>&2 "."
+    done
+    echo 1>&2 ""
+fi
+
+SCRIPT_DIR=$(readlink -f "$0" | xargs dirname)
+export PACKAGE_ROOT=${PACKAGE_ROOT-$SCRIPT_DIR}
+
+export SUDO=${SUDO-}
+export YES=${YES-$([ -t 0 ] && echo || echo "-y")}
+while getopts "sS:y-" OPT; do
+    case $OPT in
+        s) SUDO=sudo ;;
+        S) SUDO=$OPTARG ;;
+        y) YES=-y ;;
+        -) break ;;
+        ?) exit 2 ;;
+    esac
+done
+shift $((OPTIND-1))
+
+PKG=${PKG-${1-}}
+
+if [ -z "$PKG" ]; then
+    mapfile -t PKGS < <(find "$PACKAGE_ROOT" -type f -name "*.deb")
+    if [ "${#PKGS[@]}" -eq 0 ]; then
+        echo 1>&2 "- no package found, will attempt to build package"
+        "$SCRIPT_DIR/build-package"
+        mapfile -t PKGS < <(find "$PACKAGE_ROOT" -type f -name "*.deb")
+    fi
+
+    if [ "${#PKGS[@]}" -eq 0 ]; then
+        echo 1>&2 "- no package found"
+        exit 1
+    elif [ "${#PKGS[@]}" -gt 1 ]; then
+        echo 1>&2 "ambiguous packages found:"
+        for pkg in "${PKGS[@]}"; do
+            echo 1>&2 "  $pkg"
+        done
+        exit 1
+    fi
+
+    PKG=${PKGS[0]}
+fi
+
+PKG=$(readlink -f "$PKG")
+
+echo 1>&2 "- installing package: $PKG"
+set +o errexit
+$SUDO apt-get install $YES "$PKG"
+EC=$?
+set -o errexit
+if [ "$EC" -ne 0 ]; then
+    echo 1>&2 "unable to install: $PKG"
+    echo 1>&2 "you may try to:"
+    echo 1>&2 "  - use the -s option, or"
+    echo 1>&2 "  - set the SUDO environment variable (e.g. SUDO=sudo), or"
+    echo 1>&2 "  - install package manually"
+    exit $EC
+fi

@@ -49,16 +49,18 @@ if [ -z "$PKG" ]; then
     PKG=${PKGS[0]}
 fi
 
+PKG=$(readlink -f "$PKG")
+
 echo 1>&2 "- installing package: $PKG"
 set +o errexit
-$SUDO apt-get install -y "./$PKG"
+$SUDO apt-get install -y "$PKG"
 EC=$?
 set -o errexit
 if [ "$EC" -ne 0 ]; then
-    echo 1>&2 "unable to install: ./$PKG"
+    echo 1>&2 "unable to install: $PKG"
     echo 1>&2 "you may try to:"
     echo 1>&2 "  - use the -s option, or"
     echo 1>&2 "  - set the SUDO environment variable (e.g. SUDO=sudo), or"
-    echo 1>&2 "  - install packages manually"
+    echo 1>&2 "  - install package manually"
     exit $EC
 fi

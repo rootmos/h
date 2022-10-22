@@ -18,10 +18,11 @@ unzip "$ARTIFACTS/PKGBUILD.$BUILD_GIT_REF.zip" -d "$ASSETS"
 
 unzip "$ARTIFACTS/source-package.$BUILD_GIT_REF.ubuntu2204.zip" -d "$TMP"
 for f in "$TMP/"*"$BUILD_VERSION.tar"; do
-    mv "$f" "$ASSETS/$(sed 's/.tar$/.ubuntu.tar/' <<< "$(basename "$f")")"
+    UBUNTU_FILENAME=$(sed 's/.tar$/_ubuntu.tar/' <<< "$(basename "$f")")
+    mv "$f" "$ASSETS/$UBUNTU_FILENAME"
 done
 
-gh release create \
-    --target=$BUILD_GIT_REF \
+gh release create --target=$BUILD_GIT_REF \
     "v$BUILD_VERSION" \
-    "$ASSETS"/*
+    "PKGBUILD#Arch Linux PKGBUILD" \
+    "$UBUNTU_FILENAME#Ubuntu source package"

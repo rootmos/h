@@ -9,13 +9,16 @@ TOOLS=${TOOLS-$(readlink -f "$SCRIPT_DIR/../tools")}
 
 ARTIFACTS=${ARTIFACTS-$1}
 
-ASSETS=$(mktemp -d)
-trap 'rm -rf $ASSETS' EXIT
+TMP=$(mktemp -d)
+trap 'rm -rf $TMP' EXIT
+ASSETS=$TMP/assets
+mkdir -p "$ASSETS"
 
 unzip "$ARTIFACTS/PKGBUILD.$BUILD_GIT_REF.zip" -d "$ASSETS"
 
-for f in "$ARTIFACTS/source-package.$BUILD_GIT_REF."*.zip; do
-    cp -v "$f" "$ASSETS/$(sed 's/'"$BUILD_GIT_REF"'/'"$BUILD_VERSION"'/' <<< "$(basename "$f")")"
+unzip "$ARTIFACTS/source-package.$BUILD_GIT_REF.ubuntu2204.zip" -d "$TMP"
+for f in "$TMP/"*"$BUILD_VERSION.tar"; do
+    mv "$f" "$ASSETS/$(sed 's/.tar$/.ubuntu.tar/' <<< "$(basename "$f")")"
 done
 
 gh release create \

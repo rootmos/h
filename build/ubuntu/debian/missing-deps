@@ -18,21 +18,27 @@ while getopts "isS:-" OPT; do
 done
 shift $((OPTIND-1))
 
+apt-get-oopsie() {
+    echo 1>&2 "unable to install: $@"
+    echo 1>&2 "you may try to:"
+    echo 1>&2 "  - use the -s option, or"
+    echo 1>&2 "  - set the SUDO environment variable (e.g. SUDO=sudo), or"
+    echo 1>&2 "  - install packages manually"
+}
+
 if ! command -v dpkg-checkbuilddeps >/dev/null ; then
+    PRELIM_DEPS=(dpkg-dev)
     if [ -n "$INSTALL" ]; then
         set +o errexit
-        $SUDO apt-get install -y --no-install-recommends dpkg-dev
+        $SUDO apt-get install -y --no-install-recommends "${PRELIM_DEPS[@]}"
         EC=$?
         set -o errexit
         if [ "$EC" -ne 0 ]; then
-            echo 1>&2 "unable to install: dpkg-dev"
-            if [ -z "$SUDO" ]; then
-                echo 1>&2 "try setting SUDO environment variable (e.g. SUDO=sudo) or install packages manually"
-            fi
+            apt-get-oopsie "${PRELIM_DEPS[@]}"
             exit $EC
         fi
     else
-        echo 1>&2 "unable to proceed without dpkg-dev package"
+        echo 1>&2 "unable to proceed without: ${PRELIM_DEPS[@]}"
         exit 1
     fi
 fi
@@ -61,10 +67,7 @@ if [ -n "$INSTALL" ]; then
     EC=$?
     set -o errexit
     if [ "$EC" -ne 0 ]; then
-        echo 1>&2 "unable to install missing dependencies: ${PKGS[@]}"
-        if [ -z "$SUDO" ]; then
-            echo 1>&2 "try setting SUDO environment variable (e.g. SUDO=sudo) or install packages manually"
-        fi
+        apt-get-oopsie "${PKGS[@]}"
         exit $EC
     fi
 else

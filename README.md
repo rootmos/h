@@ -125,6 +125,7 @@ dropping all capabilities could be useful.
 
 ## Installation and build instructions
 
+### Building from sources
 This project is intended to be built using `Makefile`:s and common `c` build
 tools, except for the `bpf_asm` tool (found in the
 [Linux kernel sources](https://github.com/torvalds/linux/tree/master/tools/bpf)).
@@ -142,9 +143,29 @@ The steps to build the project is then:
 
 If these steps fail because of missing dependencies you may consult the
 following table (derived from the packages installed during the
-[Build and test](/actions/workflows/build-test.yaml) workflow).
+[Build and test](.github/workflows/build-test.yaml) workflow).
 
 | | runtime | build | check |
 |-|---------|-------|-------|
 |Ubuntu 22.04| `libcap2 lua5.4 python3` | `make pkg-config gcc libcap-dev wget ca-certificates bison flex liblua5.4-dev python3 libpython3-dev` | `uuid-runtime jq` |
 |Arch Linux| `lua python` | `make gcc pkgconf bpf` | `jq` |
+
+### Building from a Ubuntu source package
+Pick a release and download the Ubuntu source package asset.
+Included within are the sources and two helper scripts:
+- `build-package` that runs `dpkg-buildpackage`, as well as checking for
+  missing build-time dependencies
+- `install-package` installs the built package using `apt-get`, but note that
+  you can try out the built binaries without a system-wide installation
+
+These scripts are intended to be running as an unprivileged user, but might
+need `sudo` access to `apt-get` in order to install missing dependencies.
+Both scripts accept an `-s` option for this case, or you can set the `SUDO`
+environment variable (e.g. `SUDO="sudo --askpass"`).
+
+### Building from an Arch Linux PKGBUILD
+Pick a release and download the Arch Linux `PKGBUILD` asset, place it in a
+suitably empty directory and invoke `makepkg`, possibly with `--syncdeps`
+and/or `--install` options when desired.
+Note that you can try out the built binaries (found in the created `src`
+subfolder) without a system-wide installation.

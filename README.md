@@ -125,6 +125,25 @@ dropping all capabilities could be useful.
 
 ## Installation and build instructions
 
+This project is intended to be built using `Makefile`:s and common `c` build
+tools, except for the `bpf_asm` tool (found in the
+[Linux kernel sources](https://github.com/torvalds/linux/tree/master/tools/bpf)).
+Arch Linux users can use the [`bpf`](https://archlinux.org/packages/community/x86_64/bpf/)
+package, but other distributions might have to build their own copies.
+I have prepared a [build script](tools/bpf/build) which is used when `bpf_asm`
+is not found (the script is used in the Ubuntu CI-job).
+
+The steps to build the project is then:
+```shell
+> make tools
+> make build
+> make check
+```
+
+If these steps fail because of missing dependencies you may consult the
+following table (derived from the packages installed during the
+[Build and test](/actions/workflows/build-test.yaml) workflow).
+
 | | runtime | build | check |
 |-|---------|-------|-------|
 |Ubuntu 22.04| `libcap2 lua5.4 python3` | `make pkg-config gcc libcap-dev wget ca-certificates bison flex liblua5.4-dev python3 libpython3-dev` | `uuid-runtime jq` |

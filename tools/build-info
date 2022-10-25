@@ -50,7 +50,7 @@ kv "VERSION" "$VERSION_MAJOR.$VERSION_MINOR.$VERSION_PATCH"
 
 if [ -f "$ROOT/.build.env" ]; then
     . "$ROOT/.build.env"
-elif [ -n "${CI-}" ]; then
+elif [ -n "${CI-}" ]; then # TODO: is this actually used?
     GIT_REF=$GITHUB_SHA
     GIT_DIRTY= # HACK: assumption
     GIT_REPO=$GITHUB_REPOSITORY
@@ -60,6 +60,14 @@ elif command -v git > /dev/null \
     && git rev-parse --show-toplevel >/dev/null 2>&1; then
     GIT_REF=$(git rev-parse HEAD)
     GIT_DIRTY=$([ -n "$(git status --porcelain)" ] && echo "1" || echo)
+
+    if [ -n "$GIT_DIRTY" ]; then
+        GIT_USER_NAME=$(git config user.name)
+        GIT_USER_EMAIL=$(git config user.email)
+    else
+        GIT_USER_NAME=$(git --no-pager log --format=format:'%an' -n 1)
+        GIT_USER_EMAIL=$(git --no-pager log --format=format:'%ae' -n 1)
+    fi
 
     ORIGIN=$(git remote get-url origin)
     DOMAIN=github.com
@@ -90,15 +98,5 @@ kv "SOURCE_TARBALL_URL" "$SOURCE_TARBALL_URL"
 kv "TIME" "$(date -Is)"
 kv "TIME_RFC5322" "$(date --rfc-email)"
 
-if command -v git > /dev/null; then
-    if [ -n "$GIT_DIRTY" ]; then
-        GIT_USER_NAME=$(git config user.name)
-        GIT_USER_EMAIL=$(git config user.email)
-    else
-        GIT_USER_NAME=$(git --no-pager log --format=format:'%an\n' -n 1)
-        GIT_USER_EMAIL=$(git --no-pager log --format=format:'%ae\n' -n 1)
-    fi
-
-    kv "GIT_USER_NAME" "$GIT_USER_NAME"
-    kv "GIT_USER_EMAIL" "$GIT_USER_EMAIL"
-fi
+kv "GIT_USER_NAME" "$GIT_USER_NAME"
+kv "GIT_USER_EMAIL" "$GIT_USER_EMAIL"

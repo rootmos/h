@@ -1,6 +1,7 @@
 #!/bin/bash
 
 set -o nounset -o pipefail -o errexit
+set -o xtrace
 
 SCRIPT_DIR=$(readlink -f "$0" | xargs dirname)
 ROOT=${ROOT-$SCRIPT_DIR/..}
@@ -90,14 +91,11 @@ kv "TIME" "$(date -Is)"
 kv "TIME_RFC5322" "$(date --rfc-email)"
 
 if command -v git > /dev/null; then
-    GIT_USER_NAME=$(git config user.name)
-    GIT_USER_EMAIL=$(git config user.email)
-
-    if [ -z "$GIT_USER_NAME" ]; then
+    if [ -n "$GIT_DIRTY" ]; then
+        GIT_USER_NAME=$(git config user.name)
+        GIT_USER_EMAIL=$(git config user.email)
+    else
         GIT_USER_NAME=$(git --no-pager log --format=format:'%an\n' -n 1)
-    fi
-
-    if [ -z "$GIT_USER_EMAIL" ]; then
         GIT_USER_EMAIL=$(git --no-pager log --format=format:'%ae\n' -n 1)
     fi
 

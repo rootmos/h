@@ -77,7 +77,7 @@ jobs:
         tee -a /etc/sudoers.d/$UNPRIVILEGED <<< "$UNPRIVILEGED ALL = NOPASSWD: $(which pacman)"
 
     - name: Create PKGBUILD
-      run: build/archlinux/mk
+      run: sudo -u $UNPRIVILEGED build/archlinux/mk
 
     - name: Archive PKGBUILD
       uses: actions/upload-artifact@v3

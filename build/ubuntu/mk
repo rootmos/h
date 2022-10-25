@@ -32,6 +32,8 @@ BUILD_DEPS=$($SCRIPT_DIR/deps -bc | sed 's/ /, /g')
 FILES=(control changelog rules missing-deps)
 VARS=(PROJECT_NAME BUILD_VERSION)
 VARS+=(RUNTIME_DEPS BUILD_DEPS)
+VARS+=(BUILD_GIT_REF BUILD_TIME_RFC5322 BUILD_REPO_URL)
+VARS+=(BUILD_GIT_USER_NAME BUILD_GIT_USER_EMAIL)
 export "${VARS[@]}"
 
 SH_VARS=""
@@ -39,7 +41,7 @@ for v in "${VARS[@]}"; do
     SH_VARS="$SH_VARS"'$'"$v"
 done
 for f in "${FILES[@]}"; do
-    envsubst "${SH_VARS[@]}" < "$DEBIAN_SRC/$f" > "$DEBIAN_DST/$f"
+    envsubst "${SH_VARS[@]}" <"$DEBIAN_SRC/$f" >"$DEBIAN_DST/$f"
     if [ -x "$DEBIAN_SRC/$f" ]; then
         chmod +x "$DEBIAN_DST/$f"
     fi

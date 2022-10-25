@@ -1,13 +1,13 @@
 Source: $PROJECT_NAME
 Section: unknown
 Priority: optional
-Maintainer: root <root@unknown>
+Maintainer: $BUILD_GIT_USER_NAME <$BUILD_GIT_USER_EMAIL>
 Build-Depends: debhelper-compat (= 13), $BUILD_DEPS
 Standards-Version: 4.6.0
-Homepage: <insert the upstream URL, if relevant>
+Homepage: $BUILD_REPO_URL
 Rules-Requires-Root: no
 
 Package: $PROJECT_NAME
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}, $RUNTIME_DEPS
-Description: <insert up to 60 chars description>
+Description: Unprivileged sandboxing of popular script languages

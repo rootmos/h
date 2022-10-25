@@ -1,5 +1,5 @@
 $PROJECT_NAME ($BUILD_VERSION-1) UNRELEASED; urgency=medium
 
-  * Hello Ubuntu!
+  * Initial packaging of $BUILD_VERSION ($BUILD_GIT_REF)
 
- -- root <root@unknown>  Wed, 19 Oct 2022 10:22:30 +0000
+ -- $BUILD_GIT_USER_NAME <$BUILD_GIT_USER_EMAIL>  $BUILD_TIME_RFC5322

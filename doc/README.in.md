@@ -63,10 +63,11 @@ useful:
 Especially since the mitigation I would suggest produces a far less
 user-friendly error message as we will see.
 
-Enter seccomp, which is Linux's way of filtering syscalls and so limiting the
-exposed surface of the kernel.
+Enter [seccomp](https://www.kernel.org/doc/html/latest/userspace-api/seccomp_filter.html),
+which is Linux's way of filtering syscalls and so limiting the exposed surface
+of the kernel.
 The simplest seccomp filters are essentially accept/reject lists, but can do
-more complex things (I haven't looked into it but isn't BPF turing complete‽).
+more complex things (I haven't looked into it but isn't even cBPF turing complete‽).
 Here simple is better since it makes the security model you're implementing
 easier to reason about.
 So with seccomp enabled with a filter that forbids `clone` (the syscall
@@ -102,7 +103,9 @@ io.open(os.getenv("HOME") .. "/.aws/credentials","r"):read("*a")
 multiplayer game? Or she obfuscates it the game's log file and "oh the game
 crashed, why don't you send me the logs?")
 
-Enter landlock.
+Enter [landlock](https://www.kernel.org/doc/html/latest/userspace-api/landlock.html).
+Landlock is a fairly recently added security feature, which is meant to
+restrict filesystem access for unprivileged processes.
 
 Lastly I have included a code snippet to drop all capabilities. This is a Linux
 feature I previously hadn't had the need to explore (so take that code and what

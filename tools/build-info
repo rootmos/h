@@ -1,10 +1,9 @@
 #!/bin/bash
 
 set -o nounset -o pipefail -o errexit
-set -o xtrace
 
 SCRIPT_DIR=$(readlink -f "$0" | xargs dirname)
-ROOT=${ROOT-$SCRIPT_DIR/..}
+ROOT=${ROOT-$(readlink -f "$SCRIPT_DIR/..")}
 VERSION_FILE=${VERSION_FILE-$ROOT/.version}
 
 STYLE=env
@@ -50,14 +49,9 @@ kv "VERSION" "$VERSION_MAJOR.$VERSION_MINOR.$VERSION_PATCH"
 
 if [ -f "$ROOT/.build.env" ]; then
     . "$ROOT/.build.env"
-elif [ -n "${CI-}" ]; then # TODO: is this actually used?
-    GIT_REF=$GITHUB_SHA
-    GIT_DIRTY= # HACK: assumption
-    GIT_REPO=$GITHUB_REPOSITORY
-    REPO_URL=$GITHUB_SERVER_URL/$GITHUB_REPOSITORY
-    SOURCE_TARBALL_URL=$REPO_URL/archive/$GIT_REF$TARBALL_SUFFIX
-elif command -v git > /dev/null \
-    && git rev-parse --show-toplevel >/dev/null 2>&1; then
+elif command -v git >/dev/null \
+    && git -C "$ROOT" rev-parse --show-toplevel >/dev/null 2>&1; then
+    cd "$ROOT"
     GIT_REF=$(git rev-parse HEAD)
     GIT_DIRTY=$([ -n "$(git status --porcelain)" ] && echo "1" || echo)
 

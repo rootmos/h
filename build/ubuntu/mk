@@ -41,7 +41,7 @@ for v in "${VARS[@]}"; do
     SH_VARS="$SH_VARS"'$'"$v"
 done
 for f in "${FILES[@]}"; do
-    envsubst "${SH_VARS[@]}" < "$DEBIAN_SRC/$f" | tee "$DEBIAN_DST/$f"
+    envsubst "${SH_VARS[@]}" <"$DEBIAN_SRC/$f" >"$DEBIAN_DST/$f"
     if [ -x "$DEBIAN_SRC/$f" ]; then
         chmod +x "$DEBIAN_DST/$f"
     fi

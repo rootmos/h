@@ -90,6 +90,17 @@ kv "TIME" "$(date -Is)"
 kv "TIME_RFC5322" "$(date --rfc-email)"
 
 if command -v git > /dev/null; then
-    kv "GIT_USER_NAME" "$(git config user.name)"
-    kv "GIT_USER_EMAIL" "$(git config user.email)"
+    GIT_USER_NAME=$(git config user.name)
+    GIT_USER_EMAIL=$(git config user.email)
+
+    if [ -z "$GIT_USER_NAME" ]; then
+        GIT_USER_NAME=$(git --no-pager log --format=format:'%an\n' -n 1)
+    fi
+
+    if [ -z "$GIT_USER_EMAIL" ]; then
+        GIT_USER_EMAIL=$(git --no-pager log --format=format:'%ae\n' -n 1)
+    fi
+
+    kv "GIT_USER_NAME" "$GIT_USER_NAME"
+    kv "GIT_USER_EMAIL" "$GIT_USER_EMAIL"
 fi

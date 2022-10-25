@@ -29,7 +29,7 @@ favorite tools.
 
 Alice sends you the `fun.lua` game, hidden (link to code obfuscation
 challenges) within is the statement
-```
+```lua
 os.execute("sudo rm /")
 ```
 (or try `sudo --askpass` if not cached).
@@ -70,13 +70,15 @@ more complex things (I haven't looked into it but isn't BPF turing complete‽).
 Here simple is better since it makes the security model you're implementing
 easier to reason about.
 So with seccomp enabled with a filter that forbids `clone` (the syscall
-that the `exec`-family translates into) the kernel will send you a polite
-SIGSYS signal, killing you instantly.
-My approach have always been to start with "reject everything" filter,
+that the `exec`-family translates into) the kernel politely kill you, and claim
+you received a SIGSYS signal.
+My approach have always been to start with a "reject everything" filter,
 strace, look for SIGSYS and add that syscall to the accept list if I can
 convince myself it won't hurt my desired security level.
 
-`strace lua -e 'os.execute("echo hello")'`
+```shell
+strace lua -e 'os.execute("echo hello")'`
+```
 
 When you've done this dance a couple of steps with something you might consider
 a normal application you end up with a filter usually including the basic:
@@ -92,7 +94,7 @@ But even moderately interesting Lua application enjoys using `require`. So it's
 not unreasonable to allow Lua to `open` files. But then Alice changes her
 `fun.lua` game to include:
 
-```
+```lua
 io.open(os.getenv("HOME") .. "/.aws/credentials","r"):read("*a")
 ```
 
@@ -136,9 +138,9 @@ is not found (the script is used in the Ubuntu CI-job).
 
 The steps to build the project is then:
 ```shell
-> make tools
-> make build
-> make check
+make tools
+make build
+make check
 ```
 
 If these steps fail because of missing dependencies you may consult the
@@ -150,8 +152,9 @@ following table (derived from the packages installed during the
 ### Building from a Ubuntu source package
 Pick a release and download the Ubuntu source package asset.
 Included within are the sources and two helper scripts:
-- `build-package` that runs `dpkg-buildpackage`, as well as checking for
-  missing build-time dependencies
+- `build-package` that runs
+  [`dpkg-buildpackage`](https://manpages.ubuntu.com/manpages/jammy/en/man1/dpkg-buildpackage.1.html),
+  as well as checking for missing build-time dependencies
 - `install-package` installs the built package using `apt-get`, but note that
   you can try out the built binaries without a system-wide installation
 
@@ -161,8 +164,10 @@ Both scripts accept an `-s` option for this case, or you can set the `SUDO`
 environment variable (e.g. `SUDO="sudo --askpass"`).
 
 ### Building from an Arch Linux PKGBUILD
-Pick a release and download the Arch Linux `PKGBUILD` asset, place it in a
-suitably empty directory and invoke `makepkg`, possibly with `--syncdeps`
-and/or `--install` options when desired.
+Pick a release and download the Arch Linux
+[`PKGBUILD`](https://wiki.archlinux.org/title/PKGBUILD)
+asset, place it in a suitably empty directory and invoke
+[`makepkg`](https://wiki.archlinux.org/title/PKGBUILD),
+possibly with `--syncdeps` and/or `--install` options when desired.
 Note that you can try out the built binaries (found in the created `src`
 subfolder) without a system-wide installation.

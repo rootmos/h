@@ -1,11 +1,11 @@
 EXE=./hnode
 
 run() {
-    make build && "$EXE"
+    make build && "$EXE" 'console.log("hello world")'
 }
 
 trace() {
-    make build && strace "$EXE"
+    make build && strace "$EXE" 'console.log("hello world")'
 }
 
 libr() {

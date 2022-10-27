@@ -44,6 +44,7 @@ jobs:
       run: |
         sudo -u $UNPRIVILEGED --preserve-env=TEST_OUTPUT_DIR env SUT=$(which hlua) tools/test-harness -c hlua
         sudo -u $UNPRIVILEGED --preserve-env=TEST_OUTPUT_DIR env SUT=$(which hpython) tools/test-harness -c hpython
+        sudo -u $UNPRIVILEGED --preserve-env=TEST_OUTPUT_DIR env SUT=$(which hnode) tools/test-harness -c hnode
 
     - name: Archive test results
       uses: actions/upload-artifact@v3
@@ -94,6 +95,7 @@ jobs:
       run: |
         sudo -u $UNPRIVILEGED --preserve-env=TEST_OUTPUT_DIR env SUT=$(which hlua) tools/test-harness -c hlua
         sudo -u $UNPRIVILEGED --preserve-env=TEST_OUTPUT_DIR env SUT=$(which hpython) tools/test-harness -c hpython
+        sudo -u $UNPRIVILEGED --preserve-env=TEST_OUTPUT_DIR env SUT=$(which hnode) tools/test-harness -c hnode
 
     - name: Archive test results
       uses: actions/upload-artifact@v3

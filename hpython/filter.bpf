@@ -2,6 +2,7 @@
 ld [$$offsetof(struct seccomp_data, arch)$$]
 jne #$AUDIT_ARCH_X86_64, bad
 ld [$$offsetof(struct seccomp_data, nr)$$]
+jge #$__X32_SYSCALL_BIT, bad
 
 jeq #$__NR_read, good
 jeq #$__NR_write, good

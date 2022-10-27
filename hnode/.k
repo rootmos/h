@@ -1,11 +1,14 @@
-EXE=./hnode
+INPUT=${INPUT-${K_DIR-.}/test/hello}
+TEST_RUNNER=$K_DIR/../tools/test-runner
+
+export TIMEOUT=5
 
 run() {
-    make build && "$EXE" 'console.log("hello world")'
+    make build LOG_LEVEL=DEBUG && $TEST_RUNNER "$INPUT"
 }
 
 trace() {
-    make build && strace "$EXE" 'console.log("hello world")'
+    make build LOG_LEVEL=DEBUG && $TEST_RUNNER "$INPUT" --trace
 }
 
 libr() {

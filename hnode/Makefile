@@ -13,7 +13,7 @@ SRC ?= main.cpp
 .PHONY: build
 build: $(EXE)
 
-$(EXE).cpp: $(SRC) capabilities.c version.c r.h main.jsc
+$(EXE).cpp: $(SRC) capabilities.c filter.bpfc seccomp.c version.c r.h main.jsc
 	$(SINGLE_FILE) -o "$@" "$<"
 
 %.jsc: %.js

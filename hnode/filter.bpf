@@ -1,0 +1,112 @@
+# https://www.kernel.org/doc/Documentation/networking/filter.txt
+ld [$$offsetof(struct seccomp_data, arch)$$]
+jne #$AUDIT_ARCH_X86_64, bad
+ld [$$offsetof(struct seccomp_data, nr)$$]
+
+jeq #$__NR_brk, good
+
+jeq #$__NR_read, good
+jeq #$__NR_write, good
+jeq #$__NR_openat, good
+jeq #$__NR_close, good
+
+jeq #$__NR_readlink, good
+
+jne #$__NR_mmap, mmap_end
+ld [$$offsetof(struct seccomp_data, args[4])$$]
+jne #-1, bad
+ld [$$offsetof(struct seccomp_data, args[2])$$]
+jset #$PROT_EXEC, bad
+ld [$$offsetof(struct seccomp_data, args[3])$$]
+jeq #$$(MAP_PRIVATE|MAP_ANONYMOUS)$$, good
+jeq #$$(MAP_PRIVATE|MAP_ANONYMOUS|MAP_STACK)$$, good
+jeq #$$(MAP_PRIVATE|MAP_ANONYMOUS|MAP_NORESERVE)$$, good
+jmp bad
+mmap_end:
+
+# NB: this allows PROT_EXEC
+jeq #$__NR_mprotect, good
+
+jne #$__NR_madvise, madvise_end
+ld [$$offsetof(struct seccomp_data, args[2])$$]
+jset #$$(MADV_DONTNEED|MADV_FREE)$$, good
+jmp bad
+madvise_end:
+
+jeq #$__NR_munmap, good
+
+jeq #$__NR_futex, good
+jeq #$__NR_getrandom, good
+
+jeq #$__NR_newfstatat, good
+jeq #$__NR_statx, good
+
+jeq #$__NR_getpid, good
+jeq #$__NR_gettid, good
+jeq #$__NR_getuid, good
+jeq #$__NR_geteuid, good
+jeq #$__NR_getgid, good
+jeq #$__NR_getegid, good
+
+jeq #$__NR_uname, good
+jeq #$__NR_pkey_alloc, good
+
+jeq #$__NR_sched_getaffinity, good
+jeq #$__NR_sched_yield, good
+
+jne #$__NR_fcntl, fcntl_end
+ld [$$offsetof(struct seccomp_data, args[1])$$]
+jeq #$F_GETFL, good
+jeq #$F_SETFD, fcntl_flags
+jne #$F_SETFL, bad
+fcntl_flags:
+ld [$$offsetof(struct seccomp_data, args[2])$$]
+jset #$$(FD_CLOEXEC|O_WRONLY|O_LARGEFILE)$$, good
+jmp bad
+fcntl_end:
+
+jne #$__NR_ioctl, ioctl_end
+ld [$$offsetof(struct seccomp_data, args[1])$$]
+jeq #$TCGETS, good
+# TODO
+jeq #$TCSETS, good
+jeq #$FIONBIO, good
+jeq #$FIOCLEX, good
+jmp bad
+ioctl_end:
+
+jne #$__NR_prlimit64, prlimit64_end
+ld [$$offsetof(struct seccomp_data, args[2])$$]
+jeq #0, good
+ret #$$(SECCOMP_RET_ERRNO|EPERM)$$
+prlimit64_end:
+
+jeq #$__NR_capget, good
+
+jeq #$__NR_epoll_create1, good
+jeq #$__NR_epoll_ctl, good
+jeq #$__NR_epoll_wait, good
+
+jeq #$__NR_pipe2, good
+jeq #$__NR_eventfd2, good
+
+# TODO: restrict to threads only (i.e. check flags)
+jeq #$__NR_clone, good
+jeq #$__NR_clone3, good
+
+# TODO
+jeq #$__NR_rseq, good
+jeq #$__NR_set_robust_list, good
+
+jeq #$__NR_tgkill, good
+jeq #$__NR_exit, good
+jeq #$__NR_exit_group, good
+
+jeq #$__NR_rt_sigprocmask, good
+jeq #$__NR_rt_sigaction, good
+jeq #$__NR_rt_sigreturn, good
+
+jeq #$__NR_sysinfo, good
+
+bad: ret #$SECCOMP_RET_KILL_THREAD
+good: ret #$SECCOMP_RET_ALLOW

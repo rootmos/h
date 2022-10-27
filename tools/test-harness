@@ -51,7 +51,7 @@ for t in "${TESTS[@]}"; do
     RUN=$TMP/$TID.json
 
     set +o errexit
-    $TEST_RUNNER "$t" > "$RUN"
+    $TEST_RUNNER --silent --output="$RUN" "$t"
     set -o errexit
 
     PROJECT=$(jq -r .project "$RUN")

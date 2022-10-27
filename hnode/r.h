@@ -1,5 +1,5 @@
-// libr (e64aab8c0ee175883bb2835961259f6e45eb96ec) (https://github.com/rootmos/libr) (2022-10-25T17:40:27+02:00)
-// modules: landlock fail logging util
+// libr (11dc76e1a7e181b0427e92e2dfb811ae05c2a5a0) (https://github.com/rootmos/libr) (2022-10-27T19:05:43+02:00)
+// modules: landlock fail logging util uv
 
 #ifndef LIBR_HEADER
 #define LIBR_HEADER
@@ -80,16 +80,6 @@ void landlock_apply(int fd);
 } while(0)
 #endif
 
-#ifdef LUA_VERSION
-#define CHECK_LUA(L, err, format, ...) do { \
-    if(err != LUA_OK) { \
-        r_failwith(__extension__ __FUNCTION__, __extension__ __FILE__, \
-                   __extension__ __LINE__, 0, \
-                   format ": %s\n", ##__VA_ARGS__, lua_tostring(L, -1)); \
-    } \
-} while(0)
-#endif
-
 #define failwith(format, ...) \
     r_failwith(__extension__ __FUNCTION__, __extension__ __FILE__, \
                __extension__ __LINE__, 0, format "\n", ##__VA_ARGS__)
@@ -122,7 +112,11 @@ void r_failwith(const char* const caller,
           __extension__ __LINE__, format "\n", ##__VA_ARGS__); \
 } while(0)
 
+#ifdef __cplusplus
 void r_dummy(...);
+#else
+void r_dummy();
+#endif
 
 #if LOG_LEVEL >= LOG_ERROR
 #define error(format, ...) __r_log(LOG_ERROR, format, ##__VA_ARGS__)
@@ -186,6 +180,17 @@ const char* now_iso8601(void);
 
 void set_blocking(int fd, int blocking);
 void no_new_privs(void);
+
+// libr: uv.h
+#ifdef UV_VERSION_MAJOR
+#define CHECK_UV(err, format, ...) do { \
+    if(err != 0) { \
+        r_failwith(__extension__ __FUNCTION__, __extension__ __FILE__, \
+                   __extension__ __LINE__, 0, \
+                   format ": %s\n", ##__VA_ARGS__, uv_err_name(err)); \
+    } \
+} while(0)
+#endif
 
 #endif // LIBR_HEADER
 #ifdef LIBR_IMPLEMENTATION
@@ -332,7 +337,11 @@ void r_failwith(const char* const caller,
 #include <stdio.h>
 #include <unistd.h>
 
+#ifdef __cplusplus
 void r_dummy(...)
+#else
+void r_dummy()
+#endif
 {
     failwith("called the dummy function, you dummy!");
 }
@@ -403,5 +412,8 @@ void no_new_privs(void)
     int r = prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0);
     CHECK(r, "prctl(PR_SET_NO_NEW_PRIVS, 1)");
 }
+
+// libr: uv.c
+
 
 #endif // LIBR_IMPLEMENTATION

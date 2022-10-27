@@ -9,6 +9,7 @@ PATHS ?= $(TOOLS)/paths
 LANDLOCKC ?= $(TOOLS)/landlockc
 VERSION ?= $(TOOLS)/version
 SINGLE_FILE ?= $(TOOLS)/single-file
+NULL_TERMINATED ?= $(TOOLS)/null-terminated
 TEST_HARNESS ?= $(TOOLS)/test-harness
 
 CC = gcc

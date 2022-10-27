@@ -17,7 +17,7 @@ $(EXE).cpp: $(SRC) capabilities.c version.c r.h main.jsc
 	$(SINGLE_FILE) -o "$@" "$<"
 
 %.jsc: %.js
-	(cat "$<" && echo -ne '\0') | xxd -i > "$@"
+	$(NULL_TERMINATED) -o "$@" "$<"
 
 .PHONY: clean
 clean:

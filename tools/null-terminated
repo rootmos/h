@@ -1,0 +1,19 @@
+#!/bin/bash
+
+set -o nounset -o pipefail -o errexit
+
+TMP=$(mktemp)
+trap 'rm -f $TMP' EXIT
+
+OUTPUT=${OUTPUT-/dev/stdout}
+while getopts "o:-" OPT; do
+    case $OPT in
+        o) OUTPUT=$OPTARG ;;
+        -) break ;;
+        ?) exit 2 ;;
+    esac
+done
+shift $((OPTIND-1))
+
+(cat "${1-/dev/stdin}" && echo -ne '\0') | xxd -i > "$TMP"
+cp "$TMP" "$OUTPUT"

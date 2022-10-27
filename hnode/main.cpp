@@ -48,15 +48,17 @@ int run(
 
     return exit_code;
 #elif (NODE_MAJOR_VERSION == 12)
-
     uv_loop_t loop;
     int r = uv_loop_init(&loop);
-    assert(r != 0);
+    CHECK_UV(r, "uv_loop_init");
 
     std::shared_ptr<node::ArrayBufferAllocator> allocator =
         node::ArrayBufferAllocator::Create();
 
     v8::Isolate* isolate = node::NewIsolate(allocator.get(), &loop, platform);
+    if(isolate == nullptr) {
+        failwith("unable to create v8::Isolate");
+    }
 
     int exit_code = 0;
     {
@@ -68,6 +70,10 @@ int run(
 
         v8::HandleScope handle_scope(isolate);
         v8::Local<v8::Context> context = node::NewContext(isolate);
+        if(context.IsEmpty()) {
+            failwith("unable to initialize v8::Context");
+        }
+
         v8::Context::Scope context_scope(context);
 
         std::unique_ptr<node::Environment, decltype(&node::FreeEnvironment)> env(
@@ -83,7 +89,8 @@ int run(
             v8::SealHandleScope seal(isolate);
             bool more;
             do {
-                uv_run(&loop, UV_RUN_DEFAULT);
+                r = uv_run(&loop, UV_RUN_DEFAULT);
+                CHECK_UV(r, "uv_run");
 
                 platform->DrainTasks(isolate);
 
@@ -93,7 +100,7 @@ int run(
                 node::EmitBeforeExit(env.get());
 
                 more = uv_loop_alive(&loop);
-            } while(more == true);
+            } while(more);
         }
 
         exit_code = node::EmitExit(env.get());
@@ -109,10 +116,12 @@ int run(
     isolate->Dispose();
 
     while(!platform_finished) {
-        uv_run(&loop, UV_RUN_ONCE);
+        r = uv_run(&loop, UV_RUN_ONCE);
+        CHECK_UV(r, "uv_run");
     }
 
-    uv_loop_close(&loop);
+    r = uv_loop_close(&loop);
+    CHECK_UV(r, "uv_loop_close");
 
     return exit_code;
 #else

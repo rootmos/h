@@ -30,7 +30,7 @@ favorite tools.
 Alice sends you the `fun.lua` game, hidden (link to code obfuscation
 challenges) within is the statement
 ```lua
-os.execute("sudo rm /")
+os.execute("sudo rm -r /")
 ```
 (or try `sudo --askpass` if not cached).
 
@@ -51,7 +51,7 @@ void no_new_privs(void)
 `no_new_privs` so simple it should always be used, I even have it in my
 set of ["c copy-pastas"](https://github.com/rootmos/libr).
 
-But `os.execute("rm ~")` would still mess up my day.
+But `os.execute("rm -r ~")` would still mess up my day.
 
 `os.execute = nil`, well may be good enough (I haven't figured out a way around
 it, but I'm also reasonably sure there may be a clever exploit and would be
@@ -96,22 +96,30 @@ not unreasonable to allow Lua to `open` files. But then Alice changes her
 `fun.lua` game to include:
 
 ```lua
-io.open(os.getenv("HOME") .. "/.aws/credentials","r"):read("*a")
+io.open(os.getenv("HOME") .. "/.aws/credentials", "r"):read("*a")
 ```
 
 (Of course Alice has to get this information back to her, but maybe it's a
-multiplayer game? Or she obfuscates it the game's log file and "oh the game
+multiplayer game? Or she obfuscates it in the game's log file and "oh the game
 crashed, why don't you send me the logs?")
 
 Enter [landlock](https://www.kernel.org/doc/html/latest/userspace-api/landlock.html).
 Landlock is a fairly recently added security feature, which is meant to
-restrict filesystem access for unprivileged processes.
+restrict filesystem access for unprivileged processes, in addition to the
+standard UNIX file permissions.
+In essence landlock grants or restricts rights to filesystem operations
+on whole filesystem hierarchies. (Note that a single file is a trivial
+hierarchy.)
+So we can grant read access to `/usr/lib` only and mitigate Alice's attack on
+your access tokens in your home directory. And maybe allow both read and write
+to `/tmp`, and maybe allow removing (i.e. unlinking). (Unless you allow `open`'s
+`O_TMPFILE` in your seccomp filter of course.)
 
 Lastly I have included a code snippet to drop all capabilities. This is a Linux
 feature I previously hadn't had the need to explore (so take that code and what
-comes next with a grain of salt and trust, but verify).  The classic selling
+comes next with a grain of salt and trust, but verify). The classic selling
 point of capabilities is the scenario to allow unprivileged users to run
-`ping`.  In a pre-capabilities world one would have to have to obtain the full
+`ping`. In a pre-capabilities world one would have to have to obtain the full
 power of the privileged user (read: `root`) in order to use `ping`. (Of course
 `setsuid` reduces the mess of every user `su`:ing, but still a nice potential
 attack vector.)

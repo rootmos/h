@@ -31,12 +31,11 @@ int run(
         v8::HandleScope handle_scope(isolate);
         v8::Context::Scope context_scope(setup->context());
 
-        auto loadenv_ret = node::LoadEnvironment(
-            env,
-            "const publicRequire ="
-            "  require('module').createRequire(process.cwd() + '/');"
-            "globalThis.require = publicRequire;"
-            "require('vm').runInThisContext(process.argv[1]);");
+        const char main_script_source_utf8[] = {
+#include "main.jsc"
+        };
+
+        auto loadenv_ret = node::LoadEnvironment(env, main_script_source_utf8);
         if (loadenv_ret.IsEmpty()) {
             return 1;
         }

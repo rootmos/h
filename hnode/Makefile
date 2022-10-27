@@ -13,9 +13,12 @@ SRC ?= main.cpp
 .PHONY: build
 build: $(EXE)
 
-$(EXE).cpp: $(SRC) capabilities.c version.c r.h
+$(EXE).cpp: $(SRC) capabilities.c version.c r.h main.jsc
 	$(SINGLE_FILE) -o "$@" "$<"
+
+%.jsc: %.js
+	(cat "$<" && echo -ne '\0') | xxd -i > "$@"
 
 .PHONY: clean
 clean:
-	rm -f $(EXE) $(EXE).cpp *.bpfc version.c
+	rm -f $(EXE) $(EXE).cpp *.bpfc version.c *.jsc

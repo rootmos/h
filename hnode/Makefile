@@ -17,7 +17,7 @@ $(EXE).cpp: $(SRC) capabilities.c filter.bpfc seccomp.c version.c r.h main.jsc
 	$(SINGLE_FILE) -o "$@" "$<"
 
 %.jsc: %.js
-	$(NULL_TERMINATED) -o "$@" "$<"
+	$(C_ARRAY) -zo"$@" -i"$<"
 
 .PHONY: clean
 clean:

@@ -12,6 +12,14 @@ int main(int argc, char* argv[])
     drop_capabilities();
     no_new_privs();
 
+    int rsfd = landlock_new_ruleset();
+
+    debug("allowing read access: %s", argv[1]);
+    landlock_allow_read(rsfd, argv[1]);
+
+    landlock_apply(rsfd);
+    int r = close(rsfd); CHECK(r, "close");
+
     seccomp_apply_filter();
 
     argv = uv_setup_args(argc, argv);
@@ -50,7 +58,7 @@ int main(int argc, char* argv[])
 
     debug("initializing uv loop");
     uv_loop_t loop;
-    int r = uv_loop_init(&loop);
+    r = uv_loop_init(&loop);
     CHECK_UV(r, "uv_loop_init");
 
     debug("creating allocator");

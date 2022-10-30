@@ -1,8 +1,6 @@
 const fs = require('fs');
 const vm = require('vm');
 
-const fn = process.argv[1]
-
-fs.readFile(fn, 'utf8', function(err, data) {
-    new vm.Script(data, { filename: fn }).runInThisContext();
+fs.readFile(input_script_filename, 'utf8', function(err, data) {
+    new vm.Script(data, { filename: input_script_filename }).runInThisContext();
 });

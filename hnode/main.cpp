@@ -144,6 +144,19 @@ int main(int argc, char* argv[])
             failwith("unable to initialize v8::Context");
         }
 
+        auto global = context->Global();
+        global->Set(context,
+#if (NODE_MAJOR_VERSION >= 18)
+            v8::String::NewFromUtf8(isolate, "input_script_filename").ToLocalChecked(),
+            v8::String::NewFromUtf8(isolate, o.input).ToLocalChecked()
+#elif (NODE_MAJOR_VERSION >= 12)
+            v8::String::NewFromUtf8(isolate, "input_script_filename"),
+            v8::String::NewFromUtf8(isolate, o.input)
+#else
+#error "unsupported node version"
+#endif
+        ).Check();
+
         v8::Context::Scope context_scope(context);
 
         debug("creating node::Environment");

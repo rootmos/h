@@ -25,7 +25,7 @@ int main(int argc, char* argv[])
     argv = uv_setup_args(argc, argv);
     std::vector<std::string> args(argv, argv + argc);
 
-#if (NODE_MAJOR_VERSION == 19)
+#if (NODE_MAJOR_VERSION >= 18)
     auto result = node::InitializeOncePerProcess(
         args, {
             node::ProcessInitializationFlags::kNoInitializeV8,
@@ -37,7 +37,7 @@ int main(int argc, char* argv[])
     if (result->early_return() != 0) {
         exit(result->exit_code());
     }
-#elif (NODE_MAJOR_VERSION == 12)
+#elif (NODE_MAJOR_VERSION >= 12)
     std::vector<std::string> exec_args;
     std::vector<std::string> errors;
     int ec = node::InitializeNodeWithArgs(&args, &exec_args, &errors);
@@ -62,14 +62,13 @@ int main(int argc, char* argv[])
     CHECK_UV(r, "uv_loop_init");
 
     debug("creating allocator");
-    std::shared_ptr<node::ArrayBufferAllocator> allocator =
-        node::ArrayBufferAllocator::Create();
+    auto allocator = node::ArrayBufferAllocator::Create();
     if(allocator == nullptr) {
         failwith("unable to create allocator");
     }
 
     debug("creating v8::Isolate");
-    v8::Isolate* isolate = node::NewIsolate(allocator.get(), &loop, platform.get());
+    auto isolate = node::NewIsolate(allocator.get(), &loop, platform.get());
     if(isolate == nullptr) {
         failwith("unable to create v8::Isolate");
     }
@@ -80,13 +79,14 @@ int main(int argc, char* argv[])
         v8::Isolate::Scope isolate_scope(isolate);
 
         debug("creating node::IsolateData");
-        std::unique_ptr<node::IsolateData, decltype(&node::FreeIsolateData)> isolate_data(
-            node::CreateIsolateData(isolate, &loop, platform.get()),
-            node::FreeIsolateData);
+        std::unique_ptr<node::IsolateData, decltype(&node::FreeIsolateData)>
+            isolate_data(
+                node::CreateIsolateData(isolate, &loop, platform.get()),
+                node::FreeIsolateData);
 
         v8::HandleScope handle_scope(isolate);
 
-        v8::Local<v8::Context> context = node::NewContext(isolate);
+        auto context = node::NewContext(isolate);
         if(context.IsEmpty()) {
             failwith("unable to initialize v8::Context");
         }
@@ -94,15 +94,19 @@ int main(int argc, char* argv[])
         v8::Context::Scope context_scope(context);
 
         debug("creating node::Environment");
-        std::unique_ptr<node::Environment, decltype(&node::FreeEnvironment)> env(
-#if (NODE_MAJOR_VERSION == 19)
-              node::CreateEnvironment(isolate_data.get(), context, result->args(), result->exec_args()),
-#elif (NODE_MAJOR_VERSION == 12)
-              node::CreateEnvironment(isolate_data.get(), context, args, exec_args),
+        std::unique_ptr<node::Environment, decltype(&node::FreeEnvironment)>
+            env(
+                node::CreateEnvironment(
+                    isolate_data.get(), context,
+#if (NODE_MAJOR_VERSION >= 18)
+                    result->args(), result->exec_args()
+#elif (NODE_MAJOR_VERSION >= 12)
+                    args, exec_args
 #else
 #error "unsupported node version"
 #endif
-              node::FreeEnvironment);
+                ),
+                node::FreeEnvironment);
         if(!env) {
             failwith("unable to create environment");
         }
@@ -112,7 +116,8 @@ int main(int argc, char* argv[])
         };
 
         debug("loading environment");
-        auto loadenv_ret = node::LoadEnvironment(env.get(), main_script_source_utf8);
+        auto loadenv_ret = node::LoadEnvironment(
+            env.get(), main_script_source_utf8);
         if (loadenv_ret.IsEmpty()) {
             failwith("unable to load envionment");
         }

@@ -67,11 +67,8 @@ fcntl_end:
 
 jne #$__NR_ioctl, ioctl_end
 ld [$$offsetof(struct seccomp_data, args[1])$$]
-jeq #$TCGETS, good
-# TODO
-jeq #$TCSETS, good
-jeq #$FIONBIO, good
-jeq #$FIOCLEX, good
+# TODO: TCSETS?
+jset #$$(TCSETS|TCGETS|TIOCGPTN|TIOCGWINSZ|FIONBIO|FIOCLEX)$$, good
 jmp bad
 ioctl_end:
 

@@ -8,6 +8,12 @@
 
 #include "seccomp.c"
 #include "capabilities.c"
+
+#define RLIMIT_DEFAULT_CPU (1<<2)
+#define RLIMIT_DEFAULT_DATA (1<<23)
+#define RLIMIT_DEFAULT_NOFILE (1<<4)
+#define RLIMIT_DEFAULT_RSS (1<<23)
+#define RLIMIT_DEFAULT_AS (1<<24)
 #include "rlimit.c"
 
 struct options {

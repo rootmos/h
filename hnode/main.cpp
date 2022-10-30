@@ -7,8 +7,18 @@
 #include "capabilities.c"
 #include "seccomp.c"
 
+#define RLIMIT_DEFAULT_CPU (1<<2)
+#define RLIMIT_DEFAULT_DATA (1<<25)
+#define RLIMIT_DEFAULT_NOFILE (1<<5)
+#define RLIMIT_DEFAULT_NPROC (1<<11)
+#define RLIMIT_DEFAULT_RSS (1<<28)
+#define RLIMIT_DEFAULT_AS (1<<30)
+#include "rlimit.c"
+
 struct options {
     const char* input;
+
+    struct rlimit_spec rlimits[RLIMIT_NLIMITS];
 };
 
 static void print_usage(int fd, const char* prog)
@@ -18,6 +28,10 @@ static void print_usage(int fd, const char* prog)
     dprintf(fd, "options:\n");
     dprintf(fd, "  -h       print this message\n");
     dprintf(fd, "  -v       print version information\n");
+    dprintf(fd, "\n");
+    dprintf(fd, "rlimit options:\n");
+    dprintf(fd, "  -rRLIMIT=VALUE set RLIMIT to VALUE\n");
+    dprintf(fd, "  -R             use inherited rlimits instead of default\n");
 }
 
 #include "version.c"
@@ -26,9 +40,22 @@ static void parse_options(struct options* o, int argc, char* argv[])
 {
     memset(o, 0, sizeof(*o));
 
+    rlimit_default(o->rlimits, LENGTH(o->rlimits));
+
     int res;
-    while((res = getopt(argc, argv, "hv")) != -1) {
+    while((res = getopt(argc, argv, "hvr:R")) != -1) {
         switch(res) {
+        case 'r': {
+            int r = rlimit_parse(o->rlimits, LENGTH(o->rlimits), optarg);
+            if(r != 0) {
+                dprintf(1, "unable to parse rlimit: %s\n", optarg);
+                exit(1);
+            }
+            break;
+        }
+        case 'R':
+            rlimit_inherit(o->rlimits, LENGTH(o->rlimits));
+            break;
         case 'v':
             print_version(argv[0]);
             exit(0);
@@ -64,6 +91,8 @@ int main(int argc, char* argv[])
 
     struct options o;
     parse_options(&o, argc, argv);
+
+    rlimit_apply(o.rlimits, LENGTH(o.rlimits));
 
     int rsfd = landlock_new_ruleset();
 

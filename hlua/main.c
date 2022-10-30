@@ -10,6 +10,9 @@
 
 #include "seccomp.c"
 #include "capabilities.c"
+
+#define RLIMIT_DEFAULT_CPU (1<<2)
+#define RLIMIT_DEFAULT_NOFILE (1<<3)
 #include "rlimit.c"
 
 void openlibs(struct lua_State* L)

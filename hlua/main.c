@@ -129,6 +129,87 @@ static void parse_options(struct options* o, int argc, char* argv[])
     }
 }
 
+#include <sys/resource.h>
+
+struct rlimit_spec {
+    const char* name;
+    int resource;
+    enum {
+        RLIMIT_ACTION_NOOP = 0,
+        RLIMIT_ACTION_ZERO = 1,
+        RLIMIT_ACTION_ABS = 2,
+        RLIMIT_ACTION_EQUAL = 3,
+    } action;
+    unsigned long value;
+};
+
+
+#define RLIMIT_SPEC_NOOP(rl) (struct rlimit_spec) { .name = #rl, .resource = RLIMIT_##rl, .action = RLIMIT_ACTION_NOOP }
+#define RLIMIT_SPEC_ZERO(rl) (struct rlimit_spec) { .name = #rl, .resource = RLIMIT_##rl, .action = RLIMIT_ACTION_ZERO }
+#define RLIMIT_SPEC_ABS(rl, v) (struct rlimit_spec) { .name = #rl, .resource = RLIMIT_##rl, .action = RLIMIT_ACTION_ABS, .value = v }
+#define RLIMIT_SPEC_EQUAL(rl) (struct rlimit_spec) { .name = #rl, .resource = RLIMIT_##rl, .action = RLIMIT_ACTION_EQUAL }
+
+static void restrict_rlimits(void)
+{
+    debug("restricting rlimits");
+
+    struct rlimit_spec limits[] = {
+        RLIMIT_SPEC_ABS(CPU, 1<<2),
+        RLIMIT_SPEC_ABS(FSIZE, 1<<12),
+        RLIMIT_SPEC_ABS(DATA, 0),
+        RLIMIT_SPEC_ABS(STACK, 0),
+        RLIMIT_SPEC_ZERO(CORE),
+        RLIMIT_SPEC_ABS(RSS, 0),
+        RLIMIT_SPEC_ZERO(NPROC),
+        RLIMIT_SPEC_ABS(NOFILE, 1<<3),
+        RLIMIT_SPEC_ZERO(MEMLOCK),
+        RLIMIT_SPEC_ZERO(AS),
+        RLIMIT_SPEC_ZERO(LOCKS),
+        RLIMIT_SPEC_ZERO(SIGPENDING),
+        RLIMIT_SPEC_ZERO(MSGQUEUE),
+        RLIMIT_SPEC_ZERO(NICE),
+        RLIMIT_SPEC_ZERO(RTPRIO),
+        RLIMIT_SPEC_ZERO(RTTIME),
+    };
+
+    assert(RLIMIT_NLIMITS == LENGTH(limits));
+
+    for(size_t i = 0; i < LENGTH(limits); i++) {
+        struct rlimit rlp;
+        int r = getrlimit(limits[i].resource, &rlp);
+        CHECK(r, "getrlimit(%s)", limits[i].name);
+
+        debug("get rlimit %s: soft=%lu hard=%lu",
+              limits[i].name, rlp.rlim_cur, rlp.rlim_max);
+
+        if(limits[i].action == RLIMIT_ACTION_NOOP) {
+            continue;
+        }
+
+        switch(limits[i].action) {
+        case RLIMIT_ACTION_ZERO:
+            rlp.rlim_cur = 0;
+            rlp.rlim_max = 0;
+            break;
+        case RLIMIT_ACTION_ABS:
+            rlp.rlim_cur = limits[i].value;
+            rlp.rlim_max = limits[i].value;
+            break;
+        case RLIMIT_ACTION_EQUAL:
+            rlp.rlim_max = rlp.rlim_cur;
+            break;
+        default:
+            failwith("unexpected action: %d", limits[i].action);
+        }
+
+        debug("set rlimit %s: soft=%lu hard=%lu",
+              limits[i].name, rlp.rlim_cur, rlp.rlim_max);
+
+        r = setrlimit(limits[i].resource, &rlp);
+        CHECK(r, "setrlimit(%s)", limits[i].name);
+    }
+}
+
 int main(int argc, char* argv[])
 {
     drop_capabilities();
@@ -136,6 +217,8 @@ int main(int argc, char* argv[])
 
     struct options o;
     parse_options(&o, argc, argv);
+
+    restrict_rlimits();
 
     int rsfd = landlock_new_ruleset();
 

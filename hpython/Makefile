@@ -12,7 +12,7 @@ SRC ?= main.c
 build: $(EXE)
 
 $(EXE).c: $(SRC) filter.bpfc landlock.filesc \
-	capabilities.c seccomp.c rlimit.c version.c r.h
+	capabilities.c seccomp.c version.c r.h
 	$(SINGLE_FILE) -o "$@" "$<"
 
 landlock.files: Makefile

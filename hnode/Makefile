@@ -14,7 +14,7 @@ SRC ?= main.cpp
 build: $(EXE)
 
 $(EXE).cpp: $(SRC) filter.bpfc main.jsc \
-	capabilities.c seccomp.c rlimit.c version.c r.h
+	capabilities.c seccomp.c version.c r.h
 	$(SINGLE_FILE) -o "$@" "$<"
 
 %.jsc: %.js

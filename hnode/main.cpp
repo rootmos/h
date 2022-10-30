@@ -1,19 +1,18 @@
 #include <node.h>
 #include <uv.h>
 
-#define LIBR_IMPLEMENTATION
-#include "r.h"
-
-#include "capabilities.c"
-#include "seccomp.c"
-
 #define RLIMIT_DEFAULT_CPU (1<<2)
 #define RLIMIT_DEFAULT_DATA (1<<25)
 #define RLIMIT_DEFAULT_NOFILE (1<<5)
 #define RLIMIT_DEFAULT_NPROC (1<<11)
 #define RLIMIT_DEFAULT_RSS (1<<28)
 #define RLIMIT_DEFAULT_AS (1<<30)
-#include "rlimit.c"
+
+#define LIBR_IMPLEMENTATION
+#include "r.h"
+
+#include "capabilities.c"
+#include "seccomp.c"
 
 struct options {
     const char* input;

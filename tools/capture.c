@@ -1,4 +1,5 @@
 #include <poll.h>
+#include <unistd.h>
 #include <signal.h>
 #include <sys/signalfd.h>
 #include <sys/wait.h>
@@ -161,16 +162,32 @@ int main(int argc, char* argv[])
     int r = sigprocmask(SIG_BLOCK, &sm, NULL);
     CHECK(r, "sigprocmask");
 
+    int stdout_pair[2];
+    r = pipe(stdout_pair);
+
+    int stderr_pair[2];
+    r = pipe(stderr_pair);
+
     state.child = fork(); CHECK(state.child, "fork");
     if(state.child == 0) {
-        int r = sigprocmask(SIG_UNBLOCK, &sm, NULL);
+        r = sigprocmask(SIG_UNBLOCK, &sm, NULL);
         CHECK(r, "sigprocmask");
+
+        r = close(sfd); CHECK(r, "close");
+
+        r = dup2(stdout_pair[1], 1); CHECK(r, "dup2(.., 1)");
+        r = close(stdout_pair[0]); CHECK(r, "close");
+
+        r = close(stderr_pair[0]); CHECK(r, "close");
+        r = dup2(stderr_pair[1], 2); CHECK(r, "dup2(.., 2)");
 
         // argv[argc] == NULL
         // https://www.gnu.org/software/libc/manual/html_node/Program-Arguments.html
         r = execvp(argv[offset], &argv[offset]);
         CHECK(r, "execv");
     }
+
+    r = close(0); CHECK(r, "close(0)");
 
     info("spawned child: %d", state.child);
 

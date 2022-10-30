@@ -1,5 +1,5 @@
 run() {
-    make LOG_LEVEL=DEBUG && ./capture ls
+    make LOG_LEVEL=DEBUG && ./capture sleep 5
 }
 
 libr() {

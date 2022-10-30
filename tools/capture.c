@@ -1,3 +1,8 @@
+#include <poll.h>
+#include <signal.h>
+#include <sys/signalfd.h>
+#include <sys/wait.h>
+
 #define LIBR_IMPLEMENTATION
 #include "r.h"
 
@@ -61,12 +66,127 @@ opt_end:
     return optind;
 }
 
+struct {
+    pid_t child;
+    int child_terminated;
+    int returncode;
+} state;
+
+int should_continue(void)
+{
+    if(state.child_terminated) {
+        return 0;
+    }
+
+    return 1;
+}
+
+void graceful_shutdown(const char* reason, int child_sig)
+{
+    if(reason) {
+        info("initiating graceful shutdown: %s", reason);
+    } else {
+        info("initiating graceful shutdown");
+    }
+
+    if(!state.child_terminated) {
+        info("child (%d) is still running; sending %s",
+             state.child, strsignal(child_sig));
+        int r = kill(state.child, child_sig);
+        CHECK(r, "kill(%d, %s)", state.child, strsignal(child_sig));
+    }
+}
+
+void handle_signalfd(int fd) {
+    struct signalfd_siginfo si;
+    ssize_t s = read(fd, &si, sizeof(si));
+    if(s == -1 && (errno == EAGAIN || errno == EWOULDBLOCK)) {
+        return;
+    }
+    CHECK(s, "read");
+    if(s != sizeof(si)) {
+        failwith("unexpected partial read");
+    }
+
+    if(si.ssi_signo == SIGCHLD) {
+        if(state.child == 0) {
+            failwith("unexpected SIGCHLD signal");
+        }
+
+        int ws;
+        pid_t r = waitpid(state.child, &ws, WNOHANG);
+        CHECK_IF(r != state.child, "waitpid(%d) != %d", state.child, r);
+
+        if(WIFEXITED(ws)) {
+            info("child (%d) exited: %d", state.child, WEXITSTATUS(ws));
+            state.returncode = WEXITSTATUS(ws);
+        } else if(WIFSIGNALED(ws)) {
+            info("child (%d) signaled: %d", state.child, WTERMSIG(ws));
+            state.returncode = -WTERMSIG(ws);
+        } else {
+            failwith("unexpected waitpid (%d) status: %d", state.child, ws);
+        }
+        state.child_terminated = 1;
+    } else if(si.ssi_signo == SIGINT
+              || si.ssi_signo == SIGQUIT
+              || si.ssi_signo == SIGTERM) {
+        graceful_shutdown(strsignal(si.ssi_signo), si.ssi_signo);
+    } else {
+        failwith("unexpected signal: %s", strsignal(si.ssi_signo));
+    }
+
+    handle_signalfd(fd);
+}
+
 int main(int argc, char* argv[])
 {
+    memset(&state, 0, sizeof(state));
+
     struct options o;
     int offset = parse_options(&o, argc, argv);
 
     for(int i = offset; i < argc; i++) {
         debug("cmdline[%d]=%s", i-offset, argv[i]);
     }
+
+    sigset_t sm;
+    sigemptyset(&sm);
+    sigaddset(&sm, SIGINT);
+    sigaddset(&sm, SIGQUIT);
+    sigaddset(&sm, SIGTERM);
+    sigaddset(&sm, SIGCHLD);
+    int sfd = signalfd(-1, &sm, SFD_NONBLOCK | SFD_CLOEXEC);
+    CHECK(sfd, "signalfd");
+
+    int r = sigprocmask(SIG_BLOCK, &sm, NULL);
+    CHECK(r, "sigprocmask");
+
+    state.child = fork(); CHECK(state.child, "fork");
+    if(state.child == 0) {
+        int r = sigprocmask(SIG_UNBLOCK, &sm, NULL);
+        CHECK(r, "sigprocmask");
+
+        // argv[argc] == NULL
+        // https://www.gnu.org/software/libc/manual/html_node/Program-Arguments.html
+        r = execvp(argv[offset], &argv[offset]);
+        CHECK(r, "execv");
+    }
+
+    info("spawned child: %d", state.child);
+
+    struct pollfd fds[] = {
+        { .fd = sfd, .events = POLLIN },
+    };
+
+    while(should_continue()) {
+        int r = poll(fds, LENGTH(fds), -1);
+        CHECK_IF(r < 1, "poll");
+
+        if(fds[0].revents & POLLIN) {
+            handle_signalfd(fds[0].fd);
+        }
+    }
+
+    info("child returncode: %d", state.returncode);
+    return state.returncode != 0;
 }

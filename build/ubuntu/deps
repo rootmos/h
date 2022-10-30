@@ -27,6 +27,7 @@ if [ -n "$RUNTIME" ]; then
     PKGS+=(libcap2)
     PKGS+=("lua$LUA_VER")
     PKGS+=("python$PYTHON_VER")
+    PKGS+=("libnode72")
 fi
 
 if [ -n "$BUILD" ]; then
@@ -35,6 +36,7 @@ if [ -n "$BUILD" ]; then
     PKGS+=("liblua$LUA_VER-dev")
     PKGS+=("python$PYTHON_VER")
     PKGS+=("libpython$PYTHON_VER-dev")
+    PKGS+=("libnode-dev")
 fi
 
 if [ -n "$CHECK" ]; then

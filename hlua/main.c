@@ -52,6 +52,7 @@ void remove_stdlib_function(struct lua_State* L,
     lua_stack_neutral_end(L);
 }
 
+// https://www.lua.org/source/5.4/loslib.c.html#LUA_TMPNAMTEMPLATE
 #define DEFAULT_TMP "/tmp"
 
 struct options {

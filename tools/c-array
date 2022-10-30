@@ -1,0 +1,41 @@
+#!/usr/bin/env python3
+
+import argparse
+import sys
+
+def parse_args():
+    parser = argparse.ArgumentParser(description="Encode file as a c-array of hex values")
+    parser.add_argument("-z", "--zero", action="store_true")
+
+    parser.add_argument("-o", "--output")
+    parser.add_argument("-i", "--input")
+
+    return parser.parse_args()
+
+def hexdump(bs):
+    s = ""
+    for b in bs:
+        s += f"0x{b:02x},"
+    return s + "\n"
+
+if __name__ == "__main__":
+    args = parse_args()
+
+    if args.input is None or args.input == "-":
+        input_ = sys.stdin.buffer.read()
+    else:
+        with open(args.input, "rb") as f:
+            input_ = f.read()
+
+    bs = bytearray(input_)
+
+    if args.zero:
+        bs.append(0)
+
+    s = hexdump(bs)
+
+    if args.output is None:
+        print(s)
+    else:
+        with open(args.output, "w") as f:
+            f.write(s)

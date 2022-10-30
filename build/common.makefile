@@ -9,9 +9,11 @@ PATHS ?= $(TOOLS)/paths
 LANDLOCKC ?= $(TOOLS)/landlockc
 VERSION ?= $(TOOLS)/version
 SINGLE_FILE ?= $(TOOLS)/single-file
+C_ARRAY ?= $(TOOLS)/c-array
 TEST_HARNESS ?= $(TOOLS)/test-harness
 
 CC = gcc
+CXX = g++
 PKG_CONFIG ?= pkg-config
 
 CFLAGS = -Wall -Werror -O2
@@ -36,6 +38,9 @@ install: build
 
 %: %.c
 	$(CC) $(CFLAGS) $(EXTRA_CFLAGS) -o "$@" "$<" $(LDFLAGS) $(EXTRA_LDFLAGS)
+
+%: %.cpp
+	$(CXX) $(CFLAGS) $(EXTRA_CFLAGS) -o "$@" "$<" $(LDFLAGS) $(EXTRA_LDFLAGS)
 
 %.filesc: %.files
 	$(LANDLOCKC) "$<" "$@"

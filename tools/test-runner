@@ -15,7 +15,12 @@ def parse_args():
 
     parser.add_argument("--log", default=os.environ.get("LOG_LEVEL", "WARN"), help="set log level")
 
-    parser.add_argument("--trace", action="store_true", default=os.environ.get("TRACE") != None)
+    parser.add_argument("-s", "--silent", action="store_true")
+    parser.add_argument("-t", "--trace", action="store_true", default=os.environ.get("TRACE") != None)
+
+    parser.add_argument("-T", "--timeout", type=int, default=os.environ.get("TIMEOUT"))
+
+    parser.add_argument("-o", "--output", default=os.environ.get("OUTPUT"))
 
     parser.add_argument("input", metavar="INPUT")
 
@@ -88,7 +93,7 @@ if __name__ == "__main__":
     cmdline = []
     if args.trace:
         trace = tempfile.NamedTemporaryFile()
-        cmdline += ["strace", "-o", trace.name]
+        cmdline += ["strace", "--follow-forks", "--output-append-mode", "--output", trace.name]
     else:
         trace = None
     cmdline.append(sut)
@@ -97,15 +102,44 @@ if __name__ == "__main__":
     res["cmdline"] = cmdline
 
     res["when"] = datetime.datetime.now().astimezone().isoformat(timespec="seconds")
-    p = subprocess.run(cmdline, capture_output=True, cwd=root)
 
-    res["stdout"] = p.stdout.decode("UTF-8")
-    res["stderr"] = p.stderr.decode("UTF-8")
-    res["returncode"] = p.returncode
-    expected_exit = t.get("exit", 0)
-    if isinstance(expected_exit, str):
-        expected_exit = -int(signal.__dict__[expected_exit])
-    res["expected_returncode"] = expected_exit
+    res["result"] = True
+    res["messages"] = []
+
+    try:
+        if args.silent:
+            p = subprocess.run(cmdline, capture_output=True, cwd=root, timeout=args.timeout)
+            res["stdout"] = p.stdout.decode("UTF-8")
+            res["stderr"] = p.stderr.decode("UTF-8")
+        else:
+            with tempfile.TemporaryDirectory() as tmp:
+                run = os.path.join(tmp, "run.sh")
+                with open(run, "w") as f:
+                    f.write("""
+exec 1> >(tee "$1")
+(tail -F "$3" 1>&2 2>/dev/null) &
+exec 2> >(tee "$2" 1>&2)
+shift 3
+exec "$@"
+"""
+)
+                stdout = os.path.join(tmp, "stdout")
+                stderr = os.path.join(tmp, "stderr")
+                p = subprocess.run(["bash", run, stdout, stderr, trace.name if trace else "/dev/null"] + cmdline, cwd=root, timeout=args.timeout)
+                with open(stdout, "rb") as f:
+                    res["stdout"] = f.read().decode("UTF-8")
+                with open(stderr, "rb") as f:
+                    res["stderr"] = f.read().decode("UTF-8")
+
+        res["returncode"] = p.returncode
+        expected_exit = t.get("exit", 0)
+        if isinstance(expected_exit, str):
+            expected_exit = -int(signal.__dict__[expected_exit])
+        res["expected_returncode"] = expected_exit
+    except subprocess.TimeoutExpired:
+        res["timeout"] = args.timeout
+        res["result"] = False
+        res["messages"].append("process timedout")
 
     if trace:
         trace.seek(0)
@@ -121,21 +155,20 @@ if __name__ == "__main__":
         res["expected_stdout_fn"] = expected_stdout_fn
 
         with open(expected_stdout_fn, "rb") as f:
-            expected_stdout = f.read()
-            res["expected_stdout"] = expected_stdout.decode("UTF-8")
+            res["expected_stdout"] = f.read().decode("UTF-8")
     else:
         expected_stdout = None
 
-    res["result"] = True
-    res["messages"] = []
-
-    if p.returncode != expected_exit:
+    if "returncode" in res and res["returncode"] != expected_exit:
         res["result"] = False
         res["messages"].append("unexpected exit status")
 
-    if expected_stdout is not None and expected_stdout != p.stdout:
+    if "expected_stdout" in res and res["expected_stdout"] != res["stdout"]:
         res["result"] = False
         res["messages"].append("stdout mismatch")
 
-    print(json.dumps(res))
+    if args.output:
+        with open(args.output, "w") as f:
+            f.write(json.dumps(res))
+
     sys.exit(0 if res["result"] else 1)

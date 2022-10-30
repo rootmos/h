@@ -66,6 +66,18 @@ static void print_version(const char* prog)
     printf("lua %s.%s.%s\\n", LUA_VERSION_MAJOR, LUA_VERSION_MINOR, LUA_VERSION_RELEASE);
 #endif
 
+#ifdef NODE_MAJOR_VERSION
+    printf("node %d.%d.%d\\n", NODE_MAJOR_VERSION, NODE_MINOR_VERSION, NODE_PATCH_VERSION);
+#endif
+
+#ifdef NODE_PATCH_VERSION
+    if(NODE_PATCH_VERSION > 0) {
+        printf("v8 %d.%d.%d.%d\\n", V8_MAJOR_VERSION, V8_MINOR_VERSION, V8_BUILD_NUMBER, V8_PATCH_LEVEL);
+    } else {
+        printf("v8 %d.%d.%d\\n", V8_MAJOR_VERSION, V8_MINOR_VERSION, V8_BUILD_NUMBER);
+    }
+#endif
+
     printf("buildtime %s\\n", BUILD_TIME);
 }
 EOF

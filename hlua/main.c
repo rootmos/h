@@ -58,7 +58,7 @@ struct rlimit_spec {
     const char* name;
     int resource;
     enum {
-        RLIMIT_ACTION_NOOP = 0,
+        RLIMIT_ACTION_INHERIT = 0,
         RLIMIT_ACTION_ZERO = 1,
         RLIMIT_ACTION_ABS = 2,
         RLIMIT_ACTION_EQUAL = 3,
@@ -67,12 +67,12 @@ struct rlimit_spec {
 };
 
 
-#define RLIMIT_SPEC_NOOP(rl) (struct rlimit_spec) { .name = #rl, .resource = RLIMIT_##rl, .action = RLIMIT_ACTION_NOOP }
+#define RLIMIT_SPEC_INHERIT(rl) (struct rlimit_spec) { .name = #rl, .resource = RLIMIT_##rl, .action = RLIMIT_ACTION_INHERIT }
 #define RLIMIT_SPEC_ZERO(rl) (struct rlimit_spec) { .name = #rl, .resource = RLIMIT_##rl, .action = RLIMIT_ACTION_ZERO }
 #define RLIMIT_SPEC_ABS(rl, v) (struct rlimit_spec) { .name = #rl, .resource = RLIMIT_##rl, .action = RLIMIT_ACTION_ABS, .value = v }
 #define RLIMIT_SPEC_EQUAL(rl) (struct rlimit_spec) { .name = #rl, .resource = RLIMIT_##rl, .action = RLIMIT_ACTION_EQUAL }
 
-void default_rlimits(struct rlimit_spec rlimits[], size_t len)
+void rlimit_default(struct rlimit_spec rlimits[], size_t len)
 {
     struct rlimit_spec defaults[] = {
         RLIMIT_SPEC_ABS(CPU, 1<<2),
@@ -105,9 +105,56 @@ void default_rlimits(struct rlimit_spec rlimits[], size_t len)
     }
 }
 
-static void restrict_rlimits(const struct rlimit_spec rlimits[], size_t len)
+void rlimit_inherit(struct rlimit_spec rlimits[], size_t len)
 {
-    debug("restricting rlimits");
+    for(size_t i = 0; i < len; i++) {
+        rlimits[i].action = RLIMIT_ACTION_INHERIT;
+    }
+}
+
+int rlimit_parse(struct rlimit_spec rlimits[], size_t len, const char* str)
+{
+    debug("parsing: %s", str);
+
+    size_t L = strlen(str);
+    size_t l = 0;
+    while(str[l] != '=' && l < L) {
+        l += 1;
+    }
+
+    if(l == L) {
+        info("unable to parse: %s (unexpected end)", str);
+        return 1;
+    }
+
+    for(size_t i = 0; i < len; i++) {
+        if(strlen(rlimits[i].name) != l) {
+            continue;
+        }
+
+        if(0 == strncasecmp(str, rlimits[i].name, l)) {
+            unsigned long v;
+            int r = sscanf(str + l + 1, "%lu", &v);
+            if(r != 1) {
+                info("unable to parse: %s (value not an unsigned int)", str + l + 1);
+                return 1;
+            }
+
+            info("rlimit %s: %lu", rlimits[i].name, v);
+            rlimits[i].action = RLIMIT_ACTION_ABS;
+            rlimits[i].value = v;
+
+            return 0;
+        }
+    }
+
+    info("unable to parse: %s (no such limit found)", str);
+    return 1;
+}
+
+static void rlimit_apply(const struct rlimit_spec rlimits[], size_t len)
+{
+    debug("applying rlimits");
 
     for(size_t i = 0; i < len; i++) {
         struct rlimit rlp;
@@ -117,7 +164,7 @@ static void restrict_rlimits(const struct rlimit_spec rlimits[], size_t len)
         debug("get rlimit %s: soft=%lu hard=%lu",
               rlimits[i].name, rlp.rlim_cur, rlp.rlim_max);
 
-        if(rlimits[i].action == RLIMIT_ACTION_NOOP) {
+        if(rlimits[i].action == RLIMIT_ACTION_INHERIT) {
             continue;
         }
 
@@ -170,6 +217,10 @@ static void print_usage(int fd, const char* prog)
     dprintf(fd, "  -t       allow read+write access to %s\n", DEFAULT_TMP);
     dprintf(fd, "  -h       print this message\n");
     dprintf(fd, "  -v       print version information\n");
+    dprintf(fd, "\n");
+    dprintf(fd, "rlimit options:\n");
+    dprintf(fd, "  -rRLIMIT=VALUE set RLIMIT to VALUE\n");
+    dprintf(fd, "  -R             use inherited rlimits instead of default\n");
 }
 
 #include "version.c"
@@ -184,10 +235,10 @@ static void parse_options(struct options* o, int argc, char* argv[])
     o->allow_tmp = 0;
     o->tmp = DEFAULT_TMP;
 
-    default_rlimits(o->rlimits, LENGTH(o->rlimits));
+    rlimit_default(o->rlimits, LENGTH(o->rlimits));
 
     int res;
-    while((res = getopt(argc, argv, "hlstv")) != -1) {
+    while((res = getopt(argc, argv, "hlstvr:R")) != -1) {
         switch(res) {
         case 'l':
             o->allow_localtime = 1;
@@ -197,6 +248,17 @@ static void parse_options(struct options* o, int argc, char* argv[])
             break;
         case 't':
             o->allow_tmp = 1;
+            break;
+        case 'r': {
+            int r = rlimit_parse(o->rlimits, LENGTH(o->rlimits), optarg);
+            if(r != 0) {
+                dprintf(1, "unable to parse rlimit: %s\n", optarg);
+                exit(1);
+            }
+            break;
+        }
+        case 'R':
+            rlimit_inherit(o->rlimits, LENGTH(o->rlimits));
             break;
         case 'v':
             print_version(argv[0]);
@@ -234,7 +296,7 @@ int main(int argc, char* argv[])
     struct options o;
     parse_options(&o, argc, argv);
 
-    restrict_rlimits(o.rlimits, LENGTH(o.rlimits));
+    rlimit_apply(o.rlimits, LENGTH(o.rlimits));
 
     int rsfd = landlock_new_ruleset();
 

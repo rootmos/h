@@ -5,7 +5,7 @@ Unprivileged sandboxing of popular script languages.
 
 |Unprivileged|sandboxing|script languages|
 |------------|----------|----------------|
-|Alice: "Why not Docker?"<br>Bob: Because `sudo docker`.|[landlock](https://www.kernel.org/doc/html/latest/userspace-api/landlock.html) <br> [seccomp](https://www.kernel.org/doc/html/latest/userspace-api/seccomp_filter.html)|[lua](http://lua.org/) -> [hlua](hlua) <br> [python](https://python.org/) -> [hpython](hpython) |
+|Alice: "Why not Docker?"<br>Bob: Because `sudo docker`.|[landlock](https://www.kernel.org/doc/html/latest/userspace-api/landlock.html) <br> [seccomp](https://www.kernel.org/doc/html/latest/userspace-api/seccomp_filter.html)|[lua](http://lua.org/) -> [hlua](hlua) <br> [python](https://python.org/) -> [hpython](hpython) <br> [node](https://nodejs.org/) -> [hnode](hnode) |
 
 ## DISCLAIMER
 This project is a work in progress and has not been audited by security
@@ -160,8 +160,8 @@ following table (derived from the packages installed during the
 
 | | runtime | build | check |
 |-|---------|-------|-------|
-|Ubuntu 22.04| `libcap2 lua5.4 python3` | `make pkg-config gcc libcap-dev wget ca-certificates bison flex liblua5.4-dev python3 libpython3-dev` | `uuid-runtime jq` |
-|Arch Linux| `lua python` | `make gcc pkgconf bpf` | `jq` |
+|Ubuntu 22.04| `libcap2 lua5.4 python3 libnode72` | `make pkg-config gcc libcap-dev wget ca-certificates bison flex liblua5.4-dev python3 libpython3-dev libnode-dev` | `uuid-runtime jq` |
+|Arch Linux| `lua python nodejs` | `make gcc pkgconf bpf` | `jq` |
 
 ### Building from a Ubuntu source package
 Pick a release and download the Ubuntu source package asset.

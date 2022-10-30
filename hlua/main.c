@@ -5,6 +5,9 @@
 #include <lualib.h>
 #include <lauxlib.h>
 
+#define RLIMIT_DEFAULT_CPU (1<<2)
+#define RLIMIT_DEFAULT_NOFILE (1<<3)
+
 #define LIBR_IMPLEMENTATION
 #include "r.h"
 
@@ -63,6 +66,8 @@ struct options {
 
     int allow_tmp;
     const char* tmp;
+
+    struct rlimit_spec rlimits[RLIMIT_NLIMITS];
 };
 
 static void print_usage(int fd, const char* prog)
@@ -75,6 +80,10 @@ static void print_usage(int fd, const char* prog)
     dprintf(fd, "  -t       allow read+write access to %s\n", DEFAULT_TMP);
     dprintf(fd, "  -h       print this message\n");
     dprintf(fd, "  -v       print version information\n");
+    dprintf(fd, "\n");
+    dprintf(fd, "rlimit options:\n");
+    dprintf(fd, "  -rRLIMIT=VALUE set RLIMIT to VALUE\n");
+    dprintf(fd, "  -R             use inherited rlimits instead of default\n");
 }
 
 #include "version.c"
@@ -89,8 +98,10 @@ static void parse_options(struct options* o, int argc, char* argv[])
     o->allow_tmp = 0;
     o->tmp = DEFAULT_TMP;
 
+    rlimit_default(o->rlimits, LENGTH(o->rlimits));
+
     int res;
-    while((res = getopt(argc, argv, "hlstv")) != -1) {
+    while((res = getopt(argc, argv, "hlstvr:R")) != -1) {
         switch(res) {
         case 'l':
             o->allow_localtime = 1;
@@ -100,6 +111,17 @@ static void parse_options(struct options* o, int argc, char* argv[])
             break;
         case 't':
             o->allow_tmp = 1;
+            break;
+        case 'r': {
+            int r = rlimit_parse(o->rlimits, LENGTH(o->rlimits), optarg);
+            if(r != 0) {
+                dprintf(1, "unable to parse rlimit: %s\n", optarg);
+                exit(1);
+            }
+            break;
+        }
+        case 'R':
+            rlimit_inherit(o->rlimits, LENGTH(o->rlimits));
             break;
         case 'v':
             print_version(argv[0]);
@@ -136,6 +158,8 @@ int main(int argc, char* argv[])
 
     struct options o;
     parse_options(&o, argc, argv);
+
+    rlimit_apply(o.rlimits, LENGTH(o.rlimits));
 
     int rsfd = landlock_new_ruleset();
 

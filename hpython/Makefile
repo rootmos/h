@@ -11,7 +11,8 @@ SRC ?= main.c
 .PHONY: build
 build: $(EXE)
 
-$(EXE).c: $(SRC) filter.bpfc landlock.filesc capabilities.c seccomp.c version.c r.h
+$(EXE).c: $(SRC) filter.bpfc landlock.filesc \
+	capabilities.c seccomp.c version.c r.h
 	$(SINGLE_FILE) -o "$@" "$<"
 
 landlock.files: Makefile

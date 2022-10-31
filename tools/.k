@@ -1,5 +1,5 @@
 run() {
-    make LOG_LEVEL=DEBUG && ./capture -- sh -c 'echo "hello" 1>&2'
+    make LOG_LEVEL=DEBUG && ./capture -o stdout -- echo "hello" && cat stdout
 }
 
 libr() {

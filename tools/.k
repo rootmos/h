@@ -1,5 +1,5 @@
 run() {
-    make LOG_LEVEL=DEBUG && ./capture echo "hello"
+    make LOG_LEVEL=DEBUG && ./capture -- sh -c 'echo "hello" 1>&2'
 }
 
 libr() {

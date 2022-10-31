@@ -7,6 +7,87 @@
 #define LIBR_IMPLEMENTATION
 #include "r.h"
 
+struct buffer {
+    uint8_t* bs;
+    size_t L;
+    size_t i;
+};
+
+void buffer_init(struct buffer* b, size_t L)
+{
+    b->bs = calloc(1, L); CHECK_MALLOC(b->bs);
+    b->L = L;
+    b->i = 0;
+}
+
+int buffer_full(const struct buffer* b)
+{
+    return b->i == b->L;
+}
+
+int buffer_empty(const struct buffer* b)
+{
+    return b->i == 0;
+}
+
+void buffer_fill(struct buffer* b, int fd)
+{
+    while(1) {
+        if(buffer_full(b)) {
+            return;
+        }
+
+        const size_t l = b->L - b->i;
+        ssize_t s = read(fd, &b->bs[b->i], l);
+        if(s == -1 && (errno == EAGAIN || errno == EWOULDBLOCK)) {
+            return;
+        }
+        CHECK(s, "read(%d, .., %zu)", fd, l);
+
+        debug("read(%d) = %zd", fd, s);
+
+        b->i += s;
+    }
+}
+
+void buffer_discard(int fd)
+{
+    debug("discarding from: %d", fd);
+    while(1) {
+        uint8_t bs[1024];
+        const size_t l = LENGTH(bs);
+        ssize_t s = read(fd, bs, l);
+        if(s == -1 && (errno == EAGAIN || errno == EWOULDBLOCK)) {
+            return;
+        }
+        CHECK(s, "read(%d, .., %zu)", fd, l);
+
+        debug("discarding %zd from %d", s, fd);
+    }
+}
+
+void buffer_drain(struct buffer* b, int fd)
+{
+    while(1) {
+        if(buffer_empty(b)) {
+            return;
+        }
+
+        const size_t l = b->i;
+        ssize_t s = write(fd, b->bs, l);
+        if(s == -1 && (errno == EAGAIN || errno == EWOULDBLOCK)) {
+            return;
+        }
+        CHECK(s, "write(%d, .., %zu)", fd, l);
+
+        debug("write(%d) = %zd", fd, s);
+
+        size_t j = s - l;
+        memmove(b->bs, &b->bs[s], j);
+        b->i = j;
+    }
+}
+
 struct options {
     int silence_stdout;
     const char* stdout_fn;
@@ -71,11 +152,18 @@ struct {
     pid_t child;
     int child_terminated;
     int returncode;
+
+    struct buffer out;
+    int stdout_hup;
+    struct buffer err;
+    int stderr_hup;
 } state;
 
 int should_continue(void)
 {
-    if(state.child_terminated) {
+    if(state.child_terminated
+       && state.stdout_hup && buffer_empty(&state.out)
+       && state.stderr_hup && buffer_empty(&state.err)) {
         return 0;
     }
 
@@ -173,8 +261,6 @@ int main(int argc, char* argv[])
         r = sigprocmask(SIG_UNBLOCK, &sm, NULL);
         CHECK(r, "sigprocmask");
 
-        r = close(sfd); CHECK(r, "close");
-
         r = dup2(stdout_pair[1], 1); CHECK(r, "dup2(.., 1)");
         r = close(stdout_pair[0]); CHECK(r, "close");
 
@@ -187,20 +273,110 @@ int main(int argc, char* argv[])
         CHECK(r, "execv");
     }
 
-    r = close(0); CHECK(r, "close(0)");
-
     info("spawned child: %d", state.child);
+
+    r = close(0); CHECK(r, "close(0)");
+    r = close(stdout_pair[1]); CHECK(r, "close");
+    r = close(stderr_pair[1]); CHECK(r, "close");
+
+    set_blocking(1, 0);
+    set_blocking(2, 0);
+    set_blocking(stdout_pair[0], 0);
+    set_blocking(stderr_pair[0], 0);
 
     struct pollfd fds[] = {
         { .fd = sfd, .events = POLLIN },
+        { .fd = stdout_pair[0], .events = 0 },
+        { .fd = stderr_pair[0], .events = 0 },
+        { .fd = 1, .events = 0 },
+        { .fd = 2, .events = 0 },
     };
 
+    buffer_init(&state.out, 4096);
+    buffer_init(&state.err, 4096);
+
     while(should_continue()) {
+        if(!state.stdout_hup && !buffer_full(&state.out)) {
+            fds[1].events = POLLIN;
+        } else {
+            fds[1].events = 0;
+        }
+
+        if(!state.stderr_hup && !buffer_full(&state.err)) {
+            fds[2].events = POLLIN;
+        } else {
+            fds[2].events = 0;
+        }
+
+        if(!buffer_empty(&state.out)) {
+            fds[3].events = POLLOUT;
+        } else {
+            fds[3].events = 0;
+        }
+
+        if(!buffer_empty(&state.err)) {
+            fds[4].events = POLLOUT;
+        } else {
+            fds[4].events = 0;
+        }
+
+        debug("poll");
         int r = poll(fds, LENGTH(fds), -1);
         CHECK_IF(r < 1, "poll");
 
         if(fds[0].revents & POLLIN) {
             handle_signalfd(fds[0].fd);
+            fds[0].revents ^= POLLIN;
+        }
+
+        if(fds[1].revents & POLLIN) {
+            debug("stdout in");
+            if(o.silence_stdout) {
+                buffer_discard(fds[1].fd);
+            } else {
+                buffer_fill(&state.out, fds[1].fd);
+            }
+            fds[1].revents ^= POLLIN;
+        }
+
+        if(fds[1].revents & POLLHUP) {
+            debug("stdout hup");
+            state.stdout_hup = 1;
+            fds[1].revents ^= POLLHUP;
+        }
+
+        if(fds[2].revents & POLLIN) {
+            debug("stderr in");
+            if(o.silence_stderr) {
+                buffer_discard(fds[2].fd);
+            } else {
+                buffer_fill(&state.err, fds[2].fd);
+            }
+            fds[2].revents ^= POLLIN;
+        }
+        if(fds[2].revents & POLLHUP) {
+            debug("stderr hup");
+            state.stderr_hup = 1;
+            fds[2].revents ^= POLLHUP;
+        }
+
+        if(fds[3].revents & POLLOUT) {
+            debug("stdout out");
+            buffer_drain(&state.out, fds[3].fd);
+            fds[3].revents ^= POLLOUT;
+        }
+
+        if(fds[4].revents & POLLOUT) {
+            debug("stderr out");
+            buffer_drain(&state.err, fds[4].fd);
+            fds[4].revents ^= POLLOUT;
+        }
+
+        for(size_t i = 0; i < LENGTH(fds); i++) {
+            if(fds[i].revents != 0) {
+                failwith("unhandled events: fds[%zu].revents = %d",
+                         i, fds[i].revents);
+            }
         }
     }
 

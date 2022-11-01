@@ -11,6 +11,8 @@ struct options {
     const char* stdout_fn;
     int silence_stderr;
     const char* stderr_fn;
+
+    const char* returncode_fn;
 };
 
 static void print_usage(int fd, const char* prog)
@@ -22,6 +24,7 @@ static void print_usage(int fd, const char* prog)
     dprintf(fd, "  -o FILE  write stdout to FILE\n");
     dprintf(fd, "  -E       do not output stderr\n");
     dprintf(fd, "  -e FILE  write stderr to FILE\n");
+    dprintf(fd, "  -r FILE  write returncode to FILE (-SIG if signaled)\n");
     dprintf(fd, "  -h       print this message\n");
 }
 
@@ -33,7 +36,7 @@ static int parse_options(struct options* o, int argc, char* argv[])
     o->stderr_fn = "/dev/null";
 
     int res;
-    while((res = getopt(argc, argv, "Oo:Ee:h-")) != -1) {
+    while((res = getopt(argc, argv, "Oo:Ee:r:h-")) != -1) {
         switch(res) {
         case 'O':
             o->silence_stdout = 1;
@@ -48,6 +51,10 @@ static int parse_options(struct options* o, int argc, char* argv[])
         case 'e':
             o->stderr_fn = strdup(optarg);
             CHECK_NOT(o->stderr_fn, NULL, "strdup(%s)", optarg);
+            break;
+        case 'r':
+            o->returncode_fn = strdup(optarg);
+            CHECK_NOT(o->returncode_fn, NULL, "strdup(%s)", optarg);
             break;
         case '-':
             goto opt_end;
@@ -257,5 +264,27 @@ int main(int argc, char* argv[])
     }
 
     info("child returncode: %d", state.returncode);
+
+    if(o.returncode_fn) {
+        debug("writing returncode to: %s", o.returncode_fn);
+        int fd = open(o.returncode_fn, O_WRONLY|O_EXCL|O_CREAT);
+        CHECK(fd, "open(%s)", o.returncode_fn);
+
+        char buf[48];
+        ssize_t s = snprintf(LIT(buf), "%d", state.returncode);
+        if(s >= sizeof(buf)) {
+            failwith("buffer too small");
+        }
+
+        size_t i = 0;
+        while(i != s) {
+            int r = write(fd, &buf[i], s-i);
+            CHECK(r, "write(%s)", o.returncode_fn);
+            i += r;
+        }
+
+        int r = close(fd); CHECK(r, "close");
+    }
+
     return state.returncode != 0;
 }

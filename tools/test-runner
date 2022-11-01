@@ -10,6 +10,10 @@ import subprocess
 import sys
 import tempfile
 
+TOOLS = os.environ.get("TOOLS", os.path.dirname(os.path.realpath(__file__)))
+CAPTURE = os.environ.get("CAPTURE", os.path.join(TOOLS, "capture"))
+WATCH = os.environ.get("WATCH", os.path.join(TOOLS, "strace-log-watch"))
+
 def parse_args():
     parser = argparse.ArgumentParser(description="Yet another test runner")
 
@@ -90,60 +94,67 @@ if __name__ == "__main__":
     res["input"] = input_
     logger.debug(f"test input: {input_}")
 
-    cmdline = []
-    if args.trace:
-        trace = tempfile.NamedTemporaryFile()
-        cmdline += ["strace", "--follow-forks", "--output-append-mode", "--output", trace.name]
-    else:
-        trace = None
-    cmdline.append(sut)
-    cmdline += t.get("args", [])
-    cmdline.append(input_)
-    res["cmdline"] = cmdline
+    with tempfile.TemporaryDirectory() as tmp:
+        stdout = os.path.join(tmp, "stdout")
+        stderr = os.path.join(tmp, "stderr")
+        returncode = os.path.join(tmp, "returncode")
 
-    res["when"] = datetime.datetime.now().astimezone().isoformat(timespec="seconds")
-
-    res["result"] = True
-    res["messages"] = []
-
-    try:
+        cmdline = [CAPTURE, "-o", stdout, "-e", stderr, "-r", returncode]
         if args.silent:
-            p = subprocess.run(cmdline, capture_output=True, cwd=root, timeout=args.timeout)
-            res["stdout"] = p.stdout.decode("UTF-8")
-            res["stderr"] = p.stderr.decode("UTF-8")
+            cmdline += ["-O", "-E"]
+        cmdline += ["--"]
+
+        if args.trace:
+            trace = os.path.join(tmp, "trace")
+            cmdline += [
+                "strace",
+                "--absolute-timestamps=precision:us",
+                "--follow-forks", "--output-separately",
+                "--output", trace,
+            ]
         else:
-            with tempfile.TemporaryDirectory() as tmp:
-                run = os.path.join(tmp, "run.sh")
-                with open(run, "w") as f:
-                    f.write("""
-exec 1> >(tee "$1")
-(tail -F "$3" 1>&2 2>/dev/null) &
-exec 2> >(tee "$2" 1>&2)
-shift 3
-exec "$@"
-"""
-)
-                stdout = os.path.join(tmp, "stdout")
-                stderr = os.path.join(tmp, "stderr")
-                p = subprocess.run(["bash", run, stdout, stderr, trace.name if trace else "/dev/null"] + cmdline, cwd=root, timeout=args.timeout)
-                with open(stdout, "rb") as f:
-                    res["stdout"] = f.read().decode("UTF-8")
-                with open(stderr, "rb") as f:
-                    res["stderr"] = f.read().decode("UTF-8")
+            trace = None
 
-        res["returncode"] = p.returncode
-        expected_exit = t.get("exit", 0)
-        if isinstance(expected_exit, str):
-            expected_exit = -int(signal.__dict__[expected_exit])
-        res["expected_returncode"] = expected_exit
-    except subprocess.TimeoutExpired:
-        res["timeout"] = args.timeout
-        res["result"] = False
-        res["messages"].append("process timedout")
+        cmdline += [sut]
+        cmdline += t.get("args", [])
+        cmdline += [input_]
 
-    if trace:
-        trace.seek(0)
-        res["trace"] = trace.read().decode("UTF-8")
+        res["cmdline"] = cmdline
+        res["when"] = datetime.datetime.now().astimezone().isoformat(timespec="seconds")
+        p = subprocess.Popen(cmdline, cwd=root)
+
+        if trace and not args.silent:
+            w = subprocess.Popen([WATCH, "-p", str(p.pid), trace])
+        else:
+            w = None
+
+        res["result"] = True
+        res["messages"] = []
+        try:
+            p.wait(timeout=args.timeout)
+
+            with open(returncode, "r") as f:
+                res["returncode"] = int(f.read())
+            expected_exit = t.get("exit", 0)
+            if isinstance(expected_exit, str):
+                expected_exit = -int(signal.__dict__[expected_exit])
+            res["expected_returncode"] = expected_exit
+        except subprocess.TimeoutExpired:
+            res["timeout"] = args.timeout
+            res["result"] = False
+            res["messages"].append("process timedout")
+
+        if w is not None:
+            w.wait()
+
+        with open(stdout, "rb") as f:
+            res["stdout"] = f.read().decode("UTF-8")
+        with open(stderr, "rb") as f:
+            res["stderr"] = f.read().decode("UTF-8")
+
+        if trace:
+            q = subprocess.run(["strace-log-merge", trace], capture_output=True, check=True)
+            res["trace"] = q.stdout.decode("UTF-8")
 
     expected_stdout_fn = t.get("stdout")
     if expected_stdout_fn is None:

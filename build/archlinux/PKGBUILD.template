@@ -24,7 +24,8 @@ EOF
 }
 
 build() {
-    make tools build -C "$ROOT"
+    make tools -C "$ROOT"
+    make build -C "$ROOT"
 }
 
 check() {

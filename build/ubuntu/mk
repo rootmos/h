@@ -7,8 +7,13 @@ OUTPUT_DIR=${OUTPUT_DIR-$SCRIPT_DIR/out}
 
 HOST_TOOLS=${HOST_TOOLS-$(readlink -f "$SCRIPT_DIR/../../tools")}
 
-WORKDIR=$(mktemp -d)
-trap 'rm -rf $WORKDIR' EXIT
+WORKDIR=${WORKDIR-}
+if [ -z "$WORKDIR" ]; then
+    WORKDIR=$(mktemp -d)
+    trap 'rm -rf $WORKDIR' EXIT
+else
+    mkdir -p "$WORKDIR"
+fi
 
 read SHA256 TARBALL < <("$HOST_TOOLS/archive" -O "$WORKDIR")
 echo 1>&2 "- source tarball: $(basename "$TARBALL") $SHA256"

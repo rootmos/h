@@ -267,7 +267,7 @@ int main(int argc, char* argv[])
 
     if(o.returncode_fn) {
         debug("writing returncode to: %s", o.returncode_fn);
-        int fd = open(o.returncode_fn, O_WRONLY|O_EXCL|O_CREAT);
+        int fd = open(o.returncode_fn, O_WRONLY|O_EXCL|O_CREAT, 0644);
         CHECK(fd, "open(%s)", o.returncode_fn);
 
         char buf[48];

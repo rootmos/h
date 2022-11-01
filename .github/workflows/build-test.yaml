@@ -10,6 +10,7 @@ jobs:
       ARCH: ubuntu2204
       UNPRIVILEGED: ubuntu
       TEST_OUTPUT_DIR: /tmp/tests
+      WORKDIR: /tmp/workdir
     steps:
     - name: Install minimal dependencies
       run: |
@@ -28,7 +29,7 @@ jobs:
         echo "$UNPRIVILEGED ALL = NOPASSWD: $(which apt-get)" | tee -a /etc/sudoers
 
     - name: Build package
-      run: sudo -u $UNPRIVILEGED env SUDO=sudo build/ubuntu/mk
+      run: sudo -u $UNPRIVILEGED --preserve-env=WORKDIR env SUDO=sudo build/ubuntu/mk
 
     - name: Archive source package
       uses: actions/upload-artifact@v3
@@ -42,9 +43,10 @@ jobs:
 
     - name: Test system installation
       run: |
-        sudo -u $UNPRIVILEGED --preserve-env=TEST_OUTPUT_DIR env SUT=$(which hlua) tools/test-harness -c hlua
-        sudo -u $UNPRIVILEGED --preserve-env=TEST_OUTPUT_DIR env SUT=$(which hpython) tools/test-harness -c hpython
-        sudo -u $UNPRIVILEGED --preserve-env=TEST_OUTPUT_DIR env SUT=$(which hnode) tools/test-harness -c hnode
+        export TOOLS=$(readlink -f "$WORKDIR"/*/tools)
+        sudo -u $UNPRIVILEGED --preserve-env=TEST_OUTPUT_DIR,TOOLS env SUT=$(which hlua) tools/test-harness -c hlua
+        sudo -u $UNPRIVILEGED --preserve-env=TEST_OUTPUT_DIR,TOOLS env SUT=$(which hpython) tools/test-harness -c hpython
+        sudo -u $UNPRIVILEGED --preserve-env=TEST_OUTPUT_DIR,TOOLS env SUT=$(which hnode) tools/test-harness -c hnode
 
     - name: Archive test results
       uses: actions/upload-artifact@v3
@@ -93,9 +95,10 @@ jobs:
 
     - name: Test system installation
       run: |
-        sudo -u $UNPRIVILEGED --preserve-env=TEST_OUTPUT_DIR env SUT=$(which hlua) tools/test-harness -c hlua
-        sudo -u $UNPRIVILEGED --preserve-env=TEST_OUTPUT_DIR env SUT=$(which hpython) tools/test-harness -c hpython
-        sudo -u $UNPRIVILEGED --preserve-env=TEST_OUTPUT_DIR env SUT=$(which hnode) tools/test-harness -c hnode
+        export TOOLS=$(readlink -f build/archlinux/src/*/tools)
+        sudo -u $UNPRIVILEGED --preserve-env=TEST_OUTPUT_DIR,TOOLS env SUT=$(which hlua) tools/test-harness -c hlua
+        sudo -u $UNPRIVILEGED --preserve-env=TEST_OUTPUT_DIR,TOOLS env SUT=$(which hpython) tools/test-harness -c hpython
+        sudo -u $UNPRIVILEGED --preserve-env=TEST_OUTPUT_DIR,TOOLS env SUT=$(which hnode) tools/test-harness -c hnode
 
     - name: Archive test results
       uses: actions/upload-artifact@v3

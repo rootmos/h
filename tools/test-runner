@@ -24,7 +24,8 @@ def parse_args():
 
     parser.add_argument("--log", default=os.environ.get("LOG_LEVEL", "WARN"), help="set log level")
 
-    parser.add_argument("-s", "--silent", action="store_true")
+    parser.add_argument("-q", "--quiet", action="store_true")
+    parser.add_argument("-Q", "--very-quiet", action="store_true")
     parser.add_argument("-t", "--trace", action="store_true", default=os.environ.get("TRACE") != None)
 
     parser.add_argument("-T", "--timeout", type=int, default=os.environ.get("TIMEOUT"))
@@ -33,7 +34,12 @@ def parse_args():
 
     parser.add_argument("test", metavar="TEST", nargs='?')
 
-    return parser.parse_args()
+    args = parser.parse_args()
+
+    if args.very_quiet:
+        args.quiet = True
+
+    return args
 
 logger = None
 def setup_logger(level):
@@ -143,9 +149,9 @@ def discover_tests(root):
             if f == TEST_METAFILE:
                 t = Test(fn)
                 if t.name not in tests:
-                    tests[t.name] = t
+                    tests[(t.project, t.name)] = t
                 else:
-                    raise RuntimeError("duplicate tests", t.fn, tests[t.name].fn)
+                    raise RuntimeError("duplicate tests", t.fn, tests[(t.project, t.name)].fn)
     return tests
 
 class Run:
@@ -159,14 +165,20 @@ class Run:
             stderr = os.path.join(tmp, "stderr")
             returncode = os.path.join(tmp, "returncode")
 
-            self.cmdline = [CAPTURE, "-o", stdout, "-e", stderr, "-r", returncode]
-            if args.silent:
-                self.cmdline += ["-O", "-E"]
-            self.cmdline += ["--"]
+            self.cmdline = []
 
             trace = None
             if args.trace:
                 trace = os.path.join(tmp, "trace")
+                if not args.very_quiet:
+                    self.cmdline += [STRACE_LOG_WATCH, "-o", trace, "--"]
+
+            self.cmdline += [CAPTURE, "-o", stdout, "-e", stderr, "-r", returncode]
+            if args.quiet:
+                self.cmdline += ["-O", "-E"]
+            self.cmdline += ["--"]
+
+            if args.trace:
                 self.cmdline += [
                     STRACE,
                     "--absolute-timestamps=precision:us",
@@ -178,17 +190,11 @@ class Run:
             self.cmdline += test.args or []
             self.cmdline += [test.input_]
 
-            self.when = datetime.datetime.now().astimezone()
-            p = subprocess.Popen(self.cmdline, cwd=test.cwd)
-
-            w = None
-            if trace and not args.silent:
-                w = subprocess.Popen([STRACE_LOG_WATCH, "-p", str(p.pid), trace])
-
             self.result = True
             self.messages = []
             try:
-                p.wait(timeout=args.timeout)
+                self.when = datetime.datetime.now().astimezone()
+                p = subprocess.run(self.cmdline, cwd=test.cwd, timeout=args.timeout)
                 with open(returncode, "r") as f:
                     self.returncode = int(f.read())
             except subprocess.TimeoutExpired:
@@ -196,9 +202,6 @@ class Run:
                 self.result = False
                 self.messages.append("process timed out")
                 self.returncode = None
-
-            if w is not None:
-                w.wait()
 
             with open(stdout, "rb") as f:
                 self.stdout = f.read().decode("UTF-8")

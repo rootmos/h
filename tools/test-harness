@@ -53,7 +53,7 @@ for t in "${TESTS[@]}"; do
     RUN=$TMP/$TEST_RUN_ID.json
 
     set +o errexit
-    env PARENT_RUN_ID="$ID" $TEST_RUNNER --silent --output="$RUN" "$t"
+    env PARENT_RUN_ID="$ID" $TEST_RUNNER --very-quiet --output="$RUN" "$t"
     set -o errexit
 
     PROJECT=$(jq -r '.test.project' "$RUN")

@@ -58,8 +58,8 @@ Then there are programming languages
 [designed to be difficult to read](https://esolangs.org/wiki/Esoteric_programming_language#Obfuscation).
 And speaking of programming languages: "the greatest thing about Lua is that
 you don't have to write Lua."
-Meaning that it's very feasible to bundle a compiler for another domain or
-other esoteric language (such as [fennel](https://fennel-lang.org) and
+Meaning that it's very feasible to bundle a compiler for another language
+however esoteric (check out: [fennel](https://fennel-lang.org) and
 [Amulet](https://amulet.works/)).
 But Lua (as well as python, node, c and many many more) are:
 any-effect-any-time languages.
@@ -68,21 +68,21 @@ This in contrast with [Haskell](https://www.haskell.org)
 or [eff](https://www.eff-lang.org/) if you're feeling adventurous.
 That means that an expected pure/side-effect free operation such as compiling a
 piece of source code can execute the above `os.execute`-attack or worse if the
-attacker has an even more insidious mind.
-And considering that a compilers are usually quite extensive pieces of software
+attacker has an insidious mind.
+And considering that compilers are usually quite extensive pieces of software
 they provide ample forestry to hide the malicious tree.
 Alice, I suggest you split the malicious code in several commits/PR:s.
-Here I recommend [Ken Thompson's "Reflections on Trusting Trust"](https://dl.acm.org/doi/10.1145/358198.358210),
+For the victim, I recommend [Ken Thompson's "Reflections on Trusting Trust"](https://dl.acm.org/doi/10.1145/358198.358210),
 which if you haven't read I expect will shatter any trust you might have
 imagined you had in *any* binary executable.
 
-So the world is a scary and unsatisfactory environment, then let's begin
+So the world is a scary and unsatisfactory environment, so let's begin
 mitigating the consequences of malicious or incompetently written code.
 
-Alice's `sudo` based `rm -f /`-attack can be mitigated by a one-liner:
+Alice's `sudo`-based `rm -f /`-attack can be mitigated by a one-liner:
 [`prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0)`](https://man.archlinux.org/man/prctl.2#PR_SET_NO_NEW_PRIVS).
 This call is not expected to fail, but being a conscientious developer it never
-hurts to crash-don't-thrash and I presented a copy-pastable snippet:
+hurts to crash-don't-thrash and I present a copy-pastable snippet:
 ```c
 #include <sys/prctl.h>
 #include <stdlib.h>
@@ -105,7 +105,7 @@ Consider other programming models such as the actor model
 where the non-delivery of a message is a scenario brought to the forefront
 (the real-world scenario is the fallibility of network connections).
 If you are curious I recommend [Erlang](https://www.erlang.org/)
-(checkout [Learn You Some Erlang for great good!](https://learnyousomeerlang.com/)).
+(check out [Learn You Some Erlang for great good!](https://learnyousomeerlang.com/)).
 
 Back to mitigations: the above `no_new_privs` function call is so simple
 it should always be used.
@@ -114,12 +114,12 @@ This is the [Principle of least privilege](https://en.wikipedia.org/wiki/Princip
 if the functionality you intend to provide do not require privileges your
 process should not have any privileges, and this is the red thread in this
 attempt at raison d'être.
-But in the [RealWorld](https://hackage.haskell.org/package/base-4.13.0.0/docs/Control-Monad-ST-Safe.html#t:RealWorld)
+But in the [RealWorld](https://hackage.haskell.org/package/base-4.13.0.0/docs/Control-Monad-ST-Safe.html#t:RealWorld),
 processes inherit quite a handful of privileges that Alice can still abuse,
 as we shall see.
 
-So, Alice can't `sudo` anymore thanks to `PR_SET_NO_NEW_PRIVS`.
-But even a sneaky `os.execute("rm -r ~")` would still
+So Alice can't `sudo` anymore thanks to `PR_SET_NO_NEW_PRIVS`,
+but even a sneaky `os.execute("rm -r ~")` would still
 be a [mayor](https://www.youtube.com/watch?v=fmAWIDI4ZgY) buzzkill.
 
 The naive Lua specific mitigation is to `os.execute = nil` before running the
@@ -152,55 +152,76 @@ because of lack of infinite memory; restricted to the scratch memory:
 (That only present an interesting challenge:
 which [Project Euler](https://projecteuler.net) or
 [Advent of Code](https://adventofcode.com) problems can be solved in cBPF?)
-But when it comes to security: easily read and understandable code is, of
-course, preferred.
+But when it comes to security: easily read and understandable code is always
+preferred.
 
 Back to Alice's `os.system`-based attacks:
-with seccomp enabled with a filter that forbids `exec`:s.
-Then the kernel will politely kill your process and suggest to the rest of the
+with seccomp enabled with a filter that forbids `exec`:s,
+the kernel will politely kill your process and suggest to the rest of the
 system that you received a `SIGSYS` signal.
-But the idiom is to `fork` before `exec`:ing: so why not reject `clone` as
-well: the syscall that `fork` is translated to.
-(Remember, in Linux threads and processes are the same abstraction, one with
-shared virtual memory space and the other not.)
 
-When working with seccomp, y approach have always been to start with a
-strict "reject everything" filter,
-run a test with `strace`, look for `SIGSYS`, reason about the complained about
-syscall, reluctantly add it to the allowed-list and iterate.
-This yields a list of a set of the [necessary syscalls](https://en.wikipedia.org/wiki/Principle_of_least_privilege)
-to successfully run the test case.
-
-If you have not used `strace` before you should try:
+If you haven't invoked [strace](https://man.archlinux.org/man/strace.1) before,
+or you are curious what syscalls are being used by a program then:
 ```shell
 strace lua -e 'os.execute("echo hello")'`
 ```
-or the python equivalent:
+or maybe:
 ```shell
-strace python -c'print("hello")'
+strace python -c 'print("hello")'
 ```
 
-When you've done this dance a couple of steps with something you might consider
-a normal application you end up with a filter usually including the basic:
-`write`, `read`, `close` file descriptor manipulating functions.
-`write` is fun to think about: without it how can you communicate the result of
-any computation in a "everything is a file" system?
-The syscall filtering way of expressing this is seccomp's strict mode: only
-allow `write` and `exit`. The reasoning here is that you are only allowed to
-`write` to *already opened* filedescriptors, and in this setting `open` is
-forbidden.
+What you see when tracing `os.execute("echo hello")` is the idiom to:
+`fork` before `exec`:ing.
+So why not reject `clone` as well: the syscall that `fork` is translated to.
+(Remember, in Linux threads and processes are the same abstraction, one with
+shared virtual memory space and the other not.)
+Now threads are no longer a thing you need to reason about.
+
+In practice, working with seccomp can provide somewhat of a challenge.
+Since seccomp filters are expected to be binary representations of
+[cBPF](https://www.kernel.org/doc/Documentation/networking/filter.txt)
+you may want to use an
+[assembler](https://github.com/torvalds/linux/blob/master/tools/bpf/bpf_asm.c)
+and a [preprocessor](tools/pp) that can interpret the constants commonly used
+when making syscalls.
+I always start with a "reject everything" filter:
+```
+bad: ret #$SECCOMP_RET_KILL_THREAD
+good: ret #$SECCOMP_RET_ALLOW
+```
+then run a test under `strace`, look for `SIGSYS`, reason about the offending
+syscall, reluctantly add it to the allowed-list and iterate:
+```
+ld [$$offsetof(struct seccomp_data, nr)$$]
+
+jeq #$__NR_brk, good
+
+bad: ret #$SECCOMP_RET_KILL_THREAD
+good: ret #$SECCOMP_RET_ALLOW
+```
+Eventually when the test pass you have achieved a list of syscalls
+living up to the [principle of least privilege](https://en.wikipedia.org/wiki/Principle_of_least_privilege).
+
+Doing this dance for some non-trivial test-cases you end up with a filter
+usually including the: `write`, `read`, `close` file descriptor manipulating
+functions.
+
+`write` is particularly fun to think about: without it how can you communicate
+the result of any computation in an "everything is a file" system?
+The syscall filtering way of expressing this thought is seccomp's strict mode:
+only allow `write` and `exit`. The reasoning being is that you are only allowed
+to `write` to *already opened* file descriptors. (Note that in this setting
+`open` is forbidden, or more accurately not expressively allowed.)
 
 But even moderately interesting Lua application enjoys using `require`. So it's
 not unreasonable to allow Lua to `open` files. But then Alice changes her
-`fun.lua` game to include:
-
+`fun.lua` game to include (obfuscated):
 ```lua
 io.open(os.getenv("HOME") .. "/.aws/credentials", "r"):read("*a")
 ```
-
-(Of course Alice has to get this information back to her, but maybe it's a
-multiplayer game? Or she obfuscates it in the game's log file and "oh the game
-crashed, why don't you send me the logs?")
+Now Alice has to get this information back to her, but maybe it's a
+multiplayer game? Or she obfuscates it in the game's log file and exclaims
+"oh the game crashed, why don't you send me the logs?"
 
 Enter [landlock](https://www.kernel.org/doc/html/latest/userspace-api/landlock.html).
 Landlock is a fairly recently added security feature, which is meant to

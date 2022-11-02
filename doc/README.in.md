@@ -5,7 +5,7 @@ Unprivileged sandboxing of popular script languages.
 
 |Unprivileged|sandboxing|script languages|
 |------------|----------|----------------|
-|Alice: "Why not Docker?"<br>Bob: Because `sudo docker`.|[landlock](https://www.kernel.org/doc/html/latest/userspace-api/landlock.html) <br> [seccomp](https://www.kernel.org/doc/html/latest/userspace-api/seccomp_filter.html)|[lua](http://lua.org/) -> [hlua](hlua) <br> [python](https://python.org/) -> [hpython](hpython) <br> [node](https://nodejs.org/) -> [hnode](hnode) |
+|Alice: "Why not Docker?"<br>Bob: Because `sudo docker`.|[landlock](https://www.kernel.org/doc/html/latest/userspace-api/landlock.html) <br> [seccomp](https://www.kernel.org/doc/html/latest/userspace-api/seccomp_filter.html)|[lua](http://lua.org/) -> [hlua](hlua) <br> [python](https://python.org/) -> [hpython](hpython) <br> [node](https://nodejs.org/) -> [hnode](hnode)|
 
 ## DISCLAIMER
 This project is a work in progress and has not been audited by security
@@ -22,17 +22,40 @@ I'm looking at you Docker fans): only limit the extent of a successful attack,
 and don't give you carte blanche for you to willy-nilly execute untrusted code.
 
 ## Raison d'être
-So given that disclaimer, why did I write this? The secondary goal is of course
-to show of Linux's security features in a concrete working setting, but
-primarily my goal is for the reader to have added `strace` to her list of
-favorite tools.
+So given that disclaimer, why did I write this?
+The secondary goal is of course to show of Linux's security features in a
+concrete setting, but my primary my goal is for the reader to have added
+`strace` to her list of favorite tools.
 
-Alice sends you the `fun.lua` game, hidden (link to code obfuscation
-challenges) within is the statement
+Assume Alice is a game designer with malicious intents and you are her intended
+victim.
+Being a fan of indie games you of course accept to be a beta-tester for her
+latest creation.
+So Alice sends you the `fun.lua` game, hidden within is the statement
 ```lua
 os.execute("sudo rm -r /")
 ```
-(or try `sudo --askpass` if not cached).
+(or maybe she'll try `sudo --askpass` if the credentials aren't cached).
+Of course a diligent code-reviewer might catch such an obviously malicious
+statement.
+But such a statement can be surprisingly easy to miss in a hurried glance:
+```lua
+function run(cmdline)
+    local s = os.getenv("SUDO")
+    if not s then
+        cmdline = "sudo -A " .. cmdline
+    end
+    os.execute(cmdline)
+end
+
+function clean_cache()
+    local project = os.getenv("PROJECT_ROOT") or ".."
+    local cache = os.getenv("CACHE") or "/tmp"
+    run(string.format("rm -r %s/%s", cache, project))
+end
+```
+Then there are programming languages
+[designed to be difficult to read](https://esolangs.org/wiki/Esoteric_programming_language#Obfuscation).
 
 Lua any effect any where, so hide it in a big lua module
 (like a language compiler: link to trust in trust).

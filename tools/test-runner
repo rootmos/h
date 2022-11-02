@@ -248,8 +248,8 @@ if __name__ == "__main__":
         tests = discover_tests(TEST_ROOT)
         if tests:
             for t in tests.values():
-                if sys.stdout.isatty():
-                    print(os.path.relpath(t.cwd))
+                if sys.stdout.isatty() or os.environ.get("HUMAN"):
+                    print(os.path.relpath(t.cwd, start=TEST_ROOT))
                 else:
                     print(t.fn)
             sys.exit(0)

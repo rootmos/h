@@ -1,13 +1,23 @@
 THIS := $(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
 ROOT ?= $(realpath $(THIS)/..)
+TOOLS ?= $(ROOT)/tools
 
 EXEs = hlua hpython hnode
 
 .PHONY: all
-all: $(ROOT)/README.md $(foreach exe, $(EXEs), $(ROOT)/$(exe)/README.md)
+all: \
+	$(ROOT)/README.md \
+	$(ROOT)/tools/README.md \
+	$(foreach exe, $(EXEs), $(ROOT)/$(exe)/README.md)
 
 $(ROOT)/README.md: README.in.md deps-table.md
 	./include "$<" "$@"
+
+$(ROOT)/tools/README.md: tools.in.md hlua.tests.txt
+	./include "$<" "$@"
+
+hlua.tests.txt:
+	env TEST_ROOT="$(ROOT)/hlua" HUMAN=1 "$(TOOLS)/test-runner" > "$@"
 
 deps-table.md: $(foreach arch, ubuntu archlinux, $(ROOT)/build/$(arch)/deps)
 	./deps-table "$@"
@@ -24,4 +34,4 @@ $(foreach exe, $(EXEs), $(eval $(call exe_rule, $(exe))))
 
 .PHONY: clean
 clean:
-	rm -f deps-table.md usage.*.md
+	rm -f deps-table.md usage.*.md *.tests.txt

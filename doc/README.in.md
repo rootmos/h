@@ -56,35 +56,82 @@ end
 ```
 Then there are programming languages
 [designed to be difficult to read](https://esolangs.org/wiki/Esoteric_programming_language#Obfuscation).
+And speaking of programming languages: "the greatest thing about Lua is that
+you don't have to write Lua."
+Meaning that it's very feasible to bundle a compiler for another domain or
+other esoteric language (such as [fennel](https://fennel-lang.org) and
+[Amulet](https://amulet.works/).
+But Lua (as well as python, node, c and many many more) are:
+any-effect-any-time languages.
+This in contrast with [Haskell](https://www.haskell.org)
+(check out [Learn You a Haskell for Great Good!](http://www.learnyouahaskell.com))
+or [eff](https://www.eff-lang.org/) if you're feeling adventurous.
+That means that an expected pure/side-effect free operation such as compiling a
+piece of source code can execute the above `os.execute`-attack or worse if the
+attacker has an even more insidious mind.
+And considering that a compilers are usually quite extensive pieces of software
+they provide ample forestry to hide the malicious tree.
+(I suggest splitting the malicious code in several commits/PR:s.)
+Here I highly recommends [Ken Thompson's "Reflections on Trusting Trust"](https://dl.acm.org/doi/10.1145/358198.358210),
+which if you haven't read I expect will shatter any trust you might have
+imagined you had in *any* piece of software.
 
-Lua any effect any where, so hide it in a big lua module
-(like a language compiler: link to trust in trust).
+So the world is a scary and unsatisfactory environment, then let's begin
+mitigating the consequences.
 
+Alice's `sudo` based `rm -f /`-attack can be mitigated by a one-liner:
+[`prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0)`](https://man.archlinux.org/man/prctl.2#PR_SET_NO_NEW_PRIVS).
+This call is not expected to fail, but being a conscientious developer it never
+hurts to "crash-don't-thrash" and presented as a copy-paste-able snippet:
 ```c
 #include <sys/prctl.h>
 #include <stdlib.h>
+
 void no_new_privs(void)
 {
-    int r = prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0);
-    if(r != 0) {
+    if(0 != prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0)) {
         abort();
     }
 }
 ```
-`no_new_privs` so simple it should always be used, I even have it in my
-set of ["c copy-pastas"](https://github.com/rootmos/libr).
+Of course you might prefer `exit`.
+I don't, because libc:s commonly provide
+[`atexit`](https://man.archlinux.org/man/atexit.3)
+which in my opinion is contrary to a fail-early/crash-don't-thrash philosophy:
+the operating system already have to assume the responsibility to clean up
+after a failing process.
+(Ever noticed that c coders don't free their allocations when exiting?)
+A side-note: consider other programming models such as the actor model
+where the non-delivery of a message is a scenario brought to the forefront.
+If you are curious I warmly recommend [Erlang](https://www.erlang.org/)
+(checkout [Learn You Some Erlang for great good!](https://learnyousomeerlang.com/)).
 
-But `os.execute("rm -r ~")` would still mess up my day.
+Back to the mitigations: the above `no_new_privs` function call is so simple
+it should always be used.
+Unless *explicitly necessary* to gain new privileges.
+This is the [Principle of least privilege](https://en.wikipedia.org/wiki/Principle_of_least_privilege):
+if the functionality you intend to provide do not require privileges your
+process should not have any privileges, and this is the red thread in this
+attempt at raison d'être.
+However, normally started processes inherit quite a handful of privileges that
+Alice can still abuse, as we shall see.
 
-`os.execute = nil`, well may be good enough (I haven't figured out a way around
-it, but I'm also reasonably sure there may be a clever exploit and would be
-interested in seeing it).
+So, Alice can't `sudo` anymore thanks to `PR_SET_NO_NEW_PRIVS`.
+But even a sneaky `os.execute("rm -r ~")` would still majorly mess up my day,
+(and make me unfriend Alice).
 
-This of course can be tweaked into at least making the first naive mitigation
-useful:
-`os.execute = function() error("not allowed") end`
-Especially since the mitigation I would suggest produces a far less
-user-friendly error message as we will see.
+The naive Lua specific mitigation is to `os.execute = nil` before running the
+entrypoint of Alice's game.
+Well, that may be good enough.
+(I haven't figured out a way around that mitigation, but I'm reasonably sure
+there may be a clever exploit and would be interested in seeing it.)
+Continuing this idea we can weak it into at least making this first naive
+mitigation useful:
+```lua
+os.execute = function() error("not allowed") end
+```
+Especially since the mitigation I suggest produces a far less
+user-friendly error message, as we will see.
 
 Enter [seccomp](https://www.kernel.org/doc/html/latest/userspace-api/seccomp_filter.html),
 which is Linux's way of filtering syscalls and so limiting the exposed surface

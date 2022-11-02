@@ -23,22 +23,22 @@ and don't give you carte blanche for you to willy-nilly execute untrusted code.
 
 ## Raison d'être
 So given that disclaimer, why did I write this?
-The secondary goal is of course to show of Linux's security features in a
+The secondary goal is to show of Linux's security features in a
 concrete setting, but my primary my goal is for the reader to have added
 `strace` to her list of favorite tools.
 
 Assume Alice is a game designer with malicious intents and you are her intended
 victim.
-Being a fan of indie games you of course accept to be a beta-tester for her
+Being a fan of indie games you, of course, accept to be a beta-tester for her
 latest creation.
 So Alice sends you the `fun.lua` game, hidden within is the statement
 ```lua
 os.execute("sudo rm -r /")
 ```
 (or maybe she'll try `sudo --askpass` if the credentials aren't cached).
-Of course a diligent code-reviewer might catch such an obviously malicious
-statement.
-But such a statement can be surprisingly easy to miss in a hurried glance:
+A diligent code-reviewer might catch such an obviously malicious
+statement, but such a statement can be surprisingly easy to miss in a hurried
+glance:
 ```lua
 function run(cmdline)
     local s = os.getenv("SUDO")
@@ -82,7 +82,7 @@ mitigating the consequences of malicious or incompetently written code.
 Alice's `sudo` based `rm -f /`-attack can be mitigated by a one-liner:
 [`prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0)`](https://man.archlinux.org/man/prctl.2#PR_SET_NO_NEW_PRIVS).
 This call is not expected to fail, but being a conscientious developer it never
-hurts to "crash-don't-thrash" and I presented a copy-paste-able snippet:
+hurts to crash-don't-thrash and I presented a copy-pastable snippet:
 ```c
 #include <sys/prctl.h>
 #include <stdlib.h>
@@ -94,8 +94,8 @@ void no_new_privs(void)
     }
 }
 ```
-Of course you might prefer [`exit`](https://man.archlinux.org/man/exit.3a).
-I don't, because libc:s commonly provide
+You might have used (or prefer) [`exit`](https://man.archlinux.org/man/exit.3a).
+I don't: because libc:s commonly provide
 [`atexit`](https://man.archlinux.org/man/atexit.3)
 which in my opinion is contrary to a fail-early/crash-don't-thrash philosophy:
 the operating system already have to assume the responsibility of clean up
@@ -135,22 +135,49 @@ os.execute = function() error("not allowed") end
 Especially since the mitigation I suggest produces a far less
 user-friendly error message, as we will see.
 
-Enter [seccomp](https://www.kernel.org/doc/html/latest/userspace-api/seccomp_filter.html),
-which is Linux's way of filtering syscalls and so limiting the exposed surface
-of the kernel.
-The simplest seccomp filters are essentially accept/reject lists, but can do
-more complex things (I haven't looked into it but isn't even cBPF turing complete‽).
-Here simple is better since it makes the security model you're implementing
-easier to reason about.
-So with seccomp enabled with a filter that forbids `clone` (the syscall
-that the `exec`-family translates into) the kernel politely kill you, and claim
-you received a SIGSYS signal.
-My approach have always been to start with a "reject everything" filter,
-strace, look for SIGSYS and add that syscall to the accept list if I can
-convince myself it won't hurt my desired security level.
+Enter [seccomp](https://www.kernel.org/doc/html/latest/userspace-api/seccomp_filter.html).
+Seccomp is Linux's way of filtering syscalls and so limiting the exposed
+kernel surface.
 
+Fancy words aside, this means that when you receive in your email inbox the
+notification of a new vulnerability you can feel certain that you are not
+affected because the vulnerable syscalls are rejected by your program.
+
+The simplest seccomp filters are essentially accept/reject lists, but can do
+more complex things.
+While [cBPF](https://www.kernel.org/doc/Documentation/networking/filter.txti)
+is not theoretically Turing complete
+because of lack of infinite memory; restricted to the scratch memory:
+`uint32_t M[16]`.
+(That only present an interesting challenge:
+which [Project Euler](https://projecteuler.net) or
+[Advent of Code](https://adventofcode.com) problems can be solved in cBPF?)
+But when it comes to security: easily read and understandable code is, of
+course, preferred.
+
+Back to Alice's `os.system`-based attacks:
+with seccomp enabled with a filter that forbids `exec`:s.
+Then the kernel will politely kill your process and suggest to the rest of the
+system that you received a `SIGSYS` signal.
+But the idiom is to `fork` before `exec`:ing: so why not reject `clone` as
+well: the syscall that `fork` is translated to.
+(Remember, in Linux threads and processes are the same abstraction, one with
+shared virtual memory space and the other not.)
+
+When working with seccomp, y approach have always been to start with a
+strict "reject everything" filter,
+run a test with `strace`, look for `SIGSYS`, reason about the complained about
+syscall, reluctantly add it to the allowed-list and iterate.
+This yields a list of a set of the [necessary syscalls](https://en.wikipedia.org/wiki/Principle_of_least_privilege)
+to successfully run the test case.
+
+If you have not used `strace` before you should try:
 ```shell
 strace lua -e 'os.execute("echo hello")'`
+```
+or the python equivalent:
+```shell
+strace python -c'print("hello")'
 ```
 
 When you've done this dance a couple of steps with something you might consider

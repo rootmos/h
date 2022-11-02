@@ -60,7 +60,7 @@ And speaking of programming languages: "the greatest thing about Lua is that
 you don't have to write Lua."
 Meaning that it's very feasible to bundle a compiler for another domain or
 other esoteric language (such as [fennel](https://fennel-lang.org) and
-[Amulet](https://amulet.works/).
+[Amulet](https://amulet.works/)).
 But Lua (as well as python, node, c and many many more) are:
 any-effect-any-time languages.
 This in contrast with [Haskell](https://www.haskell.org)
@@ -71,18 +71,18 @@ piece of source code can execute the above `os.execute`-attack or worse if the
 attacker has an even more insidious mind.
 And considering that a compilers are usually quite extensive pieces of software
 they provide ample forestry to hide the malicious tree.
-(I suggest splitting the malicious code in several commits/PR:s.)
-Here I highly recommends [Ken Thompson's "Reflections on Trusting Trust"](https://dl.acm.org/doi/10.1145/358198.358210),
+Alice, I suggest you split the malicious code in several commits/PR:s.
+Here I recommend [Ken Thompson's "Reflections on Trusting Trust"](https://dl.acm.org/doi/10.1145/358198.358210),
 which if you haven't read I expect will shatter any trust you might have
-imagined you had in *any* piece of software.
+imagined you had in *any* binary executable.
 
 So the world is a scary and unsatisfactory environment, then let's begin
-mitigating the consequences.
+mitigating the consequences of malicious or incompetently written code.
 
 Alice's `sudo` based `rm -f /`-attack can be mitigated by a one-liner:
 [`prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0)`](https://man.archlinux.org/man/prctl.2#PR_SET_NO_NEW_PRIVS).
 This call is not expected to fail, but being a conscientious developer it never
-hurts to "crash-don't-thrash" and presented as a copy-paste-able snippet:
+hurts to "crash-don't-thrash" and I presented a copy-paste-able snippet:
 ```c
 #include <sys/prctl.h>
 #include <stdlib.h>
@@ -94,38 +94,40 @@ void no_new_privs(void)
     }
 }
 ```
-Of course you might prefer `exit`.
+Of course you might prefer [`exit`](https://man.archlinux.org/man/exit.3a).
 I don't, because libc:s commonly provide
 [`atexit`](https://man.archlinux.org/man/atexit.3)
 which in my opinion is contrary to a fail-early/crash-don't-thrash philosophy:
-the operating system already have to assume the responsibility to clean up
+the operating system already have to assume the responsibility of clean up
 after a failing process.
 (Ever noticed that c coders don't free their allocations when exiting?)
-A side-note: consider other programming models such as the actor model
-where the non-delivery of a message is a scenario brought to the forefront.
-If you are curious I warmly recommend [Erlang](https://www.erlang.org/)
+Consider other programming models such as the actor model
+where the non-delivery of a message is a scenario brought to the forefront
+(the real-world scenario is the fallibility of network connections).
+If you are curious I recommend [Erlang](https://www.erlang.org/)
 (checkout [Learn You Some Erlang for great good!](https://learnyousomeerlang.com/)).
 
-Back to the mitigations: the above `no_new_privs` function call is so simple
+Back to mitigations: the above `no_new_privs` function call is so simple
 it should always be used.
 Unless *explicitly necessary* to gain new privileges.
 This is the [Principle of least privilege](https://en.wikipedia.org/wiki/Principle_of_least_privilege):
 if the functionality you intend to provide do not require privileges your
 process should not have any privileges, and this is the red thread in this
 attempt at raison d'être.
-However, normally started processes inherit quite a handful of privileges that
-Alice can still abuse, as we shall see.
+But in the [RealWorld](https://hackage.haskell.org/package/base-4.13.0.0/docs/Control-Monad-ST-Safe.html#t:RealWorld)
+processes inherit quite a handful of privileges that Alice can still abuse,
+as we shall see.
 
 So, Alice can't `sudo` anymore thanks to `PR_SET_NO_NEW_PRIVS`.
-But even a sneaky `os.execute("rm -r ~")` would still majorly mess up my day,
-(and make me unfriend Alice).
+But even a sneaky `os.execute("rm -r ~")` would still
+be a [mayor](https://www.youtube.com/watch?v=fmAWIDI4ZgY) buzzkill.
 
 The naive Lua specific mitigation is to `os.execute = nil` before running the
 entrypoint of Alice's game.
-Well, that may be good enough.
+Well, that may be good enough
 (I haven't figured out a way around that mitigation, but I'm reasonably sure
-there may be a clever exploit and would be interested in seeing it.)
-Continuing this idea we can weak it into at least making this first naive
+there may exist an exploit and would be interested in seeing it).
+Continuing this idea we can tweak it into at least making this first naive
 mitigation useful:
 ```lua
 os.execute = function() error("not allowed") end

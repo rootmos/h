@@ -44,9 +44,14 @@ jobs:
     - name: Test system installation
       run: |
         export TOOLS=$(readlink -f "$WORKDIR"/*/tools)
-        sudo -u $UNPRIVILEGED --preserve-env=TEST_OUTPUT_DIR,TOOLS env SUT=$(which hlua) tools/test-harness -c hlua
-        sudo -u $UNPRIVILEGED --preserve-env=TEST_OUTPUT_DIR,TOOLS env SUT=$(which hpython) tools/test-harness -c hpython
-        sudo -u $UNPRIVILEGED --preserve-env=TEST_OUTPUT_DIR,TOOLS env SUT=$(which hnode) tools/test-harness -c hnode
+        run() {
+          sudo -u $UNPRIVILEGED --preserve-env=TEST_OUTPUT_DIR,TOOLS \
+            env SUT=$(which $1) SHOW_IDS=1 \
+            tools/test-harness -c $1
+        }
+        run hlua
+        run hpython
+        run hnode
 
     - name: Archive test results
       uses: actions/upload-artifact@v3
@@ -96,9 +101,14 @@ jobs:
     - name: Test system installation
       run: |
         export TOOLS=$(readlink -f build/archlinux/src/*/tools)
-        sudo -u $UNPRIVILEGED --preserve-env=TEST_OUTPUT_DIR,TOOLS env SUT=$(which hlua) tools/test-harness -c hlua
-        sudo -u $UNPRIVILEGED --preserve-env=TEST_OUTPUT_DIR,TOOLS env SUT=$(which hpython) tools/test-harness -c hpython
-        sudo -u $UNPRIVILEGED --preserve-env=TEST_OUTPUT_DIR,TOOLS env SUT=$(which hnode) tools/test-harness -c hnode
+        run() {
+          sudo -u $UNPRIVILEGED --preserve-env=TEST_OUTPUT_DIR,TOOLS \
+            env SUT=$(which $1) SHOW_IDS=1 \
+            tools/test-harness -c $1
+        }
+        run hlua
+        run hpython
+        run hnode
 
     - name: Archive test results
       uses: actions/upload-artifact@v3

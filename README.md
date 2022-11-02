@@ -31,7 +31,7 @@ Assume Alice is a game designer with malicious intents and you are her intended
 victim.
 Being a fan of indie games you, of course, accept to be a beta-tester for her
 latest creation.
-So Alice sends you the `fun.lua` game, hidden within is the statement
+So Alice sends you the `fun.lua` game, hidden within is the statement:
 ```lua
 os.execute("sudo rm -r /")
 ```
@@ -67,10 +67,10 @@ This in contrast with [Haskell](https://www.haskell.org)
 (check out [Learn You a Haskell for Great Good!](http://www.learnyouahaskell.com))
 or [eff](https://www.eff-lang.org/) if you're feeling adventurous.
 That means that an expected pure/side-effect free operation such as compiling a
-piece of source code can execute the above `os.execute`-attack or worse if the
+piece of source code can execute the above `os.execute`-attack, or worse if the
 attacker has an insidious mind.
 And considering that compilers are usually quite extensive pieces of software
-they provide ample forestry to hide the malicious tree.
+they provide ample forestry to hide a malicious tree.
 Alice, I suggest you split the malicious code in several commits/PR:s.
 For the victim, I recommend [Ken Thompson's "Reflections on Trusting Trust"](https://dl.acm.org/doi/10.1145/358198.358210),
 which if you haven't read I expect will shatter any trust you might have
@@ -182,7 +182,8 @@ Since seccomp filters are expected to be binary representations of
 [cBPF](https://www.kernel.org/doc/Documentation/networking/filter.txt)
 you may want to use an
 [assembler](https://github.com/torvalds/linux/blob/master/tools/bpf/bpf_asm.c)
-and a [preprocessor](tools/pp) that can interpret the constants commonly used
+and a [preprocessor](tools/pp) (bundled together [bpfc](tools/bpfc))
+that can interpret the constants commonly used
 when making syscalls.
 I always start with a "reject everything" filter:
 ```
@@ -220,8 +221,8 @@ not unreasonable to allow Lua to `open` files. But then Alice changes her
 io.open(os.getenv("HOME") .. "/.aws/credentials", "r"):read("*a")
 ```
 Now Alice has to get this information back to her, but maybe it's a
-multiplayer game? Or she obfuscates it in the game's log file and exclaims
-"oh the game crashed, why don't you send me the logs?"
+multiplayer game? Or she obfuscates it in the game's log file and exclaims:
+"Oh the game crashed, why don't you send me the logs?"
 
 Enter [landlock](https://www.kernel.org/doc/html/latest/userspace-api/landlock.html).
 Landlock is a fairly recently added security feature, which is meant to
@@ -240,16 +241,19 @@ feature I previously hadn't had the need to explore (so take that code and what
 comes next with a grain of salt and trust, but verify). The classic selling
 point of capabilities is the scenario to allow unprivileged users to run
 `ping`. In a pre-capabilities world one would have to have to obtain the full
-power of the privileged user (read: `root`) in order to use `ping`. (Of course
-`setsuid` reduces the mess of every user `su`:ing, but still a nice potential
-attack vector.)
+power of the privileged user (read: `root`) in order to use `ping`. Of course
+`setsuid` reduces the mess of every user `su`:ing, but still provides a nice
+potential attack vector on the `ping` binary.
 The capabilities is basically the idea to split `root` into separate, well,
-capabilities that can be granted. (`ping` requires the `CAP_NET_RAW` (?) capability).
+capabilities that can be granted independently.
+(`ping` requires the `CAP_NET_RAW` capability).
 
 In this project this scenario isn't really applicable. But what is applicable
-is the function to remove any granted capabilities from the current process.
+is the functionality to relinquish  granted capabilities from the current
+process.
 Maybe this sounds convoluted, but in our current Dockerized world I would say
-its fairly common to see images still run as `root`.
+its fairly common to see images invoke executables in a privileged mode
+(as `root`).
 
 And noteworthy configuration option of Linux is that you don't have to include
 the bothersome userland? Here I imagine a barebones server setup: the kernel,

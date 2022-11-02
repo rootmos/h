@@ -4,8 +4,12 @@ set -o nounset -o pipefail -o errexit
 
 SCRIPT_DIR=$(readlink -f "$0" | xargs dirname)
 BUILD=${BUILD-$SCRIPT_DIR/../build}
+OUTPUT=${1-/dev/stdout}
 
-cat <<EOF
+TMP=$(mktemp)
+trap 'rm -f $TMP' EXIT
+
+cat <<EOF > "$TMP"
 | | runtime | build | check |
 |-|---------|-------|-------|
 EOF
@@ -18,5 +22,7 @@ arch() {
 EOF
 }
 
-arch "Ubuntu 22.04" ubuntu
-arch "Arch Linux" archlinux
+arch "Ubuntu 22.04" ubuntu >> "$TMP"
+arch "Arch Linux" archlinux >> "$TMP"
+
+cp "$TMP" "$OUTPUT"

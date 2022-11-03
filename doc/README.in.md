@@ -340,10 +340,10 @@ The mitigation is to apply strict
 In this attack [`RLIMIT_AS`](https://man.archlinux.org/man/core/man-pages/setrlimit.2.en#RLIMIT_AS)
 might be the most efficient mitigation.
 
-The more common way of encountering `rlimits` is by using the shell's
+The common way of applying `rlimits` is by using the shell's
 [`ulimit`](https://man.archlinux.org/man/ulimit.1p) command.
 
-Or Alice might try a [fork bomb](https://en.wikipedia.org/wiki/Fork_bomb).
+Alice will then try a [fork bomb](https://en.wikipedia.org/wiki/Fork_bomb).
 Rejecting the `clone` syscall will of course mitigate such an attach, but for
 instance: [`node`](hnode) is determined to spawn worker threads making such a
 mitigation ineffective.
@@ -355,15 +355,19 @@ Alice, your next attack vector should be to exhaust any available block-devices
 by creating huge files with your pseduo-random generator.
 Again rlimits provide the answer:
 [`RLIMIT_FSIZE`](https://man.archlinux.org/man/core/man-pages/setrlimit.2.en#RLIMIT_FSIZE).
-
+[principle of least privilege](https://en.wikipedia.org/wiki/Principle_of_least_privilege).
 The pattern is obvious: restrict all available `rlimits` to the minimum
-required to make the intended functionality to succeed.
-
+required to make the intended functionality succeed.
 The [code-snippet used](https://github.com/rootmos/libr/blob/master/src/rlimit.c)
 to restrict the `rlimits` sets any limits not
 expressively raised to zero.
-For instance this implies that an file-descriptor-exhaustion attack is no
-longer viable: [`RLIMIT_NOFILE`](https://man.archlinux.org/man/core/man-pages/setrlimit.2.en#RLIMIT_NOFILE).
+Check the `#define RLIMIT_DEFAULT_`:s at the top of [hlua](hlua/main.c),
+[hpython](hpython/hpython.c) and [hnode](hnode/main.cpp).
+Again here we have the [principle of least privilege](https://en.wikipedia.org/wiki/Principle_of_least_privilege).
+
+For instance, this approach guarantees that a file-descriptor-exhaustion
+attack is no longer viable:
+[`RLIMIT_NOFILE`](https://man.archlinux.org/man/core/man-pages/setrlimit.2.en#RLIMIT_NOFILE).
 
 ## Installation and build instructions
 

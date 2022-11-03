@@ -1,4 +1,0 @@
-{
-    "input": "echo_server.py",
-    "exit": "SIGSYS"
-}

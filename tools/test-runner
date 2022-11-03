@@ -9,6 +9,7 @@ import signal
 import subprocess
 import sys
 import tempfile
+import toml
 import uuid
 
 TOOLS = os.environ.get("TOOLS", os.path.dirname(os.path.realpath(__file__)))
@@ -16,7 +17,7 @@ CAPTURE = os.environ.get("CAPTURE", os.path.join(TOOLS, "capture"))
 STRACE_LOG_WATCH = os.environ.get("STRACE_LOG_WATCH", os.path.join(TOOLS, "strace-log-watch"))
 STRACE = os.environ.get("STRACE", "strace")
 STRACE_LOG_MERGE = os.environ.get("STRACE_LOG_MERGE", "strace-log-merge")
-TEST_METAFILE = os.environ.get("TEST_METAFILE", "test.json")
+TEST_METAFILE = os.environ.get("TEST_METAFILE", "test.toml")
 TEST_ROOT = os.environ.get("TEST_ROOT", os.getcwd())
 
 def parse_args():
@@ -68,7 +69,7 @@ class Test:
         self.fn = fn
 
         with open(fn, "r") as f:
-            self.spec = json.load(f)
+            self.spec = toml.load(f)
         logger.debug(f"test spec: {self.spec}")
 
         self.cwd = os.path.realpath(os.path.dirname(fn))
@@ -93,14 +94,11 @@ class Test:
             self.sut = os.path.join(self.project_root, exe)
         logger.debug(f"test sut: {self.sut}")
 
-        # TODO: use only args instead of args+input
-        if "input" in self.spec:
-            self.input_ = os.path.join(self.cwd, self.spec.get("input"))
-            logger.debug(f"test input: {self.input_}")
-        else:
-            self.input_ = None
-
-        self.args = self.spec.get("args")
+        cmdline = self.spec.get("cmdline")
+        if len(cmdline) == 0:
+            raise RuntimeError("wrong number of arguments (should contain atleast the name of the executable: $0)")
+        self.cmdline = [ arg.replace("$0", self.sut) for arg in cmdline ]
+        logger.debug(f"test cmdline: {self.cmdline}")
 
         self.expected_stdout_fn = self.spec.get("stdout")
         if self.expected_stdout_fn is None:
@@ -128,9 +126,7 @@ class Test:
             "name": self.name,
             "project_root": self.project_root,
             "project": self.project,
-            "sut": self.sut,
-            "input": self.input_,
-            "args": self.args,
+            "cmdline": self.cmdline,
             "expected_returncode": self.expected_returncode,
         }
 
@@ -186,9 +182,7 @@ class Run:
                     "--output", trace,
                 ]
 
-            self.cmdline += [test.sut]
-            self.cmdline += test.args or []
-            self.cmdline += [test.input_]
+            self.cmdline += test.cmdline
 
             self.result = True
             self.messages = []

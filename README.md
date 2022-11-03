@@ -327,23 +327,22 @@ a pre-approved set of file-system operations and paths.
 Her last-ditch effort is to execute a
 [Denial-of-service attack](https://en.wikipedia.org/wiki/Denial-of-service_attack).
 
-I suggest Alice tries to allocate at least one page of memory
-(currently `getconf PAGESIZE`: 4096 bytes),
+I suggest Alice tries to `while(1)` allocate at least one page of memory
+(`getconf PAGESIZE`: 4096 bytes),
 write a single [pseudo-randomly generated](https://en.wikipedia.org/wiki/Xorshift)
 byte to each allocation: forcing the kernel to
 [copy-on-write](https://en.wikipedia.org/wiki/Copy-on-write).
-This will quickly exhaust all available memory, and any Linux user who has
-experienced that will attend to the misery caused.
+This will quickly exhaust all available memory, and any unfortunate Linux user
+will attest to the ensuing misery.
 
 The mitigation is to apply strict
 [rlimits](https://man.archlinux.org/man/core/man-pages/setrlimit.2.en).
 In this attack [`RLIMIT_AS`](https://man.archlinux.org/man/core/man-pages/setrlimit.2.en#RLIMIT_AS)
 might be the most efficient mitigation.
-
 The common way of applying `rlimits` is by using the shell's
 [`ulimit`](https://man.archlinux.org/man/ulimit.1p) command.
 
-Alice will then try a [fork bomb](https://en.wikipedia.org/wiki/Fork_bomb).
+Alice should then try a [fork bomb](https://en.wikipedia.org/wiki/Fork_bomb).
 Rejecting the `clone` syscall will of course mitigate such an attach, but for
 instance: [`node`](hnode) is determined to spawn worker threads making such a
 mitigation ineffective.

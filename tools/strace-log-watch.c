@@ -570,10 +570,6 @@ int main(int argc, char* argv[])
     memset(&state, 0, sizeof(state));
     state.child = -1;
 
-    if(offset < argc) {
-        spawn_child(&argv[offset]);
-    }
-
     int wfd = -1;
     if(o.pid >= 0) {
         info("waiting for %d", o.pid);
@@ -603,6 +599,10 @@ int main(int argc, char* argv[])
 
     int r = sigprocmask(SIG_BLOCK, &state.sm, NULL);
     CHECK(r, "sigprocmask");
+
+    if(offset < argc) {
+        spawn_child(&argv[offset]);
+    }
 
     state.running = 1;
     state.fds_N = 1<<4;

@@ -182,7 +182,7 @@ Since seccomp filters are expected to be binary representations of
 [cBPF](https://www.kernel.org/doc/Documentation/networking/filter.txt)
 you may want to use an
 [assembler](https://github.com/torvalds/linux/blob/master/tools/bpf/bpf_asm.c)
-and a [preprocessor](tools/pp) (bundled together [bpfc](tools/bpfc))
+and a [preprocessor](tools/pp) (bundled together as [bpfc](tools/bpfc))
 that can interpret the constants commonly used
 when making syscalls.
 I always start with a "reject everything" filter:

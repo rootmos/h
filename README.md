@@ -147,6 +147,11 @@ kernel surface.
 Fancy words aside, this means that when you receive in your email inbox the
 notification of a new vulnerability you can feel certain that you are not
 affected because the vulnerable syscalls are rejected by your program.
+If you aren't subscribing to any [CVE](https://en.wikipedia.org/wiki/Common_Vulnerabilities_and_Exposures)
+mailing lists I recommend:
+- [Arch Linux's](https://lists.archlinux.org/mailman3/lists/arch-security.lists.archlinux.org/),
+- [Ubuntu's](https://lists.ubuntu.com/mailman/listinfo/ubuntu-security-announce) or
+- [OpenBSD's](https://www.openbsd.org/mail.html) mailing lists.
 
 The simplest seccomp filters are essentially accept/reject lists, but can do
 more complex things.

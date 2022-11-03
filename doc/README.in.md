@@ -272,6 +272,18 @@ Now Alice has to get this information back to her, but maybe it's a
 multiplayer game? Or she obfuscates it in the game's log file and exclaims:
 "Oh the game crashed, why don't you send me the logs?"
 
+But Alice's intentions might only go as far as
+[griefing](https://en.wikipedia.org/wiki/Griefing), and will try to
+`os.remove` your access tokens.
+(Alice, try to remove Chrome/Firefox cookies as well.)
+This would loose me at least an hour and my sunny disposition.)
+
+Removing files maps to the [`unlink`](https://man.archlinux.org/man/unlink.2)
+syscall.
+Certainly it commonly makes sense to reject that syscall,
+but a plausible scenario is using `unlink` is to remove intermediately
+created files (during compilation or other).
+
 ### Enter [landlock](https://www.kernel.org/doc/html/latest/userspace-api/landlock.html)
 Landlock is a fairly recently added security feature, which is meant to
 restrict filesystem access for unprivileged processes, in addition to the
@@ -310,6 +322,48 @@ a single stand-alone server executable and nothing else. So in that setting
 dropping all capabilities could be useful.
 
 ### rlimits
+Now Alice is restricted to using only a selected set of syscalls and only
+a pre-approved set of file-system operations and paths.
+Her last-ditch effort is to execute a
+[Denial-of-service attack](https://en.wikipedia.org/wiki/Denial-of-service_attack).
+
+I suggest Alice tries to allocate at least one page of memory
+(currently `getconf PAGESIZE`: 4096 bytes),
+write a single [pseudo-randomly generated](https://en.wikipedia.org/wiki/Xorshift)
+byte to each allocation: forcing the kernel to
+[copy-on-write](https://en.wikipedia.org/wiki/Copy-on-write).
+This will quickly exhaust all available memory, and any Linux user who has
+experienced that will attend to the misery caused.
+
+The mitigation is to apply strict
+[rlimits](https://man.archlinux.org/man/core/man-pages/setrlimit.2.en).
+In this attack [`RLIMIT_AS`](https://man.archlinux.org/man/core/man-pages/setrlimit.2.en#RLIMIT_AS)
+might be the most efficient mitigation.
+
+The more common way of encountering `rlimits` is by using the shell's
+[`ulimit`](https://man.archlinux.org/man/ulimit.1p) command.
+
+Or Alice might try a [fork bomb](https://en.wikipedia.org/wiki/Fork_bomb).
+Rejecting the `clone` syscall will of course mitigate such an attach, but for
+instance: [`node`](hnode) is determined to spawn worker threads making such a
+mitigation ineffective.
+Once more rlimits come to the rescue:
+[`RLIMIT_NPROC`](https://man.archlinux.org/man/core/man-pages/setrlimit.2.en#RLIMIT_NPROC)
+restricts the number of process a process can spawn (including threads).
+
+Alice, your next attack vector should be to exhaust any available block-devices
+by creating huge files with your pseduo-random generator.
+Again rlimits provide the answer:
+[`RLIMIT_FSIZE`](https://man.archlinux.org/man/core/man-pages/setrlimit.2.en#RLIMIT_FSIZE).
+
+The pattern is obvious: restrict all available `rlimits` to the minimum
+required to make the intended functionality to succeed.
+
+The [code-snippet used](https://github.com/rootmos/libr/blob/master/src/rlimit.c)
+to restrict the `rlimits` sets any limits not
+expressively raised to zero.
+For instance this implies that an file-descriptor-exhaustion attack is no
+longer viable: [`RLIMIT_NOFILE`](https://man.archlinux.org/man/core/man-pages/setrlimit.2.en#RLIMIT_NOFILE).
 
 ## Installation and build instructions
 

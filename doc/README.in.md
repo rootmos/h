@@ -132,10 +132,10 @@ mitigation useful:
 ```lua
 os.execute = function() error("not allowed") end
 ```
-Especially since the mitigation I suggest produces a far less
-user-friendly error message, as we will see.
+Especially since the mitigation I suggest below produces a far less
+user-friendly error message.
 
-Enter [seccomp](https://www.kernel.org/doc/html/latest/userspace-api/seccomp_filter.html).
+Enter [seccomp](https://www.kernel.org/doc/html/latest/userspace-api/seccomp_filter.html)
 Seccomp is Linux's way of filtering syscalls and so limiting the exposed
 kernel surface.
 
@@ -149,33 +149,68 @@ While [cBPF](https://www.kernel.org/doc/Documentation/networking/filter.txti)
 is not theoretically Turing complete
 because of lack of infinite memory; restricted to the scratch memory:
 `uint32_t M[16]`.
-(That only present an interesting challenge:
+That only present an interesting challenge:
 which [Project Euler](https://projecteuler.net) or
-[Advent of Code](https://adventofcode.com) problems can be solved in cBPF?)
+[Advent of Code](https://adventofcode.com) problems can be solved in cBPF?
 But when it comes to security: easily read and understandable code is always
 preferred.
 
-Back to Alice's `os.system`-based attacks:
+Back to Alice's `os.execute`-based attacks:
 with seccomp enabled with a filter that forbids `exec`:s,
 the kernel will politely kill your process and suggest to the rest of the
 system that you received a `SIGSYS` signal.
+In practice this means that your process immediately vanish, so without a
+syscall inspection tool such as `strace` one is reduced to debugging by: "thou
+shalt printf".
 
 If you haven't invoked [strace](https://man.archlinux.org/man/strace.1) before,
 or you are curious what syscalls are being used by a program then:
+
 ```shell
-strace lua -e 'os.execute("echo hello")'`
-```
-or maybe:
-```shell
+strace lua -e 'print("hello")'
 strace python -c 'print("hello")'
 ```
 
-What you see when tracing `os.execute("echo hello")` is the idiom to:
-`fork` before `exec`:ing.
-So why not reject `clone` as well: the syscall that `fork` is translated to.
-(Remember, in Linux threads and processes are the same abstraction, one with
-shared virtual memory space and the other not.)
-Now threads are no longer a thing you need to reason about.
+The output of `strace` can be quite extensive (and therefore `strace` provides
+sophisticated ways to filter what is traced).
+For our [hello world](https://rosettacode.org/wiki/Hello_world/Text) example
+the interesting syscall can be found towards the end:
+```
+write(1, "hello\n", 6)                  = 6
+```
+Other interesting syscalls to look for are memory allocating syscalls such as
+[`brk`](https://man.archlinux.org/man/brk.2) and
+[`mmap`](https://man.archlinux.org/man/mmap.2):
+```
+mmap(NULL, 151552, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0x7f55a8b74000
+```
+
+Continuing our investigation of Alice's `os.execute`-attack, we can trace an
+almost as trivial piece of code:
+```shell
+strace -f lua -e 'os.execute("echo hello")'
+strace -f python -c 'import os; os.system("echo hello")'
+```
+Note the `-f` (`--follow-forks`) option that tells `strace` continue tracing
+spawned child processes.
+And now we look for
+[`clone`](https://man.archlinux.org/man/clone.2) (the syscall that implements
+[`fork`](https://man.archlinux.org/man/fork.2))
+and [`execve`](https://man.archlinux.org/man/execve.2).
+From the trace in the parent:
+```
+clone3({flags=CLONE_VM|CLONE_VFORK, exit_signal=SIGCHLD, stack=0x7f8160953000, stack_size=0x9000}, 88) = 2304236
+```
+and in the child:
+```
+execve("/bin/sh", ["sh", "-c", "echo hello"], 0x7ffebf549aa8 /* 52 vars */) = 0
+```
+
+So why not reject `clone`?
+Remember, in Linux threads and processes are the same abstraction, one with
+shared virtual memory space and the other not.
+Now both thread as well as processes are no longer a thing you need to reason
+about.
 
 In practice, working with seccomp can provide somewhat of a challenge.
 Since seccomp filters are expected to be binary representations of

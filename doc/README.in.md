@@ -167,7 +167,7 @@ In practice this means that your process immediately vanish, so without a
 syscall inspection tool such as `strace` one is reduced to debugging by: "thou
 shalt printf".
 
-### [strace](https://man.archlinux.org/man/strace.1)
+### Enter [strace](https://man.archlinux.org/man/strace.1)
 If you haven't invoked strace before, or you are curious what syscalls are
 being used by a program then try:
 ```shell
@@ -215,11 +215,16 @@ shared virtual memory space and the other not.
 Now both thread as well as processes are no longer a thing you need to reason
 about.
 
-### [Berkeley Packet Filter](https://www.kernel.org/doc/html/latest/bpf/index.html)
+### Enter [Berkeley Packet Filters](https://www.kernel.org/doc/html/latest/bpf/index.html)
 Seccomp filters are expected to be binary representations of
 [cBPF](https://www.kernel.org/doc/Documentation/networking/filter.txt), the c
 stands for "classic" BPF (in contrast with
 extended BPF ([eBPF](https://www.kernel.org/doc/html/latest/bpf/index.html)).
+For instance it might be useful to reject a syscall, return `-1` and set
+`errno` to `EPERM` or `ENOSYS` to allow a child to recover:
+see for example the `prlimit` check in
+[`hnode`'s seccomp filter](https://github.com/rootmos/h/blob/6ed41b19839291fe4ca404cb5c315223a0f72ec2/hnode/filter.bpf#L76).
+
 While cBPF is not theoretically Turing complete
 because of lack of infinite memory; restricted to the scratch memory:
 `uint32_t M[16]`.

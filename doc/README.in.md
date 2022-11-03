@@ -27,6 +27,7 @@ The secondary goal is to show of Linux's security features in a
 concrete setting, but my primary my goal is for the reader to have added
 `strace` to her list of favorite tools.
 
+### Alice's game
 Assume Alice is a game designer with malicious intents and you are her intended
 victim.
 Being a fan of indie games you, of course, accept to be a beta-tester for her
@@ -79,6 +80,7 @@ imagined you had in *any* binary executable.
 So the world is a scary and unsatisfactory environment, so let's begin
 mitigating the consequences of malicious or incompetently written code.
 
+### No new privileges
 Alice's `sudo`-based `rm -f /`-attack can be mitigated by a one-liner:
 [`prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0)`](https://man.archlinux.org/man/prctl.2#PR_SET_NO_NEW_PRIVS).
 This call is not expected to fail, but being a conscientious developer it never
@@ -135,7 +137,7 @@ os.execute = function() error("not allowed") end
 Especially since the mitigation I suggest below produces a far less
 user-friendly error message.
 
-Enter [seccomp](https://www.kernel.org/doc/html/latest/userspace-api/seccomp_filter.html)
+### Enter [seccomp](https://www.kernel.org/doc/html/latest/userspace-api/seccomp_filter.html)
 Seccomp is Linux's way of filtering syscalls and so limiting the exposed
 kernel surface.
 
@@ -206,7 +208,7 @@ and in the child:
 execve("/bin/sh", ["sh", "-c", "echo hello"], 0x7ffebf549aa8 /* 52 vars */) = 0
 ```
 
-So why not reject `clone`?
+So why not reject `clone` as well?
 Remember, in Linux threads and processes are the same abstraction, one with
 shared virtual memory space and the other not.
 Now both thread as well as processes are no longer a thing you need to reason
@@ -217,7 +219,7 @@ Since seccomp filters are expected to be binary representations of
 [cBPF](https://www.kernel.org/doc/Documentation/networking/filter.txt)
 you may want to use an
 [assembler](https://github.com/torvalds/linux/blob/master/tools/bpf/bpf_asm.c)
-and a [preprocessor](tools/pp) (bundled together as [bpfc](tools/bpfc))
+and a [preprocessor](tools/pp) (I've bundled them together as [bpfc](tools/bpfc))
 that can interpret the constants commonly used
 when making syscalls.
 I always start with a "reject everything" filter:
@@ -259,7 +261,7 @@ Now Alice has to get this information back to her, but maybe it's a
 multiplayer game? Or she obfuscates it in the game's log file and exclaims:
 "Oh the game crashed, why don't you send me the logs?"
 
-Enter [landlock](https://www.kernel.org/doc/html/latest/userspace-api/landlock.html).
+### Enter [landlock](https://www.kernel.org/doc/html/latest/userspace-api/landlock.html)
 Landlock is a fairly recently added security feature, which is meant to
 restrict filesystem access for unprivileged processes, in addition to the
 standard UNIX file permissions.
@@ -271,6 +273,7 @@ your access tokens in your home directory. And maybe allow both read and write
 to `/tmp`, and maybe allow removing (i.e. unlinking). (Unless you allow `open`'s
 `O_TMPFILE` in your seccomp filter of course.)
 
+### Drop capabilities
 Lastly I have included a code snippet to drop all capabilities. This is a Linux
 feature I previously hadn't had the need to explore (so take that code and what
 comes next with a grain of salt and trust, but verify). The classic selling

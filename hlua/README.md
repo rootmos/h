@@ -15,3 +15,6 @@ rlimit options:
   -rRLIMIT=VALUE set RLIMIT to VALUE
   -R             use inherited rlimits instead of default
 ```
+
+## TODO
+- [ ] test `require`:ing c modules

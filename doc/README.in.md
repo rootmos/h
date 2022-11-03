@@ -103,10 +103,13 @@ which in my opinion is contrary to a fail-early/crash-don't-thrash philosophy:
 the operating system already have to assume the responsibility of clean up
 after a failing process.
 (Ever noticed that c coders don't free their allocations when exiting?)
-Consider other programming models such as the actor model
-where the non-delivery of a message is a scenario brought to the forefront
-(the real-world scenario is the fallibility of network connections).
-If you are curious I recommend [Erlang](https://www.erlang.org/)
+Using `exit` and `atexit` reminds me of exception handling and the nightmare
+when exception handlers raise exceptions.
+Instead consider programming models where failure-is-always-an-option thinking
+is prevalent,
+such as the actor model where the non-delivery of a message is a scenario
+brought to the forefront (the real-world scenario is the fallibility of network
+connections). If you are curious I recommend [Erlang](https://www.erlang.org/)
 (check out [Learn You Some Erlang for great good!](https://learnyousomeerlang.com/)).
 
 Back to mitigations: the above `no_new_privs` function call is so simple
@@ -347,3 +350,9 @@ asset, place it in a suitably empty directory and invoke
 possibly with `--syncdeps` and/or `--install` options when desired.
 Note that you can try out the built binaries (found in the created `src`
 subfolder) without a system-wide installation.
+
+## TODO
+- [ ] landlock ABI=2 (see the [sandbox example](https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git/tree/samples/landlock/sandboxer.c#n233))
+- [ ] [readline](https://en.wikipedia.org/wiki/GNU_Readline) or naive
+  [REPL](https://en.wikipedia.org/wiki/Read%E2%80%93eval%E2%80%93print_loop)
+  with [rlwrap](https://github.com/hanslub42/rlwrap)

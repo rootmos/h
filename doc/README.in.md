@@ -147,13 +147,6 @@ affected because the vulnerable syscalls are rejected by your program.
 
 The simplest seccomp filters are essentially accept/reject lists, but can do
 more complex things.
-While [cBPF](https://www.kernel.org/doc/Documentation/networking/filter.txti)
-is not theoretically Turing complete
-because of lack of infinite memory; restricted to the scratch memory:
-`uint32_t M[16]`.
-That only present an interesting challenge:
-which [Project Euler](https://projecteuler.net) or
-[Advent of Code](https://adventofcode.com) problems can be solved in cBPF?
 But when it comes to security: easily read and understandable code is always
 preferred.
 
@@ -165,14 +158,13 @@ In practice this means that your process immediately vanish, so without a
 syscall inspection tool such as `strace` one is reduced to debugging by: "thou
 shalt printf".
 
-If you haven't invoked [strace](https://man.archlinux.org/man/strace.1) before,
-or you are curious what syscalls are being used by a program then:
-
+#### [strace](https://man.archlinux.org/man/strace.1)
+If you haven't invoked strace before, or you are curious what syscalls are
+being used by a program then try:
 ```shell
 strace lua -e 'print("hello")'
 strace python -c 'print("hello")'
 ```
-
 The output of `strace` can be quite extensive (and therefore `strace` provides
 sophisticated ways to filter what is traced).
 For our [hello world](https://rosettacode.org/wiki/Hello_world/Text) example
@@ -214,14 +206,25 @@ shared virtual memory space and the other not.
 Now both thread as well as processes are no longer a thing you need to reason
 about.
 
-In practice, working with seccomp can provide somewhat of a challenge.
-Since seccomp filters are expected to be binary representations of
-[cBPF](https://www.kernel.org/doc/Documentation/networking/filter.txt)
-you may want to use an
+#### [Berkeley Packet Filter](https://www.kernel.org/doc/html/latest/bpf/index.html)
+Seccomp filters are expected to be binary representations of
+[cBPF](https://www.kernel.org/doc/Documentation/networking/filter.txt), the c
+stands for "classic" BPF (in contrast with
+extended BPF ([eBPF](https://www.kernel.org/doc/html/latest/bpf/index.html)).
+While cBPF is not theoretically Turing complete
+because of lack of infinite memory; restricted to the scratch memory:
+`uint32_t M[16]`.
+That only present an interesting challenge:
+which [Project Euler](https://projecteuler.net) or
+[Advent of Code](https://adventofcode.com) problems can be solved in cBPF?
+
+Therefore working with seccomp can provide somewhat of a challenge.
+So you may want to use an
 [assembler](https://github.com/torvalds/linux/blob/master/tools/bpf/bpf_asm.c)
 and a [preprocessor](tools/pp) (I've bundled them together as [bpfc](tools/bpfc))
 that can interpret the constants commonly used
 when making syscalls.
+
 I always start with a "reject everything" filter:
 ```
 bad: ret #$SECCOMP_RET_KILL_THREAD

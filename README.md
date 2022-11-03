@@ -60,25 +60,25 @@ Then there are programming languages
 And speaking of programming languages: "the greatest thing about Lua is that
 you don't have to write Lua."
 Meaning that it's very feasible to bundle a compiler for another language
-however esoteric (check out: [fennel](https://fennel-lang.org) and
+however non-esoteric (check out: [fennel](https://fennel-lang.org) and
 [Amulet](https://amulet.works/)).
 But Lua (as well as python, node, c and many many more) are:
-any-effect-any-time languages.
-This in contrast with [Haskell](https://www.haskell.org)
+any-effect-at-any-time languages.
+(This in contrast with [Haskell](https://www.haskell.org)
 (check out [Learn You a Haskell for Great Good!](http://www.learnyouahaskell.com))
-or [eff](https://www.eff-lang.org/) if you're feeling adventurous.
+or [eff](https://www.eff-lang.org/) if you're feeling adventurous.)
 That means that an expected pure/side-effect free operation such as compiling a
-piece of source code can execute the above `os.execute`-attack, or worse if the
-attacker has an insidious mind.
+piece of source code can include an obfuscated `os.execute`-attack, or worse if
+the attacker has a more insidious mind.
 And considering that compilers are usually quite extensive pieces of software
 they provide ample forestry to hide a malicious tree.
-Alice, I suggest you split the malicious code in several commits/PR:s.
+Alice, I suggest you split your malicious code in several commits/PR:s.
 For the victim, I recommend [Ken Thompson's "Reflections on Trusting Trust"](https://dl.acm.org/doi/10.1145/358198.358210),
 which if you haven't read I expect will shatter any trust you might have
 imagined you had in *any* binary executable.
 
-So the world is a scary and unsatisfactory environment, so let's begin
-mitigating the consequences of malicious or incompetently written code.
+So the world is a scary and unsatisfactory environment, then let's consider
+migitaning the consequences of malicious and/or incompetently written code.
 
 ### No new privileges
 Alice's `sudo`-based `rm -f /`-attack can be mitigated by a one-liner:
@@ -97,23 +97,24 @@ void no_new_privs(void)
 }
 ```
 You might have used (or prefer) [`exit`](https://man.archlinux.org/man/exit.3a).
-I don't: because libc:s commonly provide
+I don't: libc:s commonly provide
 [`atexit`](https://man.archlinux.org/man/atexit.3)
 which in my opinion is contrary to a fail-early/crash-don't-thrash philosophy:
 the operating system already have to assume the responsibility of clean up
-after a failing process.
-(Ever noticed that c coders don't free their allocations when exiting?)
-Using `exit` and `atexit` reminds me of exception handling and the nightmare
-when exception handlers raise exceptions.
+after a failing process:
+Ever noticed that c coders don't free their allocations when exiting?
+Using `exit` and `atexit` reminds me of languages with exceptions and the
+nightmare when exception handlers raising exceptions.
 Instead consider programming models where failure-is-always-an-option thinking
-is prevalent,
-such as the actor model where the non-delivery of a message is a scenario
+is prevalent.
+Consider the actor model where the non-delivery of a message is a scenario
 brought to the forefront (the real-world scenario is the fallibility of network
-connections). If you are curious I recommend [Erlang](https://www.erlang.org/)
+connections).
+If you are curious I recommend [Erlang](https://www.erlang.org/)
 (check out [Learn You Some Erlang for great good!](https://learnyousomeerlang.com/)).
 
-Back to mitigations: the above `no_new_privs` function call is so simple
-it should always be used.
+Back to mitigating Alice's attacks: the above `no_new_privs` function call is
+so simple it should always be used.
 Unless *explicitly necessary* to gain new privileges.
 This is the [Principle of least privilege](https://en.wikipedia.org/wiki/Principle_of_least_privilege):
 if the functionality you intend to provide do not require privileges your
@@ -352,14 +353,13 @@ restricts the number of process a process can spawn (including threads).
 
 Alice, your next attack vector should be to exhaust any available block-devices
 by creating huge files with your pseduo-random generator.
-Again rlimits provide the answer:
+Again rlimits provide the mitigation:
 [`RLIMIT_FSIZE`](https://man.archlinux.org/man/core/man-pages/setrlimit.2.en#RLIMIT_FSIZE).
 [principle of least privilege](https://en.wikipedia.org/wiki/Principle_of_least_privilege).
 The pattern is obvious: restrict all available `rlimits` to the minimum
 required to make the intended functionality succeed.
 The [code-snippet used](https://github.com/rootmos/libr/blob/master/src/rlimit.c)
-to restrict the `rlimits` sets any limits not
-expressively raised to zero.
+to restrict the `rlimits` sets any limits not expressively raised to zero.
 Check the `#define RLIMIT_DEFAULT_`:s at the top of [hlua](hlua/main.c),
 [hpython](hpython/hpython.c) and [hnode](hnode/main.cpp).
 Again here we have the [principle of least privilege](https://en.wikipedia.org/wiki/Principle_of_least_privilege).

@@ -19,7 +19,9 @@ $(ROOT)/tools/README.md: tools.in.md hlua.tests.txt
 hlua.tests.txt:
 	env TEST_ROOT="$(ROOT)/hlua" HUMAN=1 "$(TOOLS)/test-runner" > "$@"
 
-deps-table.md: $(foreach arch, ubuntu archlinux, $(ROOT)/build/$(arch)/deps)
+deps-table.md: \
+	$(ROOT)/build/ubuntu/deps \
+	$(ROOT)/build/archlinux/PKGBUILD.template
 	./deps-table "$@"
 
 define exe_rule

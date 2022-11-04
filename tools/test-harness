@@ -32,7 +32,15 @@ BLACK="\033[30m"
 RED="\033[31m"
 GREEN="\033[32m"
 
-ID=$(uuidgen)
+uuid() {
+    python3 -c 'import uuid; print(uuid.uuid4())'
+}
+
+poor_jq() {
+    python3 -c "import json, sys; print(json.load(sys.stdin)$1)" < "$2"
+}
+
+ID=$(uuid)
 if [ -n "$SHOW_IDS" ] || [ "$VERBOSE" = "2" ]; then
     echo "test run: $ID"
 fi
@@ -49,20 +57,20 @@ N=0
 F=0
 S=0
 for t in "${TESTS[@]}"; do
-    export TEST_RUN_ID=$(uuidgen)
+    export TEST_RUN_ID=$(uuid)
     RUN=$TMP/$TEST_RUN_ID.json
 
     set +o errexit
     env PARENT_RUN_ID="$ID" $TEST_RUNNER --very-quiet --output="$RUN" "$t"
     set -o errexit
 
-    PROJECT=$(jq -r '.test.project' "$RUN")
-    NAME=$(jq -r '.test.name' "$RUN")
+    PROJECT=$(poor_jq '["test"]["project"]' "$RUN")
+    NAME=$(poor_jq '["test"]["name"]' "$RUN")
 
     cp "$RUN" "$BUNDLE_ROOT/$PROJECT.$NAME.$TEST_RUN_ID.json"
 
     N=$((N+1))
-    if [ "$(jq -r .result "$RUN")" = "true" ]; then
+    if [ "$(poor_jq '["result"]' "$RUN")" = "True" ]; then
         S=$((S+1))
         echo -ne "[ ${GREEN}OK${DEFAULT} ] "
     else
@@ -76,7 +84,7 @@ for t in "${TESTS[@]}"; do
         echo "$PROJECT $NAME"
     fi
 
-    if ([ "$VERBOSE" = "1" ] && [ "$(jq -r .result "$RUN")" != "true" ]) \
+    if ([ "$VERBOSE" = "1" ] && [ "$(poor_jq '["result"]' "$RUN")" != "True" ]) \
         || [ "$VERBOSE" = "2" ]; then
         sed 's/^/       /' < "$RUN"
         echo

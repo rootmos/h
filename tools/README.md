@@ -44,6 +44,23 @@ When developing you may use the `--trace` option to run `strace` during the
 test, which I find very useful while iterating to find the necessary syscalls
 to allow in the seccomp filters.
 
+Tests are defined and discovered by having a
+[`test.toml`](../hlua/test/hello/test.toml) file:
+```toml
+cmdline = ["$0", "main.lua"]
+```
+where `"$0"` will be replaced by the relevant binary.
+To test for [non-zero exit status](../hlua/test/exit/test.toml):
+```toml
+cmdline = ["$0", "main.lua"]
+exit = 3
+```
+or if you expect to be [signaled](../hpython/test/socket/test.toml):
+```toml
+cmdline = ["$0", "echo_server.py"]
+exit = "SIGSYS"
+```
+
 The subprojects' `Makefile`s have a `test` target that invokes the
 `test-harness` script that runs all available tests and has the option to
 bundle the test results into a tarball.

@@ -396,8 +396,8 @@ following table (derived from the packages installed during the
 
 | | runtime | build | check |
 |-|---------|-------|-------|
-|Ubuntu 22.04| `libcap2 lua5.4 python3 libnode72` | `make pkg-config gcc libcap-dev wget ca-certificates bison flex liblua5.4-dev python3 libpython3-dev libnode-dev` | `uuid-runtime jq` |
-|Arch Linux| `lua python nodejs` | `make gcc pkgconf bpf` | `jq` |
+|Ubuntu 22.04| `libcap2 lua5.4 python3 libnode72` | `make pkg-config gcc libcap-dev wget ca-certificates bison flex liblua5.4-dev python3 libpython3-dev libnode-dev` | `uuid-runtime jq python3-toml` |
+|Arch Linux| `lua python nodejs` | `make gcc pkgconf bpf` | `jq python-toml` |
 
 ### Building from a Ubuntu source package
 Pick a release and download the Ubuntu source package asset.

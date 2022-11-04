@@ -10,5 +10,6 @@ trace() {
 }
 
 libr() {
-    "$HOME/git/libr/bundle.sh" -o r.h landlock fail logging util lua rlimit
+    "$HOME/git/libr/bundle" assemble -o r.h
+        landlock fail logging util lua rlimit
 }

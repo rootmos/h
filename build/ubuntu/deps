@@ -41,6 +41,7 @@ fi
 
 if [ -n "$CHECK" ]; then
     PKGS+=(uuid-runtime jq)
+    PKGS+=("python$PYTHON_VER-toml") # TODO until python >= 3.11
 fi
 
 echo "${PKGS[@]}"

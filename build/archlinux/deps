@@ -7,11 +7,13 @@ SCRIPT_DIR=$(readlink -f "$0" | xargs dirname)
 RUNTIME=
 BUILD=
 CHECK=
-while getopts "rbc-" OPT; do
+MARKDOWN=
+while getopts "rbcm-" OPT; do
     case $OPT in
         r) RUNTIME=1 ;;
         b) BUILD=1 ;;
         c) CHECK=1 ;;
+        m) MARKDOWN=1 ;;
         -) break ;;
         ?) exit 2 ;;
     esac
@@ -33,4 +35,33 @@ if [ -n "$CHECK" ]; then
     . <(grep '^checkdepends' "$PKGBUILD" | sed 's/^\s*\w\+\s*/PKGS+/')
 fi
 
-echo "${PKGS[@]}"
+if [ -z "$MARKDOWN" ]; then
+    echo "${PKGS[@]}"
+else
+    I=0
+    for p in "${PKGS[@]}"; do
+        if [ $I -gt 0 ]; then
+            echo -n " "
+        fi
+
+        REPOS=(core extra community)
+        S=
+        for r in "${REPOS[@]}"; do
+            URL=https://archlinux.org/packages/$r/x86_64/$p/
+            if ! curl --head --fail "$URL" &> /dev/null; then
+                continue
+            fi
+            S=1
+            break
+        done
+
+        if [ -z "$S" ]; then
+            echo 1>&2 "unable to find archlinux package: $p"
+            exit 1
+        fi
+
+        echo -n "[\`$p\`]($URL)"
+        I=$((I+1))
+    done
+    echo
+fi

@@ -18,7 +18,7 @@ arch() {
     export ARCH=$2
     DEPS=$BUILD/$ARCH/deps
     cat <<EOF
-|$1| \`$("$DEPS" -r)\` | \`$("$DEPS" -b)\` | \`$("$DEPS" -c)\` |
+|$1| $("$DEPS" -rm) | $("$DEPS" -bm) | $("$DEPS" -cm) |
 EOF
 }
 

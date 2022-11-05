@@ -2,7 +2,7 @@ THIS := $(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
 ROOT ?= $(realpath $(THIS)/..)
 TOOLS ?= $(ROOT)/tools
 
-EXEs = hlua hpython hnode
+EXEs = hlua hpython hnode hsh
 
 .PHONY: all
 all: \

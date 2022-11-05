@@ -52,6 +52,7 @@ jobs:
         run hlua
         run hpython
         run hnode
+        run hsh
 
     - name: Archive test results
       uses: actions/upload-artifact@v3
@@ -109,6 +110,7 @@ jobs:
         run hlua
         run hpython
         run hnode
+        run hsh
 
     - name: Archive test results
       uses: actions/upload-artifact@v3

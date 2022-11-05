@@ -5,6 +5,7 @@
 usage: hnode [OPTION]... INPUT
 
 options:
+  -s       allow reading files beneath the input script's directory
   -h       print this message
   -v       print version information
 

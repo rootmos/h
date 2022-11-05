@@ -1,4 +1,4 @@
-INPUT=${INPUT-${K_DIR-.}/test/hello}
+INPUT=${INPUT-${K_DIR-.}/test/require}
 TEST_RUNNER=$K_DIR/../tools/test-runner
 
 export TIMEOUT=5

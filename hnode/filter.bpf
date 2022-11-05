@@ -9,6 +9,7 @@ jeq #$__NR_read, good
 jeq #$__NR_write, good
 jeq #$__NR_openat, good
 jeq #$__NR_close, good
+jeq #$__NR_dup2, good
 
 jeq #$__NR_readlink, good
 
@@ -48,6 +49,8 @@ jeq #$__NR_geteuid, good
 jeq #$__NR_getgid, good
 jeq #$__NR_getegid, good
 
+jeq #$__NR_getcwd, good
+
 jeq #$__NR_uname, good
 jeq #$__NR_pkey_alloc, good
 
@@ -86,6 +89,10 @@ jeq #$__NR_epoll_wait, good
 
 jeq #$__NR_pipe2, good
 jeq #$__NR_eventfd2, good
+jeq #$__NR_socketpair, good
+jeq #$__NR_shutdown, good
+
+jeq #$__NR_wait4, good
 
 # TODO: restrict to threads only (i.e. check flags)
 jeq #$__NR_clone, good

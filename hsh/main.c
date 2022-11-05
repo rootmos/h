@@ -124,17 +124,8 @@ int main(int argc, char* argv[])
 
     char* shell = strdup(o.shell); CHECK_MALLOC(shell);
     char* input = strdup(o.input); CHECK_MALLOC(input);
-    char* args[] = {
-        shell,
-        "-r",
-        input,
-        NULL,
-    };
-
-    char* env[] = {
-        "PATH=/usr/bin",
-        NULL,
-    };
+    char* args[] = { shell, input, NULL, };
+    char* env[] = { NULL, };
 
     r = fexecve(shell_fd, args, env);
     CHECK(r, "fexecve");

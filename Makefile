@@ -1,4 +1,4 @@
-PROJECTS = hlua hpython hnode
+PROJECTS = hlua hpython hnode hsh
 TARGETS = build clean test install
 
 define mk_rule

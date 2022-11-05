@@ -1,0 +1,2 @@
+cmdline = ["$0", "main.sh"]
+exit = 1

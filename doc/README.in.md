@@ -394,10 +394,7 @@ If these steps fail because of missing dependencies you may consult the
 following table (derived from the packages installed during the
 [Build and test](.github/workflows/build-test.yaml) workflow).
 
-| | runtime | build | check |
-|-|---------|-------|-------|
-|Ubuntu 22.04| [`libcap2`](https://packages.ubuntu.com/jammy/libcap2) [`lua5.4`](https://packages.ubuntu.com/jammy/lua5.4) [`python3`](https://packages.ubuntu.com/jammy/python3) [`libnode72`](https://packages.ubuntu.com/jammy/libnode72) | [`make`](https://packages.ubuntu.com/jammy/make) [`pkg-config`](https://packages.ubuntu.com/jammy/pkg-config) [`gcc`](https://packages.ubuntu.com/jammy/gcc) [`libcap-dev`](https://packages.ubuntu.com/jammy/libcap-dev) [`wget`](https://packages.ubuntu.com/jammy/wget) [`ca-certificates`](https://packages.ubuntu.com/jammy/ca-certificates) [`bison`](https://packages.ubuntu.com/jammy/bison) [`flex`](https://packages.ubuntu.com/jammy/flex) [`liblua5.4-dev`](https://packages.ubuntu.com/jammy/liblua5.4-dev) [`python3`](https://packages.ubuntu.com/jammy/python3) [`libpython3-dev`](https://packages.ubuntu.com/jammy/libpython3-dev) [`libnode-dev`](https://packages.ubuntu.com/jammy/libnode-dev) | [`python3-toml`](https://packages.ubuntu.com/jammy/python3-toml) |
-|Arch Linux| [`lua`](https://archlinux.org/packages/extra/x86_64/lua/) [`python`](https://archlinux.org/packages/core/x86_64/python/) [`nodejs`](https://archlinux.org/packages/community/x86_64/nodejs/) | [`make`](https://archlinux.org/packages/core/x86_64/make/) [`gcc`](https://archlinux.org/packages/core/x86_64/gcc/) [`pkgconf`](https://archlinux.org/packages/core/x86_64/pkgconf/) [`bpf`](https://archlinux.org/packages/community/x86_64/bpf/) | [`python-toml`](https://archlinux.org/packages/community/x86_64/python-toml/) |
+@include "deps-table.md"
 
 ### Building from a Ubuntu source package
 Pick a release and download the Ubuntu source package asset.

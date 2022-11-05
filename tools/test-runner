@@ -9,26 +9,38 @@ import signal
 import subprocess
 import sys
 import tempfile
+import toml
+import uuid
 
 TOOLS = os.environ.get("TOOLS", os.path.dirname(os.path.realpath(__file__)))
 CAPTURE = os.environ.get("CAPTURE", os.path.join(TOOLS, "capture"))
-WATCH = os.environ.get("WATCH", os.path.join(TOOLS, "strace-log-watch"))
+STRACE_LOG_WATCH = os.environ.get("STRACE_LOG_WATCH", os.path.join(TOOLS, "strace-log-watch"))
+STRACE = os.environ.get("STRACE", "strace")
+STRACE_LOG_MERGE = os.environ.get("STRACE_LOG_MERGE", "strace-log-merge")
+TEST_METAFILE = os.environ.get("TEST_METAFILE", "test.toml")
+TEST_ROOT = os.environ.get("TEST_ROOT", os.getcwd())
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Yet another test runner")
 
     parser.add_argument("--log", default=os.environ.get("LOG_LEVEL", "WARN"), help="set log level")
 
-    parser.add_argument("-s", "--silent", action="store_true")
+    parser.add_argument("-q", "--quiet", action="store_true")
+    parser.add_argument("-Q", "--very-quiet", action="store_true")
     parser.add_argument("-t", "--trace", action="store_true", default=os.environ.get("TRACE") != None)
 
     parser.add_argument("-T", "--timeout", type=int, default=os.environ.get("TIMEOUT"))
 
     parser.add_argument("-o", "--output", default=os.environ.get("OUTPUT"))
 
-    parser.add_argument("input", metavar="INPUT")
+    parser.add_argument("test", metavar="TEST", nargs='?')
 
-    return parser.parse_args()
+    args = parser.parse_args()
+
+    if args.very_quiet:
+        args.quiet = True
+
+    return args
 
 logger = None
 def setup_logger(level):
@@ -47,139 +59,203 @@ def setup_logger(level):
 
     return l
 
+class Test:
+    def __init__(self, fn):
+        if os.path.isdir(fn):
+            fn = os.path.join(fn, TEST_METAFILE)
+        logger.debug(f"test file: {fn}")
+        if not os.path.exists(fn):
+            raise RuntimeError("unable to read test spec", fn)
+        self.fn = fn
+
+        with open(fn, "r") as f:
+            self.spec = toml.load(f)
+        logger.debug(f"test spec: {self.spec}")
+
+        self.cwd = os.path.realpath(os.path.dirname(fn))
+        logger.debug(f"test cwd: {self.cwd}")
+
+        self.name = self.spec.get("name", os.path.basename(self.cwd))
+        logger.debug(f"test name: {self.name}")
+
+        self.project_root = os.environ.get("PROJECT_ROOT")
+        if self.project_root is None:
+            self.project_root = os.path.realpath(os.path.join(self.cwd, "../.."))
+        logger.debug(f"test project root: {self.project_root}")
+
+        self.project = os.environ.get("PROJECT")
+        if self.project is None:
+            self.project = os.path.basename(self.project_root)
+        logger.debug(f"test project: {self.project}")
+
+        self.sut = os.environ.get("SUT")
+        if self.sut is None:
+            exe = os.environ.get("EXE", self.project)
+            self.sut = os.path.join(self.project_root, exe)
+        logger.debug(f"test sut: {self.sut}")
+
+        cmdline = self.spec.get("cmdline")
+        if len(cmdline) == 0:
+            raise RuntimeError("wrong number of arguments (should contain atleast the name of the executable: $0)")
+        self.cmdline = [ arg.replace("$0", self.sut) for arg in cmdline ]
+        logger.debug(f"test cmdline: {self.cmdline}")
+
+        self.expected_stdout_fn = self.spec.get("stdout")
+        if self.expected_stdout_fn is None:
+            self.expected_stdout_fn = os.path.join(self.cwd, "stdout")
+            if not os.path.exists(self.expected_stdout_fn):
+                self.expected_stdout_fn = None
+        if self.expected_stdout_fn is not None:
+            with open(self.expected_stdout_fn, "rb") as f:
+                self.expected_stdout = f.read().decode("UTF-8")
+        else:
+            self.expected_stdout = None
+
+        self.expected_returncode = self.spec.get("exit", 0)
+        if isinstance(self.expected_returncode, str):
+            self.expected_returncode = -int(signal.__dict__[self.expected_returncode])
+        logger.debug(f"test expected exit: {self.expected_returncode}")
+
+    def run(self, args):
+        return Run(test=self, args=args)
+
+    def to_json(self):
+        d = {
+            "fn": self.fn,
+            "cwd": self.cwd,
+            "name": self.name,
+            "project_root": self.project_root,
+            "project": self.project,
+            "cmdline": self.cmdline,
+            "expected_returncode": self.expected_returncode,
+        }
+
+        if self.expected_stdout_fn is not None:
+            d["expected_stdout_fn"] = self.expected_stdout_fn
+        if self.expected_stdout is not None:
+            d["expected_stdout"] = self.expected_stdout
+
+        return d
+
+def discover_tests(root):
+    tests = {}
+    for r, _, fs in os.walk(root):
+        for f in fs:
+            fn = os.path.join(r, f)
+            if f == TEST_METAFILE:
+                t = Test(fn)
+                if t.name not in tests:
+                    tests[(t.project, t.name)] = t
+                else:
+                    raise RuntimeError("duplicate tests", t.fn, tests[(t.project, t.name)].fn)
+    return tests
+
+class Run:
+    def __init__(self, test, args):
+        self.test = test
+
+        self.run_id = os.environ.get("TEST_RUN_ID", str(uuid.uuid4()))
+
+        with tempfile.TemporaryDirectory() as tmp:
+            stdout = os.path.join(tmp, "stdout")
+            stderr = os.path.join(tmp, "stderr")
+            returncode = os.path.join(tmp, "returncode")
+
+            self.cmdline = []
+
+            trace = None
+            if args.trace:
+                trace = os.path.join(tmp, "trace")
+                if not args.very_quiet:
+                    self.cmdline += [STRACE_LOG_WATCH, "-o", trace, "--"]
+
+            self.cmdline += [CAPTURE, "-o", stdout, "-e", stderr, "-r", returncode]
+            if args.quiet:
+                self.cmdline += ["-O", "-E"]
+            self.cmdline += ["--"]
+
+            if args.trace:
+                self.cmdline += [
+                    STRACE,
+                    "--absolute-timestamps=precision:us",
+                    "--follow-forks", "--output-separately",
+                    "--output", trace,
+                ]
+
+            self.cmdline += test.cmdline
+
+            self.result = True
+            self.messages = []
+            try:
+                self.when = datetime.datetime.now().astimezone()
+                p = subprocess.run(self.cmdline, cwd=test.cwd, timeout=args.timeout)
+                with open(returncode, "r") as f:
+                    self.returncode = int(f.read())
+            except subprocess.TimeoutExpired:
+                self.timeout = args.timeout
+                self.result = False
+                self.messages.append("process timed out")
+                self.returncode = None
+
+            with open(stdout, "rb") as f:
+                self.stdout = f.read().decode("UTF-8")
+            with open(stderr, "rb") as f:
+                self.stderr = f.read().decode("UTF-8")
+
+            if trace:
+                q = subprocess.run([STRACE_LOG_MERGE, trace], capture_output=True, check=True)
+                self.trace = q.stdout.decode("UTF-8")
+            else:
+                self.trace = None
+
+        if self.returncode is not None and self.returncode != test.expected_returncode:
+            self.result = False
+            self.messages.append("unexpected exit status")
+
+        if test.expected_stdout is not None and self.stdout != test.expected_stdout:
+            self.result = False
+            self.messages.append("stdout mismatch")
+
+    def to_json(self):
+        d = {
+            "run_id": self.run_id,
+            "test": self.test.to_json(),
+            "stdout": self.stdout,
+            "stderr": self.stderr,
+            "returncode": self.returncode,
+            "result": self.result,
+            "when": self.when.isoformat(timespec="seconds"),
+            "messages": self.messages,
+        }
+
+        if "PARENT_RUN_ID" in os.environ:
+            d["parent_run_id"] = os.environ.get("PARENT_RUN_ID")
+
+        if self.trace is not None:
+            d["trace"] = self.trace
+
+        return d
+
 if __name__ == "__main__":
     args = parse_args()
     logger = setup_logger(args.log.upper())
     logger.debug(f"args: {args}")
 
-    fn = args.input
-
-    if os.path.isdir(fn):
-        test_metafile = os.environ.get("TEST_METAFILE", "test.json")
-        fn = os.path.join(fn, test_metafile)
-    logger.info(f"test file: {fn}")
-
-    with open(fn, "r") as f:
-        t = json.load(f)
-    logger.debug(f"test spec: {t}")
-
-    res = {}
-
-    res["root"] = root = os.path.dirname(fn)
-    logger.debug(f"test root: {root}")
-
-    name = t.get("name")
-    if name is None:
-        name = os.path.basename(root)
-    res["name"] = name
-    logger.debug(f"test name: {name}")
-
-    project_root = os.environ.get("PROJECT_ROOT")
-    if project_root is None:
-        project_root = os.path.realpath(os.path.dirname(os.path.dirname(root)))
-    res["project_root"] = project_root
-    res["project"] = os.environ.get("PROJECT", os.path.basename(project_root))
-
-    sut = os.environ.get("SUT")
-    if sut is None:
-        exe = os.environ.get("EXE")
-        if exe is None:
-            exe = os.path.basename(project_root)
-
-        sut = os.path.join(project_root, exe)
-    res["sut"] = sut
-    logger.debug(f"test sut: {sut}")
-
-    input_ = os.path.realpath(os.path.join(root, t.get("input")))
-    res["input"] = input_
-    logger.debug(f"test input: {input_}")
-
-    with tempfile.TemporaryDirectory() as tmp:
-        stdout = os.path.join(tmp, "stdout")
-        stderr = os.path.join(tmp, "stderr")
-        returncode = os.path.join(tmp, "returncode")
-
-        cmdline = [CAPTURE, "-o", stdout, "-e", stderr, "-r", returncode]
-        if args.silent:
-            cmdline += ["-O", "-E"]
-        cmdline += ["--"]
-
-        if args.trace:
-            trace = os.path.join(tmp, "trace")
-            cmdline += [
-                "strace",
-                "--absolute-timestamps=precision:us",
-                "--follow-forks", "--output-separately",
-                "--output", trace,
-            ]
+    if args.test is None:
+        tests = discover_tests(TEST_ROOT)
+        if tests:
+            for t in tests.values():
+                if sys.stdout.isatty() or os.environ.get("HUMAN"):
+                    print(os.path.relpath(t.cwd, start=TEST_ROOT))
+                else:
+                    print(t.fn)
+            sys.exit(0)
         else:
-            trace = None
-
-        cmdline += [sut]
-        cmdline += t.get("args", [])
-        cmdline += [input_]
-
-        res["cmdline"] = cmdline
-        res["when"] = datetime.datetime.now().astimezone().isoformat(timespec="seconds")
-        p = subprocess.Popen(cmdline, cwd=root)
-
-        if trace and not args.silent:
-            w = subprocess.Popen([WATCH, "-p", str(p.pid), trace])
-        else:
-            w = None
-
-        res["result"] = True
-        res["messages"] = []
-        try:
-            p.wait(timeout=args.timeout)
-
-            with open(returncode, "r") as f:
-                res["returncode"] = int(f.read())
-            expected_exit = t.get("exit", 0)
-            if isinstance(expected_exit, str):
-                expected_exit = -int(signal.__dict__[expected_exit])
-            res["expected_returncode"] = expected_exit
-        except subprocess.TimeoutExpired:
-            res["timeout"] = args.timeout
-            res["result"] = False
-            res["messages"].append("process timedout")
-
-        if w is not None:
-            w.wait()
-
-        with open(stdout, "rb") as f:
-            res["stdout"] = f.read().decode("UTF-8")
-        with open(stderr, "rb") as f:
-            res["stderr"] = f.read().decode("UTF-8")
-
-        if trace:
-            q = subprocess.run(["strace-log-merge", trace], capture_output=True, check=True)
-            res["trace"] = q.stdout.decode("UTF-8")
-
-    expected_stdout_fn = t.get("stdout")
-    if expected_stdout_fn is None:
-        expected_stdout_fn = os.path.join(root, "stdout")
-        if not os.path.exists(expected_stdout_fn):
-            expected_stdout_fn = None
-    if expected_stdout_fn is not None:
-        logger.debug(f"expected stdout from: {expected_stdout_fn}")
-        res["expected_stdout_fn"] = expected_stdout_fn
-
-        with open(expected_stdout_fn, "rb") as f:
-            res["expected_stdout"] = f.read().decode("UTF-8")
+            sys.exit(1)
     else:
-        expected_stdout = None
-
-    if "returncode" in res and res["returncode"] != expected_exit:
-        res["result"] = False
-        res["messages"].append("unexpected exit status")
-
-    if "expected_stdout" in res and res["expected_stdout"] != res["stdout"]:
-        res["result"] = False
-        res["messages"].append("stdout mismatch")
-
-    if args.output:
-        with open(args.output, "w") as f:
-            f.write(json.dumps(res))
-
-    sys.exit(0 if res["result"] else 1)
+        t = Test(args.test)
+        r = t.run(args)
+        if args.output:
+            with open(args.output, "w") as f:
+                f.write(json.dumps(r.to_json()))
+        sys.exit(0 if r.result else 1)

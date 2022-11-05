@@ -1,10 +1,11 @@
-// libr (4817dad4190c12a20f799fd243f4957e463085dd) (https://github.com/rootmos/libr) (2022-10-30T16:22:56+01:00)
+// libr 0.1.0 (317f3c9301907ef8a237613f01b1c3577a017ca1) (https://github.com/rootmos/libr.git) (2022-11-05T09:35:20+01:00)
 // modules: landlock fail logging util uv rlimit
 
 #ifndef LIBR_HEADER
 #define LIBR_HEADER
 
 // libr: landlock.h
+
 #include <linux/types.h>
 
 int landlock_abi_version(void);
@@ -15,6 +16,7 @@ void landlock_allow_read_write(int rsfd, const char* path);
 void landlock_apply(int fd);
 
 // libr: fail.h
+
 #define CHECK(res, format, ...) CHECK_NOT(res, -1, format, ##__VA_ARGS__)
 
 #define CHECK_NOT(res, err, format, ...) \
@@ -94,6 +96,7 @@ void r_failwith(const char* const caller,
     __attribute__ ((noreturn, format (printf, 5, 6)));
 
 // libr: logging.h
+
 #include <stdarg.h>
 
 #define LOG_QUIET 0
@@ -162,6 +165,7 @@ void r_vlog(int level,
             const char* const fmt, va_list vl);
 
 // libr: util.h
+
 #define LENGTH(xs) (sizeof(xs)/sizeof((xs)[0]))
 #define LIT(x) x,sizeof(x)
 
@@ -182,6 +186,7 @@ void set_blocking(int fd, int blocking);
 void no_new_privs(void);
 
 // libr: uv.h
+
 #ifdef UV_VERSION_MAJOR
 #define CHECK_UV(err, format, ...) do { \
     if(err != 0) { \
@@ -193,6 +198,7 @@ void no_new_privs(void);
 #endif
 
 // libr: rlimit.h
+
 #include <stddef.h>
 
 enum rlimit_action {
@@ -214,8 +220,8 @@ void rlimit_inherit(struct rlimit_spec rlimits[], size_t len);
 
 int rlimit_parse(struct rlimit_spec rlimits[], size_t len, const char* str);
 void rlimit_apply(const struct rlimit_spec rlimits[], size_t len);
-
 #endif // LIBR_HEADER
+
 #ifdef LIBR_IMPLEMENTATION
 
 // libr: landlock.c
@@ -436,9 +442,6 @@ void no_new_privs(void)
     CHECK(r, "prctl(PR_SET_NO_NEW_PRIVS, 1)");
 }
 
-// libr: uv.c
-
-
 // libr: rlimit.c
 
 #include <assert.h>
@@ -631,5 +634,4 @@ void rlimit_apply(const struct rlimit_spec rlimits[], size_t len)
         CHECK(r, "setrlimit(%s)", rlimits[i].name);
     }
 }
-
 #endif // LIBR_IMPLEMENTATION

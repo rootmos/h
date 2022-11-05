@@ -1,6 +1,7 @@
 fetch() {
     SYMLINK=
     FETCH_STYLE=${FETCH_STYLE-default}
+    OPTIND=0
     while getopts "sS:-" OPT; do
         case $OPT in
             s) SYMLINK=1 ;;

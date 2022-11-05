@@ -3,21 +3,25 @@
 set -o nounset -o pipefail -o errexit
 
 SCRIPT_DIR=$(readlink -f "$0" | xargs dirname)
+PACKAGE_FINDER=${PACKAGE_FINDER-$SCRIPT_DIR/package}
 
 RUNTIME=
 BUILD=
 CHECK=
-while getopts "rbc-" OPT; do
+MARKDOWN=
+while getopts "rbcm-" OPT; do
     case $OPT in
         r) RUNTIME=1 ;;
         b) BUILD=1 ;;
         c) CHECK=1 ;;
+        m) MARKDOWN=1 ;;
         -) break ;;
         ?) exit 2 ;;
     esac
 done
 shift $((OPTIND-1))
 
+RELEASE=jammy # 22.04
 LUA_VER=5.4
 PYTHON_VER=3
 
@@ -40,7 +44,20 @@ if [ -n "$BUILD" ]; then
 fi
 
 if [ -n "$CHECK" ]; then
-    PKGS+=(uuid-runtime jq)
+    PKGS+=("python$PYTHON_VER-toml") # TODO until python >= 3.11
 fi
 
-echo "${PKGS[@]}"
+if [ -z "$MARKDOWN" ]; then
+    echo "${PKGS[@]}"
+else
+    I=0
+    for p in "${PKGS[@]}"; do
+        if [ $I -gt 0 ]; then
+            echo -n " "
+        fi
+        URL=$($PACKAGE_FINDER "$RELEASE" "$p")
+        echo -n "[\`$p\`]($URL)"
+        I=$((I+1))
+    done
+    echo
+fi

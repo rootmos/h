@@ -1,0 +1,2 @@
+cmdline = ["$0", "runtime.lua"]
+exit = 2

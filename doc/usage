@@ -1,0 +1,23 @@
+#!/bin/bash
+
+set -o nounset -o pipefail -o errexit
+
+EXE=$1
+OUTPUT=${2-/dev/stdout}
+
+TMP=$(mktemp)
+trap 'rm -f $TMP' EXIT
+
+echo '```' >> "$TMP"
+python - "$EXE" <<EOF >> "$TMP"
+import sys
+import os
+import subprocess
+
+exe = sys.argv[1]
+name = os.path.basename(exe)
+subprocess.run([name, "-h"], executable=exe, check=True)
+EOF
+echo '```' >> "$TMP"
+
+cp "$TMP" "$OUTPUT"

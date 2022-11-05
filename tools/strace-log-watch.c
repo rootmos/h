@@ -190,25 +190,31 @@ struct options {
 
 static void print_usage(int fd, const char* prog)
 {
-    dprintf(fd, "usage: %s [OPTION]... PATTERN\n", prog);
+    dprintf(fd, "usage: %s [OPTION]... [COMMAND [ARG]...]\n", prog);
     dprintf(fd, "\n");
     dprintf(fd, "options:\n");
-    dprintf(fd, "  -p PID  terminate after PID dies\n");
-    dprintf(fd, "  -h      print this message\n");
+    dprintf(fd, "  -o PATTERN  watch for trace files prefixed with PATTERN\n");
+    dprintf(fd, "  -p PID      terminate after PID dies\n");
+    dprintf(fd, "  -h          print this message\n");
 }
 
-static void parse_options(struct options* o, int argc, char* argv[])
+static int parse_options(struct options* o, int argc, char* argv[])
 {
     memset(o, 0, sizeof(*o));
     o->pid = -1;
 
     int res;
-    while((res = getopt(argc, argv, "p:h-")) != -1) {
+    while((res = getopt(argc, argv, "p:o:h-")) != -1) {
         switch(res) {
+        case 'o': {
+            o->pattern = strdup(optarg);
+            CHECK_MALLOC(o->pattern);
+            break;
+        }
         case 'p': {
             int r = sscanf(optarg, "%d", &o->pid);
             if(r != 1) {
-                dprintf(2, "error: unable to parse pid: %s", optarg);
+                dprintf(2, "error: unable to parse pid: %s\n", optarg);
                 exit(1);
             }
             break;
@@ -223,14 +229,12 @@ static void parse_options(struct options* o, int argc, char* argv[])
     }
 opt_end:
 
-    if(optind < argc) {
-        o->pattern = argv[optind];
-        debug("pattern: %s", o->pattern);
-    } else {
-        dprintf(2, "error: no input file specified\n");
-        print_usage(2, argv[0]);
+    if(o->pattern == NULL) {
+        dprintf(2, "error: no pattern specified\n");
         exit(1);
     }
+
+    return optind;
 }
 
 struct trace {
@@ -243,6 +247,9 @@ struct trace {
 
 struct {
     sigset_t sm;
+
+    pid_t child;
+    int child_terminated;
 
     char* dir;
     char* prefix;
@@ -390,12 +397,21 @@ static void graceful_shutdown(const char* reason, int sig)
 {
     debug("initiating graceful shutdown: %s", reason);
 
+    const char* sigstr = strsignal(sig);
+
     struct trace* t = state.traces;
     while(t) {
         int r = kill(t->tail, sig);
-        CHECK(r, "kill(%d, %s)", t->tail, strsignal(sig));
-        debug("kill(%d, %s)", t->tail, strsignal(sig));
+        CHECK(r, "kill(%d, %s)", t->tail, sigstr);
+        debug("kill(%d, %s)", t->tail, sigstr);
         t = t->next;
+    }
+
+    if(state.child >= 0 && !state.child_terminated) {
+        info("child (%d) is still running; sending %s",
+             state.child, sigstr);
+        int r = kill(state.child, sig);
+        CHECK(r, "kill(%d, %s)", state.child, sigstr);
     }
 
     state.running = 0;
@@ -425,12 +441,23 @@ static void handle_signalfd(int sfd)
                 break;
             }
 
+            const char* type = "tail";
+            if(r == state.child) {
+                type = "child";
+            }
+
             if(WIFEXITED(ws)) {
-                info("child (%d) exited: %d", r, WEXITSTATUS(ws));
+                info("%s (%d) exited: %d", type, r, WEXITSTATUS(ws));
             } else if(WIFSIGNALED(ws)) {
-                info("child (%d) signaled: %s", r, strsignal(WTERMSIG(ws)));
+                info("%s (%d) signaled: %s", type, r, strsignal(WTERMSIG(ws)));
             } else {
                 failwith("unexpected waitpid (%d) status: %d", r, ws);
+            }
+
+            if(r == state.child) {
+                state.child_terminated = 1;
+                graceful_shutdown("child terminated", SIGINT);
+                break;
             }
 
             struct trace** t = &state.traces;
@@ -508,12 +535,40 @@ static void expand_fds(void)
     state.fds_N = N;
 }
 
+static void spawn_child(char* argv[])
+{
+    for(size_t i = 0; argv[i]; i++) {
+        debug("child cmdline[%zu]: %s", i, argv[i]);
+    }
+
+    state.child = fork(); CHECK(state.child, "fork");
+    if(state.child == 0) {
+        int r = sigprocmask(SIG_UNBLOCK, &state.sm, NULL);
+        CHECK(r, "sigprocmask");
+
+        // argv[argc] == NULL
+        // https://www.gnu.org/software/libc/manual/html_node/Program-Arguments.html
+        r = execvp(argv[0], argv);
+        CHECK(r, "execv");
+    }
+
+    info("spawned child: %d", state.child);
+}
+
+static int is_running(void)
+{
+    return state.running ||
+        (state.child >= 0 && !state.child_terminated)
+        || state.traces != NULL;
+}
+
 int main(int argc, char* argv[])
 {
     struct options o;
-    parse_options(&o, argc, argv);
+    int offset = parse_options(&o, argc, argv);
 
     memset(&state, 0, sizeof(state));
+    state.child = -1;
 
     int wfd = -1;
     if(o.pid >= 0) {
@@ -545,6 +600,10 @@ int main(int argc, char* argv[])
     int r = sigprocmask(SIG_BLOCK, &state.sm, NULL);
     CHECK(r, "sigprocmask");
 
+    if(offset < argc) {
+        spawn_child(&argv[offset]);
+    }
+
     state.running = 1;
     state.fds_N = 1<<4;
     size_t M = 3 + (wfd >= 0);
@@ -575,7 +634,7 @@ int main(int argc, char* argv[])
         state.fds[wfd_i].events = POLLIN;
     }
 
-    while(state.running || state.traces != NULL) {
+    while(is_running()) {
         if(buffer_empty(&state.out)) {
             state.fds[ofd_i].events = 0;
         } else {

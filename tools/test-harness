@@ -6,11 +6,11 @@ TOOLS=${TOOLS-$(readlink -f "$0" | xargs dirname)}
 
 TEST_ROOT=${TEST_ROOT-$PWD}
 PARENT_PROJECT=${PARENT_PROJECT-$(basename "$TEST_ROOT")}
-export TEST_METAFILE=${TEST_METAFILE-test.json}
 TEST_RUNNER=${TEST_RUNNER-$TOOLS/test-runner}
 TEST_OUTPUT_DIR=${TEST_OUTPUT_DIR-}
 TEST_RESULT_BUNDLE=${TEST_RESULT_BUNDLE-}
 VERBOSE=${VERBOSE-1}
+SHOW_IDS=${SHOW_IDS-}
 while getopts "c:r:o:qvV-" OPT; do
     case $OPT in
         c) TEST_ROOT=$OPTARG ;;
@@ -32,8 +32,18 @@ BLACK="\033[30m"
 RED="\033[31m"
 GREEN="\033[32m"
 
-ID=$(uuidgen)
-echo "test run: $ID"
+uuid() {
+    python3 -c 'import uuid; print(uuid.uuid4())'
+}
+
+poor_jq() {
+    python3 -c "import json, sys; print(json.load(sys.stdin)$1)" < "$2"
+}
+
+ID=$(uuid)
+if [ -n "$SHOW_IDS" ] || [ "$VERBOSE" = "2" ]; then
+    echo "test run: $ID"
+fi
 
 TMP=$(mktemp -d)
 trap 'rm -rf $TMP' EXIT
@@ -41,26 +51,26 @@ trap 'rm -rf $TMP' EXIT
 BUNDLE_ROOT=$TMP/$PARENT_PROJECT-tests-$ID
 mkdir -p "$BUNDLE_ROOT"
 
-mapfile -t TESTS < <(find "$TEST_ROOT" -name "$TEST_METAFILE")
+mapfile -t TESTS < <(env TEST_ROOT="$TEST_ROOT" $TEST_RUNNER)
 
 N=0
 F=0
 S=0
 for t in "${TESTS[@]}"; do
-    TID=$(uuidgen)
-    RUN=$TMP/$TID.json
+    export TEST_RUN_ID=$(uuid)
+    RUN=$TMP/$TEST_RUN_ID.json
 
     set +o errexit
-    $TEST_RUNNER --silent --output="$RUN" "$t"
+    env PARENT_RUN_ID="$ID" $TEST_RUNNER --very-quiet --output="$RUN" "$t"
     set -o errexit
 
-    PROJECT=$(jq -r .project "$RUN")
-    NAME=$(jq -r .name "$RUN")
+    PROJECT=$(poor_jq '["test"]["project"]' "$RUN")
+    NAME=$(poor_jq '["test"]["name"]' "$RUN")
 
-    cp "$RUN" "$BUNDLE_ROOT/$PROJECT.$NAME.json"
+    cp "$RUN" "$BUNDLE_ROOT/$PROJECT.$NAME.$TEST_RUN_ID.json"
 
     N=$((N+1))
-    if [ "$(jq -r .result "$RUN")" = "true" ]; then
+    if [ "$(poor_jq '["result"]' "$RUN")" = "True" ]; then
         S=$((S+1))
         echo -ne "[ ${GREEN}OK${DEFAULT} ] "
     else
@@ -68,11 +78,16 @@ for t in "${TESTS[@]}"; do
         echo -ne "[${RED}FAIL${DEFAULT}] "
     fi
 
-    echo "$PROJECT $NAME"
+    if [ -n "$SHOW_IDS" ] || [ "$VERBOSE" = "2" ]; then
+        echo "$PROJECT $NAME ($TEST_RUN_ID)"
+    else
+        echo "$PROJECT $NAME"
+    fi
 
-    if ([ "$VERBOSE" = "1" ] && [ "$(jq -r .result "$RUN")" != "true" ]) \
+    if ([ "$VERBOSE" = "1" ] && [ "$(poor_jq '["result"]' "$RUN")" != "True" ]) \
         || [ "$VERBOSE" = "2" ]; then
         sed 's/^/       /' < "$RUN"
+        echo
     fi
 done
 

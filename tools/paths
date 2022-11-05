@@ -72,5 +72,5 @@ if __name__ == "__main__":
     if args.python_site:
         out(python_site())
 
-    for l in args.lib:
+    for l in args.lib or []:
         out(lib(l))

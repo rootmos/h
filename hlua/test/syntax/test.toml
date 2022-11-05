@@ -1,0 +1,2 @@
+cmdline = ["$0", "syntax.lua"]
+exit = 2

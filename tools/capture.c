@@ -17,7 +17,7 @@ struct options {
 
 static void print_usage(int fd, const char* prog)
 {
-    dprintf(fd, "usage: %s [OPTION]... [COMMAND [ARG]...]\n", prog);
+    dprintf(fd, "usage: %s [OPTION]... COMMAND [ARG]...\n", prog);
     dprintf(fd, "\n");
     dprintf(fd, "options:\n");
     dprintf(fd, "  -O       do not output stdout\n");

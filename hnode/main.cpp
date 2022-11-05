@@ -98,6 +98,9 @@ int main(int argc, char* argv[])
     debug("allowing read access: %s", o.input);
     landlock_allow_read(rsfd, o.input);
 
+    // necessary since node 19.0.1
+    landlock_allow_read(rsfd, "/etc/ssl/openssl.cnf");
+
     landlock_apply(rsfd);
     int r = close(rsfd); CHECK(r, "close");
 

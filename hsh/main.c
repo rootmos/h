@@ -13,7 +13,9 @@
 #include "seccomp.c"
 #include "capabilities.c"
 
-#define DEFAULT_SHELL "/usr/bin/bash"
+#ifndef DEFAULT_SHELL
+#define DEFAULT_SHELL "/bin/sh"
+#endif
 
 struct options {
     const char* input;

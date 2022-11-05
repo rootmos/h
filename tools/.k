@@ -3,5 +3,5 @@ run() {
 }
 
 libr() {
-    "$HOME/git/libr/bundle" assemble -o r.h fail logging util
+    "$HOME/git/libr/bundle" -o r.h fail logging util
 }

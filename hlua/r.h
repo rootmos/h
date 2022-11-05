@@ -1,4 +1,4 @@
-// libr 0.1.0 (21ba7b86b2ad2d66724a501bf6b6f9b2ddcc68fe) (https://github.com/rootmos/libr.git) (2022-11-04T15:31:57+01:00)
+// libr 0.1.0 (317f3c9301907ef8a237613f01b1c3577a017ca1) (https://github.com/rootmos/libr.git) (2022-11-05T09:25:21+01:00)
 // modules: landlock fail logging util lua rlimit
 
 #ifndef LIBR_HEADER

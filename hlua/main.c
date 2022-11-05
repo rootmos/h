@@ -48,7 +48,15 @@ void remove_stdlib_function(struct lua_State* L,
     int t = lua_getglobal(L, lib);
     LUA_EXPECT_TYPE(L, t, LUA_TTABLE, "%s", lib);
 
-    lua_pushnil(L);
+    char buf[128];
+    int r = snprintf(LIT(buf), "error(\"%s.%s forbidden\")", lib, f);
+    if(r >= LENGTH(buf)) {
+        failwith("buffer overflow");
+    }
+
+    r = luaL_loadstring(L, buf);
+    CHECK_LUA(L, r, "luaL_loadstring(%s)", buf);
+
     lua_setfield(L, -2, f);
     lua_pop(L, 1);
 
@@ -91,11 +99,6 @@ static void print_usage(int fd, const char* prog)
 static void parse_options(struct options* o, int argc, char* argv[])
 {
     memset(o, 0, sizeof(*o));
-
-    o->allow_localtime = 0;
-    o->allow_script_dir = 0;
-
-    o->allow_tmp = 0;
     o->tmp = DEFAULT_TMP;
 
     rlimit_default(o->rlimits, LENGTH(o->rlimits));

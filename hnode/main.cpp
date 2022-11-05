@@ -1,3 +1,5 @@
+#include <libgen.h>
+
 #include <node.h>
 #include <uv.h>
 
@@ -17,6 +19,8 @@
 struct options {
     const char* input;
 
+    int allow_script_dir;
+
     struct rlimit_spec rlimits[RLIMIT_NLIMITS];
 };
 
@@ -25,6 +29,7 @@ static void print_usage(int fd, const char* prog)
     dprintf(fd, "usage: %s [OPTION]... INPUT\n", prog);
     dprintf(fd, "\n");
     dprintf(fd, "options:\n");
+    dprintf(fd, "  -s       allow reading files beneath the input script's directory\n");
     dprintf(fd, "  -h       print this message\n");
     dprintf(fd, "  -v       print version information\n");
     dprintf(fd, "\n");
@@ -42,8 +47,11 @@ static void parse_options(struct options* o, int argc, char* argv[])
     rlimit_default(o->rlimits, LENGTH(o->rlimits));
 
     int res;
-    while((res = getopt(argc, argv, "hvr:R")) != -1) {
+    while((res = getopt(argc, argv, "hvsr:R")) != -1) {
         switch(res) {
+        case 's':
+            o->allow_script_dir = 1;
+            break;
         case 'r': {
             int r = rlimit_parse(o->rlimits, LENGTH(o->rlimits), optarg);
             if(r != 0) {
@@ -95,8 +103,22 @@ int main(int argc, char* argv[])
 
     int rsfd = landlock_new_ruleset();
 
-    debug("allowing read access: %s", o.input);
-    landlock_allow_read(rsfd, o.input);
+    if(o.allow_script_dir) {
+        char buf0[PATH_MAX];
+        strncpy(buf0, o.input, sizeof(buf0)-1);
+        buf0[sizeof(buf0)-1] = '\0';
+        char* dir = dirname(buf0);
+
+        char buf2[PATH_MAX];
+        char* script_dir = realpath(dir, buf2);
+        CHECK_NOT(script_dir, NULL, "realpath(%s)", dir);
+
+        debug("allowing read access beneath: %s", script_dir);
+        landlock_allow_read(rsfd, script_dir);
+    } else {
+        debug("allowing read access: %s", o.input);
+        landlock_allow_read(rsfd, o.input);
+    }
 
     // necessary since node 19.0.1
     landlock_allow_read(rsfd, "/etc/ssl/openssl.cnf");
@@ -106,8 +128,14 @@ int main(int argc, char* argv[])
 
     seccomp_apply_filter();
 
-    argv = uv_setup_args(argc, argv);
-    std::vector<std::string> args(argv, argv + argc);
+    char* c_args[] = {
+        argv[0],
+        NULL,
+    };
+    const int n_args = 1;
+
+    argv = uv_setup_args(n_args, c_args);
+    std::vector<std::string> args(c_args, c_args + n_args);
 
 #if (NODE_MAJOR_VERSION >= 18)
     auto result = node::InitializeOncePerProcess(
@@ -116,9 +144,11 @@ int main(int argc, char* argv[])
             node::ProcessInitializationFlags::kNoInitializeNodeV8Platform
         });
     for (const std::string& err: result->errors()) {
-        error("%s", err.c_str());
+        error("node initialization error: %s", err.c_str());
     }
     if (result->early_return() != 0) {
+        int ec = result->exit_code();
+        debug("node exit: %d", ec);
         exit(result->exit_code());
     }
 #elif (NODE_MAJOR_VERSION >= 12)
@@ -126,9 +156,10 @@ int main(int argc, char* argv[])
     std::vector<std::string> errors;
     int ec = node::InitializeNodeWithArgs(&args, &exec_args, &errors);
     for (const std::string& err: errors) {
-        error("%s", err.c_str());
+        error("node initialization error: %s", err.c_str());
     }
     if(ec != 0) {
+        debug("node exit: %d", ec);
         exit(ec);
     }
 #else

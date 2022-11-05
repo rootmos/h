@@ -4,7 +4,7 @@ include $(ROOT)/../build/common.makefile
 EXE ?= hsh
 SRC ?= main.c
 
-DEFAULT_SHELL ?= /bin/sh
+DEFAULT_SHELL ?= /bin/bash
 
 CFLAGS += -DDEFAULT_SHELL=\"$(DEFAULT_SHELL)\"
 

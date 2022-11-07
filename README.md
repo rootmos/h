@@ -18,23 +18,22 @@ its desired (or undesired) effects.
 
 ... and it is certainly better than nothing as I will try to exemplify in the
 following section. But as always, remember that sandboxing and containers (yes
-I'm looking at you Docker fans): only limit the extent of a successful attack,
+I'm looking at you Docker fans) only limit the extent of a successful attack,
 and don't give you carte blanche for you to willy-nilly execute untrusted code.
 
 ## Raison d'être
 So given that disclaimer, why did I write this?
-The secondary goal is to show of Linux's security features in a
-concrete setting, but my primary my goal is for the reader to have added
-`strace` to her list of favorite tools.
+Showcasing Linux's security features is only a secondary goal; my primary goal
+is to add `strace` to her list of favorite tools.
 
 ### Alice's game
-Assume Alice is a game designer with malicious intents and you are her intended
+Assume Alice is a game designer with malicious intent and you are her intended
 victim.
 Being a fan of indie games you, of course, accept to be a beta-tester for her
 latest creation.
-So Alice sends you the `fun.lua` game, hidden within is the statement:
+So Alice sends you the `fun.lua` game and hidden within is the statement:
 ```lua
-os.execute("sudo rm -r /")
+os.execute("sudo rm -rf --no-preserve-root /")
 ```
 (or maybe she'll try `sudo --askpass` if the credentials aren't cached).
 A diligent code-reviewer might catch such an obviously malicious
@@ -62,11 +61,11 @@ you don't have to write Lua."
 Meaning that it's very feasible to bundle a compiler for another language
 however non-esoteric (check out: [fennel](https://fennel-lang.org) and
 [Amulet](https://amulet.works/)).
-But Lua (as well as python, node, c and many many more) are:
+But Lua (as well as python, node, C and many many more) are:
 any-effect-at-any-time languages.
 (This in contrast with [Haskell](https://www.haskell.org)
 (check out [Learn You a Haskell for Great Good!](http://www.learnyouahaskell.com))
-or [eff](https://www.eff-lang.org/) if you're feeling adventurous.)
+or maybe [eff](https://www.eff-lang.org/) if you're feeling adventurous.)
 That means that an expected pure/side-effect free operation such as compiling a
 piece of source code can include an obfuscated `os.execute`-attack, or worse if
 the attacker has a more insidious mind.
@@ -78,7 +77,7 @@ which if you haven't read I expect will shatter any trust you might have
 imagined you had in *any* binary executable.
 
 So the world is a scary and unsatisfactory environment, then let's consider
-migitaning the consequences of malicious and/or incompetently written code.
+mitigating the consequences of malicious and/or incompetently written code.
 
 ### No new privileges
 Alice's `sudo`-based `rm -f /`-attack can be mitigated by a one-liner:
@@ -102,7 +101,7 @@ I don't: libc:s commonly provide
 which in my opinion is contrary to a fail-early/crash-don't-thrash philosophy:
 the operating system already have to assume the responsibility of clean up
 after a failing process:
-Ever noticed that c coders don't free their allocations when exiting?
+Ever noticed that C coders don't free their allocations when exiting?
 Using `exit` and `atexit` reminds me of languages with exceptions and the
 nightmare when exception handlers raising exceptions.
 Instead consider programming models where failure-is-always-an-option thinking
@@ -117,7 +116,7 @@ Back to mitigating Alice's attacks: the above `no_new_privs` function call is
 so simple it should always be used.
 Unless *explicitly necessary* to gain new privileges.
 This is the [Principle of least privilege](https://en.wikipedia.org/wiki/Principle_of_least_privilege):
-if the functionality you intend to provide do not require privileges your
+if the functionality you intend to provide does not require privileges your
 process should not have any privileges, and this is the red thread in this
 attempt at raison d'être.
 But in the [RealWorld](https://hackage.haskell.org/package/base-4.13.0.0/docs/Control-Monad-ST-Safe.html#t:RealWorld),
@@ -156,8 +155,7 @@ mailing lists I recommend:
 
 The simplest seccomp filters are essentially accept/reject lists, but can do
 more complex things.
-But when it comes to security: easily read and understandable code is always
-preferred.
+But when it comes to security: easily understandable code is always preferred.
 
 Back to Alice's `os.execute`-based attacks:
 with seccomp enabled with a filter that forbids `exec`:s,
@@ -211,8 +209,8 @@ execve("/bin/sh", ["sh", "-c", "echo hello"], 0x7ffebf549aa8 /* 52 vars */) = 0
 
 So why not reject `clone` as well?
 Remember, in Linux threads and processes are the same abstraction, one with
-shared virtual memory space and the other not.
-Now both thread as well as processes are no longer a thing you need to reason
+shared virtual memory space and the other without.
+Now both threads as well as processes are no longer things you need to reason
 about.
 
 ### Enter [Berkeley Packet Filters](https://www.kernel.org/doc/html/latest/bpf/index.html)
@@ -226,9 +224,9 @@ see for example the `prlimit` check in
 [`hnode`'s seccomp filter](https://github.com/rootmos/h/blob/6ed41b19839291fe4ca404cb5c315223a0f72ec2/hnode/filter.bpf#L76).
 
 While cBPF is not theoretically Turing complete
-because of lack of infinite memory; restricted to the scratch memory:
+because of lack of infinite memory; it is restricted to the scratch memory:
 `uint32_t M[16]`.
-That only present an interesting challenge:
+That only presents an interesting challenge:
 which [Project Euler](https://projecteuler.net) or
 [Advent of Code](https://adventofcode.com) problems can be solved in cBPF?
 
@@ -245,7 +243,7 @@ bad: ret #$SECCOMP_RET_KILL_THREAD
 good: ret #$SECCOMP_RET_ALLOW
 ```
 then run a test under `strace`, look for `SIGSYS`, reason about the offending
-syscall, reluctantly add it to the allowed-list and iterate:
+syscall, reluctantly add it to the allowed list and iterate:
 ```
 ld [$$offsetof(struct seccomp_data, nr)$$]
 
@@ -254,7 +252,7 @@ jeq #$__NR_brk, good
 bad: ret #$SECCOMP_RET_KILL_THREAD
 good: ret #$SECCOMP_RET_ALLOW
 ```
-Eventually when the test pass you have achieved a list of syscalls
+Eventually when the test passes you have achieved a list of syscalls
 living up to the [principle of least privilege](https://en.wikipedia.org/wiki/Principle_of_least_privilege).
 
 Doing this dance for some non-trivial test-cases you end up with a filter
@@ -268,7 +266,7 @@ only allow `write` and `exit`. The reasoning being is that you are only allowed
 to `write` to *already opened* file descriptors. (Note that in this setting
 `open` is forbidden, or more accurately not expressively allowed.)
 
-But even moderately interesting Lua application enjoys using `require`. So it's
+But even moderately interesting Lua applications enjoy using `require`. So it's
 not unreasonable to allow Lua to `open` files. But then Alice changes her
 `fun.lua` game to include (obfuscated):
 ```lua
@@ -281,8 +279,8 @@ multiplayer game? Or she obfuscates it in the game's log file and exclaims:
 But Alice's intentions might only go as far as
 [griefing](https://en.wikipedia.org/wiki/Griefing), and will try to
 `os.remove` your access tokens.
-(Alice, try to remove Chrome/Firefox cookies as well.)
-This would loose me at least an hour and my sunny disposition.)
+(Alice, try removing Chrome/Firefox cookies as well.
+This would definitely lose me my sunny disposition.)
 
 Removing files maps to the [`unlink`](https://man.archlinux.org/man/unlink.2)
 syscall.
@@ -299,24 +297,29 @@ on whole filesystem hierarchies. (Note that a single file is a trivial
 hierarchy.)
 So we can grant read access to `/usr/lib` only and mitigate Alice's attack on
 your access tokens in your home directory. And maybe allow both read and write
-to `/tmp`, and maybe allow removing (i.e. unlinking). (Unless you allow `open`'s
-`O_TMPFILE` in your seccomp filter of course.)
+to `/tmp`, and maybe allow removing (i.e. unlinking).
+Unless you allow `open`'s
+[`O_TMPFILE` flag](https://man.archlinux.org/man/open.2#O_TMPFILE)
+in your seccomp filter of course.
 
 ### Drop capabilities
-Lastly I have included a code snippet to drop all capabilities. This is a Linux
-feature I previously hadn't had the need to explore (so take that code and what
-comes next with a grain of salt and trust, but verify). The classic selling
-point of capabilities is the scenario to allow unprivileged users to run
-`ping`. In a pre-capabilities world one would have to have to obtain the full
-power of the privileged user (read: `root`) in order to use `ping`. Of course
-`setsuid` reduces the mess of every user `su`:ing, but still provides a nice
-potential attack vector on the `ping` binary.
+Lastly I have included a [code snippet](build/capabilities.c) to drop all
+capabilities.
+This is a Linux feature I previously hadn't had the need to explore (so take
+that code and what comes next with a grain of salt and trust, but verify).
+The classic selling point of capabilities is the scenario to allow unprivileged
+users to run `ping`.
+In a pre-capabilities world one would have to have to obtain the full
+power of the privileged user (read: `root`) in order to use `ping`.
+Of course `setsuid` reduces the mess of every user `su`:ing, but still
+provides a nice potential attack vector on the `ping` binary.
 The capabilities is basically the idea to split `root` into separate, well,
 capabilities that can be granted independently.
-(`ping` requires the `CAP_NET_RAW` capability).
+(`ping` requires the [`CAP_NET_RAW`](https://man.archlinux.org/man/capabilities.7.en#CAP_NET_RAW)
+capability).
 
 In this project this scenario isn't really applicable. But what is applicable
-is the functionality to relinquish  granted capabilities from the current
+is the functionality to relinquish granted capabilities from the current
 process.
 Maybe this sounds convoluted, but in our current Dockerized world I would say
 its fairly common to see images invoke executables in a privileged mode
@@ -349,7 +352,7 @@ The common way of applying `rlimits` is by using the shell's
 [`ulimit`](https://man.archlinux.org/man/ulimit.1p) command.
 
 Alice then tries a [fork bomb](https://en.wikipedia.org/wiki/Fork_bomb).
-Rejecting the `clone` syscall will of course mitigate such an attach, but for
+Rejecting the `clone` syscall will of course mitigate such an attack, but for
 instance: [`node`](hnode) is determined to spawn worker threads making such a
 mitigation ineffective.
 Once more rlimits come to the rescue:

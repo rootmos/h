@@ -330,7 +330,9 @@ the bothersome userland? Here I imagine a barebones server setup: the kernel,
 a single stand-alone server executable and nothing else. So in that setting
 dropping all capabilities could be useful.
 
-### rlimits
+But even with these restrictions Alice can cause quite a bother.
+
+### Enter [rlimits](https://man.archlinux.org/man/core/man-pages/setrlimit.2.en)
 Now Alice is restricted to using only a selected set of syscalls and only
 a pre-approved set of file-system operations and paths.
 Her last-ditch effort is to execute a
@@ -378,13 +380,16 @@ attack is no longer viable:
 ### Conclusion
 Given Alice's game you're itching to play but her malicious intent:
 do you now feel safe to evaluate her code?
-- We can enforce a list of allowed syscalls and their arguments using secccomp
+- We can enforce a list of allowed syscalls and their arguments using
+  [secccomp](#enter-berkeley-packet-filters)
 - We can imposed an additional layer of access restriction on the file
-  system hierarchy using landlock
-- We can enforce strict limits on resource usage: memory, file-descriptors
-  and thread/processes
+  system hierarchy using
+  [landlock](#enter-landlock)
+- We can enforce [strict limits on resource usage](#enter-rlimits) upon:
+  memory usage, file-descriptor and thread/processes allocation
+
 You might feel safe: but what
-[surreal thing will she thing of next](https://cs.stanford.edu/~knuth/sn.html)?
+[surreal thing will she think of next](https://cs.stanford.edu/~knuth/sn.html)?
 
 ## Installation and build instructions
 

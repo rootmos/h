@@ -423,6 +423,8 @@ Note that you can try out the built binaries (found in the created `src`
 subfolder) without a system-wide installation.
 
 ## TODO
+- [ ] use [`strace` statistics](https://man.archlinux.org/man/strace.1#Statistics)
+  to sort seccomp filters with respect to number of calls
 - [ ] landlock ABI=2 (see the [sandbox example](https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git/tree/samples/landlock/sandboxer.c#n233))
 - [ ] [readline](https://en.wikipedia.org/wiki/GNU_Readline) or naive
   [REPL](https://en.wikipedia.org/wiki/Read%E2%80%93eval%E2%80%93print_loop)

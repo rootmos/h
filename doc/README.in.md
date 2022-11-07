@@ -79,7 +79,7 @@ imagined you had in *any* binary executable.
 So the world is a scary and unsatisfactory environment, then let's consider
 mitigating the consequences of malicious and/or incompetently written code.
 
-### No new privileges
+### Enter [No new privileges](https://www.kernel.org/doc/html/latest/userspace-api/no_new_privs.html)
 Alice's `sudo`-based `rm -f /`-attack can be mitigated by a one-liner:
 [`prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0)`](https://man.archlinux.org/man/prctl.2#PR_SET_NO_NEW_PRIVS).
 This call is not expected to fail, but being a conscientious developer it never
@@ -302,7 +302,7 @@ Unless you allow `open`'s
 [`O_TMPFILE` flag](https://man.archlinux.org/man/open.2#O_TMPFILE)
 in your seccomp filter of course.
 
-### Drop [capabilities](https://man.archlinux.org/man/capabilities.7)
+### Enter [drop capabilities](https://man.archlinux.org/man/capabilities.7)
 Lastly I have included a [code snippet](build/capabilities.c) to drop all
 capabilities.
 This is a Linux feature I previously hadn't had the need to explore (so take

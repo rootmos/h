@@ -32,6 +32,7 @@ if [ -n "$RUNTIME" ]; then
     PKGS+=("lua$LUA_VER")
     PKGS+=("python$PYTHON_VER")
     PKGS+=("libnode72")
+    PKGS+=("bash")
 fi
 
 if [ -n "$BUILD" ]; then

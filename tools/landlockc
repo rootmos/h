@@ -11,9 +11,15 @@ trap 'rm -f $TMP' EXIT
 
 cat "$INPUT" | while read F; do
     if [ -f "$F" ]; then
-        cat <<EOF >> "$TMP"
+        if [ -x "$F" ]; then
+            cat <<EOF >> "$TMP"
+landlock_allow($FD, "$F", LANDLOCK_ACCESS_FS_READ_FILE|LANDLOCK_ACCESS_FS_EXECUTE);
+EOF
+        else
+            cat <<EOF >> "$TMP"
 landlock_allow($FD, "$F", LANDLOCK_ACCESS_FS_READ_FILE);
 EOF
+        fi
     elif [ -d "$F" ]; then
         cat <<EOF >> "$TMP"
 landlock_allow($FD, "$F", LANDLOCK_ACCESS_FS_READ_FILE|LANDLOCK_ACCESS_FS_READ_DIR);

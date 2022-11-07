@@ -2,7 +2,7 @@ pkgname=$BUILD_PROJECT
 pkgver=$BUILD_VERSION
 pkgrel=1
 arch=("x86_64")
-depends=("lua" "python" "nodejs")
+depends=("lua" "python" "nodejs" "bash")
 makedepends=("make" "gcc" "pkgconf" "bpf")
 checkdepends=("python-toml") # TODO until python >= 3.11
 url=$BUILD_REPO_URL

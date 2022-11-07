@@ -1,0 +1,80 @@
+# https://www.kernel.org/doc/Documentation/networking/filter.txt
+ld [$$offsetof(struct seccomp_data, arch)$$]
+jne #$AUDIT_ARCH_X86_64, bad
+ld [$$offsetof(struct seccomp_data, nr)$$]
+jge #$__X32_SYSCALL_BIT, bad
+
+jeq #$__NR_brk, good
+
+jne #$__NR_mmap, mmap_end
+ld [$$offsetof(struct seccomp_data, args[3])$$]
+jset #$$(MAP_PRIVATE)$$, good
+jmp bad
+mmap_end:
+
+jeq #$__NR_mprotect, good
+jeq #$__NR_munmap, good
+
+jeq #$__NR_execveat, good
+jeq #$__NR_execve, good
+
+jeq #$__NR_getuid, good
+jeq #$__NR_getgid, good
+jeq #$__NR_geteuid, good
+jeq #$__NR_getegid, good
+jeq #$__NR_getpid, good
+jeq #$__NR_getppid, good
+jeq #$__NR_getpgrp, good
+jeq #$__NR_gettid, good
+
+jeq #$__NR_openat, good
+jeq #$__NR_close, good
+jeq #$__NR_read, good
+jeq #$__NR_pread64, good
+jeq #$__NR_write, good
+jeq #$__NR_writev, good
+jeq #$__NR_lseek, good
+jeq #$__NR_access, good
+jeq #$__NR_newfstatat, good
+jeq #$__NR_dup2, good
+jeq #$__NR_readlink, good
+
+# TODO: restrict to AF_UNIX
+jeq #$__NR_socket, good
+jeq #$__NR_connect, good
+
+jeq #$__NR_getrandom, good
+
+jeq #$__NR_rt_sigprocmask, good
+jeq #$__NR_rt_sigaction, good
+
+jeq #$__NR_arch_prctl, good
+jeq #$__NR_set_tid_address, good
+
+jeq #$__NR_sysinfo, good
+jeq #$__NR_uname, good
+
+jeq #$__NR_getcwd, good
+
+jeq #$__NR_set_robust_list, good
+jeq #$__NR_rseq, good
+
+jeq #$__NR_prlimit64, good
+
+jne #$__NR_ioctl, ioctl_end
+ld [$$offsetof(struct seccomp_data, args[1])$$]
+jset #$$(TIOCGPGRP)$$, good
+jmp bad
+ioctl_end:
+
+jne #$__NR_fcntl, fcntl_end
+ld [$$offsetof(struct seccomp_data, args[1])$$]
+jset #$$(F_GETFD|F_SETFD)$$, good
+jmp bad
+fcntl_end:
+
+jeq #$__NR_tgkill, good
+jeq #$__NR_exit_group, good
+
+bad: ret #$SECCOMP_RET_KILL_THREAD
+good: ret #$SECCOMP_RET_ALLOW

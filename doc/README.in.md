@@ -375,6 +375,17 @@ For instance, this approach guarantees that a file-descriptor-exhaustion
 attack is no longer viable:
 [`RLIMIT_NOFILE`](https://man.archlinux.org/man/core/man-pages/setrlimit.2.en#RLIMIT_NOFILE).
 
+### Conclusion
+Given Alice's game you're itching to play but her malicious intent:
+do you now feel safe to evaluate her code?
+- We can enforce a list of allowed syscalls and their arguments using secccomp
+- We can imposed an additional layer of access restriction on the file
+  system hierarchy using landlock
+- We can enforce strict limits on resource usage: memory, file-descriptors
+  and thread/processes
+You might feel safe: but what
+[surreal thing will she thing of next](https://cs.stanford.edu/~knuth/sn.html)?
+
 ## Installation and build instructions
 
 ### Building from sources

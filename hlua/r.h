@@ -1,19 +1,8 @@
-// libr 0.1.0 (317f3c9301907ef8a237613f01b1c3577a017ca1) (https://github.com/rootmos/libr.git) (2022-11-05T09:25:21+01:00)
-// modules: landlock fail logging util lua rlimit
+// libr 0.2.0 (1dbe1799252e4b97a820e44d38c2726ce8a3af16) (https://github.com/rootmos/libr.git) (2022-11-07T15:06:05+01:00)
+// modules: fail logging now no_new_privs seccomp landlock rlimit util lua
 
 #ifndef LIBR_HEADER
 #define LIBR_HEADER
-
-// libr: landlock.h
-
-#include <linux/types.h>
-
-int landlock_abi_version(void);
-int landlock_new_ruleset(void);
-void landlock_allow(int rsfd, const char* path, __u64 allowed_access);
-void landlock_allow_read(int fd, const char* path);
-void landlock_allow_read_write(int rsfd, const char* path);
-void landlock_apply(int fd);
 
 // libr: fail.h
 
@@ -31,56 +20,6 @@ void landlock_apply(int fd);
 } while(0)
 
 #define CHECK_MALLOC(x) CHECK_NOT(x, NULL, "memory allocation failed")
-
-#ifdef SND_LIB_VERSION
-#define CHECK_ALSA(err, format, ...) do { \
-    if(err < 0) { \
-        r_failwith(__extension__ __FUNCTION__, __extension__ __FILE__, \
-                   __extension__ __LINE__, 0, \
-                   format ": %s\n", ##__VA_ARGS__, snd_strerror(err)); \
-    } \
-} while(0)
-#endif
-
-#ifdef CL_SUCCESS
-#define CHECK_OCL(err, format, ...) do { \
-    if(err != CL_SUCCESS) { \
-        r_failwith(__extension__ __FUNCTION__, __extension__ __FILE__, \
-                   __extension__ __LINE__, 0, \
-                   format ": %d\n", ##__VA_ARGS__, err); \
-    } \
-} while(0)
-#endif
-
-#ifdef FREETYPE_MAJOR
-#define CHECK_FT(err, format, ...) do { \
-    if(err != FT_Err_Ok) { \
-        r_failwith(__extension__ __FUNCTION__, __extension__ __FILE__, \
-                   __extension__ __LINE__, 0, \
-                   format ": (%d) %s\n", ##__VA_ARGS__, err, FT_Error_String(err)); \
-    } \
-} while(0)
-#endif
-
-#ifdef VK_HEADER_VERSION
-#define CHECK_VULKAN(res, format, ...) do { \
-    if(res != VK_SUCCESS) { \
-        r_failwith(__extension__ __FUNCTION__, __extension__ __FILE__, \
-                   __extension__ __LINE__, 0, \
-                   format ": %d\n", ##__VA_ARGS__, res); \
-    } \
-} while(0)
-#endif
-
-#ifdef AVERROR
-#define CHECK_AV(res, format, ...) do { \
-    if(res < 0) { \
-        r_failwith(__extension__ __FUNCTION__, __extension__ __FILE__, \
-                   __extension__ __LINE__, 0, \
-                   format ": %s\n", ##__VA_ARGS__, av_err2str(res)); \
-    } \
-} while(0)
-#endif
 
 #define failwith(format, ...) \
     r_failwith(__extension__ __FUNCTION__, __extension__ __FILE__, \
@@ -164,10 +103,65 @@ void r_vlog(int level,
             const unsigned int line,
             const char* const fmt, va_list vl);
 
+// libr: now.h
+
+// returns current time formated as compact ISO8601: 20190123T182628Z
+const char* now_iso8601_compact(void);
+
+// libr: no_new_privs.h
+
+void no_new_privs(void);
+
+// libr: seccomp.h
+
+#ifndef seccomp
+int seccomp(unsigned int operation, unsigned int flags, void *args);
+#endif
+
+// libr: landlock.h
+
+#include <linux/types.h>
+
+int landlock_abi_version(void);
+int landlock_new_ruleset(void);
+void landlock_allow(int rsfd, const char* path, __u64 allowed_access);
+void landlock_allow_read(int fd, const char* path);
+void landlock_allow_read_write(int rsfd, const char* path);
+void landlock_apply(int fd);
+
+// libr: rlimit.h
+
+#include <stddef.h>
+
+enum rlimit_action {
+    RLIMIT_ACTION_INHERIT = 0,
+    RLIMIT_ACTION_ZERO = 1,
+    RLIMIT_ACTION_ABS = 2,
+    RLIMIT_ACTION_EQUAL = 3,
+};
+
+struct rlimit_spec {
+    const char* name;
+    int resource;
+    enum rlimit_action action;
+    unsigned long value;
+};
+
+void rlimit_default(struct rlimit_spec rlimits[], size_t len);
+void rlimit_inherit(struct rlimit_spec rlimits[], size_t len);
+
+int rlimit_parse(struct rlimit_spec rlimits[], size_t len, const char* str);
+void rlimit_apply(const struct rlimit_spec rlimits[], size_t len);
+
 // libr: util.h
 
+#ifndef LENGTH
 #define LENGTH(xs) (sizeof(xs)/sizeof((xs)[0]))
+#endif
+
+#ifndef LIT
 #define LIT(x) x,sizeof(x)
+#endif
 
 #ifndef MAX
 #define MAX(a,b) ((a) > (b) ? (a) : (b))
@@ -176,14 +170,6 @@ void r_vlog(int level,
 #ifndef MIN
 #define MIN(a,b) ((a) < (b) ? (a) : (b))
 #endif
-
-const char* getenv_mandatory(const char* const env);
-
-// returns current time formated as compact ISO8601: 20190123T182628Z
-const char* now_iso8601(void);
-
-void set_blocking(int fd, int blocking);
-void no_new_privs(void);
 
 // libr: lua.h
 
@@ -213,33 +199,111 @@ void no_new_privs(void);
 #define lua_stack_neutral_end(L) \
     CHECK_IF(LUA_STACK_NEUTRAL_TERM != lua_gettop(L), \
              "redundant stack elements present")
-
-// libr: rlimit.h
-
-#include <stddef.h>
-
-enum rlimit_action {
-    RLIMIT_ACTION_INHERIT = 0,
-    RLIMIT_ACTION_ZERO = 1,
-    RLIMIT_ACTION_ABS = 2,
-    RLIMIT_ACTION_EQUAL = 3,
-};
-
-struct rlimit_spec {
-    const char* name;
-    int resource;
-    enum rlimit_action action;
-    unsigned long value;
-};
-
-void rlimit_default(struct rlimit_spec rlimits[], size_t len);
-void rlimit_inherit(struct rlimit_spec rlimits[], size_t len);
-
-int rlimit_parse(struct rlimit_spec rlimits[], size_t len, const char* str);
-void rlimit_apply(const struct rlimit_spec rlimits[], size_t len);
 #endif // LIBR_HEADER
 
 #ifdef LIBR_IMPLEMENTATION
+
+// libr: fail.c
+
+#include <stdlib.h>
+#include <errno.h>
+#include <stdio.h>
+#include <string.h>
+
+void r_failwith(const char* const caller,
+                const char* const file,
+                const unsigned int line,
+                const int include_errno,
+                const char* const fmt, ...)
+{
+    va_list vl;
+    va_start(vl, fmt);
+
+    if(include_errno) {
+        r_log(LOG_ERROR, caller, file, line, "(%s) ", strerror(errno));
+        vfprintf(stderr, fmt, vl);
+    } else {
+        r_vlog(LOG_ERROR, caller, file, line, fmt, vl);
+    }
+    va_end(vl);
+
+    abort();
+}
+
+// libr: logging.c
+
+#include <stdio.h>
+#include <unistd.h>
+#include <stdlib.h>
+
+#ifdef __cplusplus
+void r_dummy(...)
+#else
+void r_dummy()
+#endif
+{
+    abort();
+}
+
+void r_vlog(int level,
+            const char* const caller,
+            const char* const file,
+            const unsigned int line,
+            const char* const fmt, va_list vl)
+{
+    fprintf(stderr, "%s:%d:%s:%s:%u ",
+            now_iso8601_compact(), getpid(), caller, file, line);
+
+    vfprintf(stderr, fmt, vl);
+}
+
+void r_log(int level,
+           const char* const caller,
+           const char* const file,
+           const unsigned int line,
+           const char* const fmt, ...)
+{
+    va_list vl;
+    va_start(vl, fmt);
+    r_vlog(level, caller, file, line, fmt, vl);
+    va_end(vl);
+}
+
+// libr: now.c
+
+#include <time.h>
+#include <stdlib.h>
+
+const char* now_iso8601_compact(void)
+{
+    static char buf[17];
+    const time_t t = time(NULL);
+    size_t r = strftime(buf, sizeof(buf), "%Y%m%dT%H%M%SZ", gmtime(&t));
+    if(r <= 0) abort();
+    return buf;
+}
+
+// libr: no_new_privs.c
+
+#include <sys/prctl.h>
+
+void no_new_privs(void)
+{
+    int r = prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0);
+    CHECK(r, "prctl(PR_SET_NO_NEW_PRIVS, 1)");
+}
+
+// libr: seccomp.c
+
+#include <sys/syscall.h>
+#include <unistd.h>
+
+#ifndef seccomp
+int seccomp(unsigned int operation, unsigned int flags, void *args)
+{
+    return syscall(SYS_seccomp, operation, flags, args);
+}
+#endif
 
 // libr: landlock.c
 
@@ -349,114 +413,6 @@ void landlock_apply(int fd)
 {
     int r = landlock_restrict_self(fd, 0);
     CHECK(r, "landlock_restrict_self");
-}
-
-// libr: fail.c
-
-#include <stdlib.h>
-#include <errno.h>
-#include <stdio.h>
-#include <string.h>
-
-void r_failwith(const char* const caller,
-                const char* const file,
-                const unsigned int line,
-                const int include_errno,
-                const char* const fmt, ...)
-{
-    va_list vl;
-    va_start(vl, fmt);
-
-    if(include_errno) {
-        r_log(LOG_ERROR, caller, file, line, "(%s) ", strerror(errno));
-        vfprintf(stderr, fmt, vl);
-    } else {
-        r_vlog(LOG_ERROR, caller, file, line, fmt, vl);
-    }
-    va_end(vl);
-
-    abort();
-}
-
-// libr: logging.c
-
-#include <stdio.h>
-#include <unistd.h>
-
-#ifdef __cplusplus
-void r_dummy(...)
-#else
-void r_dummy()
-#endif
-{
-    failwith("called the dummy function, you dummy!");
-}
-
-void r_vlog(int level,
-            const char* const caller,
-            const char* const file,
-            const unsigned int line,
-            const char* const fmt, va_list vl)
-{
-    fprintf(stderr, "%s:%d:%s:%s:%u ",
-            now_iso8601(), getpid(), caller, file, line);
-
-    vfprintf(stderr, fmt, vl);
-}
-
-void r_log(int level,
-           const char* const caller,
-           const char* const file,
-           const unsigned int line,
-           const char* const fmt, ...)
-{
-    va_list vl;
-    va_start(vl, fmt);
-    r_vlog(level, caller, file, line, fmt, vl);
-    va_end(vl);
-}
-
-// libr: util.c
-
-#include <assert.h>
-#include <fcntl.h>
-#include <stdlib.h>
-#include <time.h>
-#include <sys/prctl.h>
-
-const char* now_iso8601(void)
-{
-    static char buf[17];
-    const time_t t = time(NULL);
-    size_t r = strftime(buf, sizeof(buf), "%Y%m%dT%H%M%SZ", gmtime(&t));
-    assert(r > 0);
-    return buf;
-}
-
-const char* getenv_mandatory(const char* const env)
-{
-    const char* const v = getenv(env);
-    if(v == NULL) { failwith("environment variable %s not set", env); }
-    return v;
-}
-
-void set_blocking(int fd, int blocking)
-{
-    int fl = fcntl(fd, F_GETFL, 0);
-    if(blocking) {
-        fl &= ~O_NONBLOCK;
-    } else {
-        fl |= O_NONBLOCK;
-    }
-
-    int r = fcntl(fd, F_SETFL, fl);
-    CHECK(r, "fcntl(%d, F_SETFL, %d)", fd, fl);
-}
-
-void no_new_privs(void)
-{
-    int r = prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0);
-    CHECK(r, "prctl(PR_SET_NO_NEW_PRIVS, 1)");
 }
 
 // libr: rlimit.c

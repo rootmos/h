@@ -1,7 +1,9 @@
-#include <unistd.h>
+#include <assert.h>
+#include <fcntl.h>
 #include <signal.h>
 #include <sys/signalfd.h>
 #include <sys/wait.h>
+#include <unistd.h>
 
 #define LIBR_IMPLEMENTATION
 #include "r.h"

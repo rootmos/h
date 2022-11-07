@@ -10,5 +10,7 @@ trace() {
 }
 
 libr() {
-    "$HOME/git/libr/bundle" -o r.h landlock fail logging util lua rlimit
+    "$HOME/git/libr/bundle" -o r.h fail logging \
+        no_new_privs seccomp landlock rlimit \
+        lua
 }

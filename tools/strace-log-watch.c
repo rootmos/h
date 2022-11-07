@@ -1,4 +1,5 @@
 #define _GNU_SOURCE
+#include <assert.h>
 #include <fcntl.h>
 #include <libgen.h>
 #include <linux/limits.h>
@@ -12,26 +13,6 @@
 
 #define LIBR_IMPLEMENTATION
 #include "r.h"
-
-// TODO: move to libr
-inline int is_digit(char c)
-{
-    return '0' <= c && c <= '9';
-}
-
-int devnull(int flags)
-{
-    flags |= O_CLOEXEC;
-    int r = open("/dev/null", flags);
-    CHECK(r, "open(/dev/null, %d)", flags);
-    return r;
-}
-
-void devnull_to(int fd)
-{
-    int n = devnull(fd);
-    int r = dup2(fd, n); CHECK(r, "dup2(.., %d)", n);
-}
 
 #ifndef pidfd_open
 int pidfd_open(pid_t pid, unsigned int flags)
@@ -336,7 +317,7 @@ static void trace_init(struct trace* t, const char* dir, const char* name)
         r = sigprocmask(SIG_UNBLOCK, &state.sm, NULL);
         CHECK(r, "sigprocmask");
 
-        devnull_to(0);
+        devnull2(0, 0);
         r = dup2(pipefd[1], 1); CHECK(r, "dup2(.., 1)");
 
         r = execlp("tail", "tail", "--lines=+1", "--follow", path, NULL);

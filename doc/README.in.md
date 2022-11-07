@@ -282,11 +282,14 @@ But Alice's intentions might only go as far as
 (Alice, try removing Chrome/Firefox cookies as well.
 This would definitely lose me my sunny disposition.)
 
-Removing files maps to the [`unlink`](https://man.archlinux.org/man/unlink.2)
+Removing files map to the [`unlink`](https://man.archlinux.org/man/unlink.2)
 syscall.
 Certainly it commonly makes sense to reject that syscall,
 but a plausible scenario is using `unlink` is to remove intermediately
 created files (during compilation or other).
+
+So what do we do about Alice's intent to remove your
+`with-blood-sweat-and-tears.doc` file?
 
 ### Enter [landlock](https://www.kernel.org/doc/html/latest/userspace-api/landlock.html)
 Landlock is a fairly recently added security feature, which is meant to

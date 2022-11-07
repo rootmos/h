@@ -1,7 +1,3 @@
-run() {
-    make LOG_LEVEL=DEBUG && ./capture -o stdout -- echo "hello" && cat stdout
-}
-
 libr() {
-    "$HOME/git/libr/bundle" -o r.h fail logging util
+    "$HOME/git/libr/bundle" -o r.h fail logging util char devnull
 }

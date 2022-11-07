@@ -1,5 +1,5 @@
-// libr 0.1.0 (317f3c9301907ef8a237613f01b1c3577a017ca1) (https://github.com/rootmos/libr.git) (2022-11-05T09:24:55+01:00)
-// modules: fail logging util
+// libr 0.2.0 (1dbe1799252e4b97a820e44d38c2726ce8a3af16) (https://github.com/rootmos/libr.git) (2022-11-07T15:06:05+01:00)
+// modules: fail logging now util char devnull
 
 #ifndef LIBR_HEADER
 #define LIBR_HEADER
@@ -20,56 +20,6 @@
 } while(0)
 
 #define CHECK_MALLOC(x) CHECK_NOT(x, NULL, "memory allocation failed")
-
-#ifdef SND_LIB_VERSION
-#define CHECK_ALSA(err, format, ...) do { \
-    if(err < 0) { \
-        r_failwith(__extension__ __FUNCTION__, __extension__ __FILE__, \
-                   __extension__ __LINE__, 0, \
-                   format ": %s\n", ##__VA_ARGS__, snd_strerror(err)); \
-    } \
-} while(0)
-#endif
-
-#ifdef CL_SUCCESS
-#define CHECK_OCL(err, format, ...) do { \
-    if(err != CL_SUCCESS) { \
-        r_failwith(__extension__ __FUNCTION__, __extension__ __FILE__, \
-                   __extension__ __LINE__, 0, \
-                   format ": %d\n", ##__VA_ARGS__, err); \
-    } \
-} while(0)
-#endif
-
-#ifdef FREETYPE_MAJOR
-#define CHECK_FT(err, format, ...) do { \
-    if(err != FT_Err_Ok) { \
-        r_failwith(__extension__ __FUNCTION__, __extension__ __FILE__, \
-                   __extension__ __LINE__, 0, \
-                   format ": (%d) %s\n", ##__VA_ARGS__, err, FT_Error_String(err)); \
-    } \
-} while(0)
-#endif
-
-#ifdef VK_HEADER_VERSION
-#define CHECK_VULKAN(res, format, ...) do { \
-    if(res != VK_SUCCESS) { \
-        r_failwith(__extension__ __FUNCTION__, __extension__ __FILE__, \
-                   __extension__ __LINE__, 0, \
-                   format ": %d\n", ##__VA_ARGS__, res); \
-    } \
-} while(0)
-#endif
-
-#ifdef AVERROR
-#define CHECK_AV(res, format, ...) do { \
-    if(res < 0) { \
-        r_failwith(__extension__ __FUNCTION__, __extension__ __FILE__, \
-                   __extension__ __LINE__, 0, \
-                   format ": %s\n", ##__VA_ARGS__, av_err2str(res)); \
-    } \
-} while(0)
-#endif
 
 #define failwith(format, ...) \
     r_failwith(__extension__ __FUNCTION__, __extension__ __FILE__, \
@@ -153,10 +103,20 @@ void r_vlog(int level,
             const unsigned int line,
             const char* const fmt, va_list vl);
 
+// libr: now.h
+
+// returns current time formated as compact ISO8601: 20190123T182628Z
+const char* now_iso8601_compact(void);
+
 // libr: util.h
 
+#ifndef LENGTH
 #define LENGTH(xs) (sizeof(xs)/sizeof((xs)[0]))
+#endif
+
+#ifndef LIT
 #define LIT(x) x,sizeof(x)
+#endif
 
 #ifndef MAX
 #define MAX(a,b) ((a) > (b) ? (a) : (b))
@@ -166,13 +126,38 @@ void r_vlog(int level,
 #define MIN(a,b) ((a) < (b) ? (a) : (b))
 #endif
 
-const char* getenv_mandatory(const char* const env);
+// libr: char.h
 
-// returns current time formated as compact ISO8601: 20190123T182628Z
-const char* now_iso8601(void);
+inline int is_digit(char c)
+{
+    return '0' <= c && c <= '9';
+}
 
-void set_blocking(int fd, int blocking);
-void no_new_privs(void);
+inline int is_alpha(char c)
+{
+    return ('a' <= c && c <= 'z') || ('A' <= c && c <= 'Z');
+}
+
+inline int is_punctuation(char c)
+{
+    return c == '.'
+        || c == ','
+        || c == '-'
+        || c == '_'
+        || c == '\''
+        || c == '"';
+}
+
+inline int is_whitespace(char c)
+{
+    return c == ' '
+        || c == '\t';
+}
+
+// libr: devnull.h
+
+int devnull(int flags);
+void devnull_to(int fd);
 #endif // LIBR_HEADER
 
 #ifdef LIBR_IMPLEMENTATION
@@ -208,6 +193,7 @@ void r_failwith(const char* const caller,
 
 #include <stdio.h>
 #include <unistd.h>
+#include <stdlib.h>
 
 #ifdef __cplusplus
 void r_dummy(...)
@@ -215,7 +201,7 @@ void r_dummy(...)
 void r_dummy()
 #endif
 {
-    failwith("called the dummy function, you dummy!");
+    abort();
 }
 
 void r_vlog(int level,
@@ -225,7 +211,7 @@ void r_vlog(int level,
             const char* const fmt, va_list vl)
 {
     fprintf(stderr, "%s:%d:%s:%s:%u ",
-            now_iso8601(), getpid(), caller, file, line);
+            now_iso8601_compact(), getpid(), caller, file, line);
 
     vfprintf(stderr, fmt, vl);
 }
@@ -242,46 +228,37 @@ void r_log(int level,
     va_end(vl);
 }
 
-// libr: util.c
+// libr: now.c
 
-#include <assert.h>
-#include <fcntl.h>
-#include <stdlib.h>
 #include <time.h>
-#include <sys/prctl.h>
+#include <stdlib.h>
 
-const char* now_iso8601(void)
+const char* now_iso8601_compact(void)
 {
     static char buf[17];
     const time_t t = time(NULL);
     size_t r = strftime(buf, sizeof(buf), "%Y%m%dT%H%M%SZ", gmtime(&t));
-    assert(r > 0);
+    if(r <= 0) abort();
     return buf;
 }
 
-const char* getenv_mandatory(const char* const env)
+// libr: devnull.c
+
+#include <fcntl.h>
+#include <unistd.h>
+
+int devnull(int flags)
 {
-    const char* const v = getenv(env);
-    if(v == NULL) { failwith("environment variable %s not set", env); }
-    return v;
+    flags |= O_CLOEXEC;
+    int fd = open("/dev/null", flags);
+    CHECK(fd, "open(/dev/null, %d)", flags);
+    return fd;
 }
 
-void set_blocking(int fd, int blocking)
+void devnull2(int fd, int flags)
 {
-    int fl = fcntl(fd, F_GETFL, 0);
-    if(blocking) {
-        fl &= ~O_NONBLOCK;
-    } else {
-        fl |= O_NONBLOCK;
-    }
-
-    int r = fcntl(fd, F_SETFL, fl);
-    CHECK(r, "fcntl(%d, F_SETFL, %d)", fd, fl);
-}
-
-void no_new_privs(void)
-{
-    int r = prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0);
-    CHECK(r, "prctl(PR_SET_NO_NEW_PRIVS, 1)");
+    int null = devnull(flags);
+    int r = dup2(null, fd); CHECK(r, "dup2(.., %d)", fd);
+    r = close(null); CHECK(r, "close");
 }
 #endif // LIBR_IMPLEMENTATION

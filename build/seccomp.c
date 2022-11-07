@@ -1,13 +1,5 @@
 #include <linux/seccomp.h>
 #include <linux/filter.h>
-#include <sys/syscall.h>
-
-#ifndef seccomp
-static int seccomp(unsigned int operation, unsigned int flags, void *args)
-{
-    return syscall(SYS_seccomp, operation, flags, args);
-}
-#endif
 
 void seccomp_apply_filter()
 {

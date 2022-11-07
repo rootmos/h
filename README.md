@@ -302,7 +302,7 @@ Unless you allow `open`'s
 [`O_TMPFILE` flag](https://man.archlinux.org/man/open.2#O_TMPFILE)
 in your seccomp filter of course.
 
-### Drop capabilities
+### Drop [capabilities](https://man.archlinux.org/man/capabilities.7)
 Lastly I have included a [code snippet](build/capabilities.c) to drop all
 capabilities.
 This is a Linux feature I previously hadn't had the need to explore (so take
@@ -330,14 +330,15 @@ the bothersome userland? Here I imagine a barebones server setup: the kernel,
 a single stand-alone server executable and nothing else. So in that setting
 dropping all capabilities could be useful.
 
-But even with these restrictions Alice can cause quite a bother.
+But even with these restrictions Alice can cause quite a bother:
 
 ### Enter [rlimits](https://man.archlinux.org/man/core/man-pages/setrlimit.2.en)
-Now Alice is restricted to using only a selected set of syscalls and only
-a pre-approved set of file-system operations and paths.
+Now Alice is restricted to using a restricted set of syscalls and restricted
+to a pre-approved set of file-system operations on an equally pre-approved
+subset of the file-system tree.
+
 Her last-ditch effort is to execute a
 [Denial-of-service attack](https://en.wikipedia.org/wiki/Denial-of-service_attack).
-
 I suggest Alice tries to `while(1)` allocate at least one page of memory
 (`getconf PAGESIZE`: 4096 bytes),
 write a single [pseudo-randomly generated](https://en.wikipedia.org/wiki/Xorshift)
@@ -378,18 +379,17 @@ attack is no longer viable:
 [`RLIMIT_NOFILE`](https://man.archlinux.org/man/core/man-pages/setrlimit.2.en#RLIMIT_NOFILE).
 
 ### Conclusion
-Given Alice's game you're itching to play but her malicious intent:
+Given Alice's game you're itching to play regardless of her malicious intent:
 do you now feel safe to evaluate her code?
 - We can enforce a list of allowed syscalls and their arguments using
   [secccomp](#enter-berkeley-packet-filters)
-- We can imposed an additional layer of access restriction on the file
-  system hierarchy using
-  [landlock](#enter-landlock)
-- We can enforce [strict limits on resource usage](#enter-rlimits) upon:
+- We can imposed an additional layer of access restriction upon the file
+  system hierarchy using [landlock](#enter-landlock)
+- We can enforce [strict limits on resource usage](#enter-rlimits) on:
   memory usage, file-descriptor and thread/processes allocation
 
 You might feel safe: but what
-[surreal thing will she think of next](https://cs.stanford.edu/~knuth/sn.html)?
+[surreal thing will she think of next](https://cs.stanford.edu/~knuth/sn.html)‽
 
 ## Installation and build instructions
 

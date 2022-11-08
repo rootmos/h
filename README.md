@@ -395,6 +395,27 @@ do you now feel safe to evaluate her code?
 You might feel safe: but what
 [surreal thing will she think of next](https://cs.stanford.edu/~knuth/sn.html)‽
 
+## Frequently unasked questions
+- "No, but seriously, why not `sudo docker`?"<br>
+  Yes, and seriously, no `sudo`, but yes Docker. My opinion is that Docker is
+  great (for me `Docker := cgroups+overlayfs` packaged into a sleek product,
+  but that's fine), especially in professional (CI/Kubernetes/what-have-you)
+  settings. With this project I want to showcase a Linux way of sandboxing
+  applications *unprivileged*: hence no `sudo`, but yes Docker.
+  Also my guiding principle (other than "trust, but verify" that is);
+  [principle of least privilege](https://en.wikipedia.org/wiki/Principle_of_least_privilege):
+  why require privileges to do something that can be achieved without?
+- "Why no binary packages?"<br>
+  Because each embedded script host may have a different license, and I do not
+  want to spend the time to study each of them and mess up anyway.
+  Also my aim for this project to be an educational showcase and a sandbox to
+  let users experiment and get hands on experience with the Linux security
+  features in a non-toy setting: reduce the value of a pre-built binary package
+  distributed without the sources and tools.
+  The laziness argument coupled with this aim argument guides me to only offer
+  source packages: mostly as a guide for users who do not feel comfortable to
+  jump straight into the deep end with `git clone` and `make`.
+
 ## Installation and build instructions
 
 ### Building from sources

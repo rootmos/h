@@ -79,11 +79,12 @@ imagined you had in *any* binary executable.
 So the world is a scary and unsatisfactory environment, then let's consider
 mitigating the consequences of malicious and/or incompetently written code.
 
-### Enter [No new privileges](https://www.kernel.org/doc/html/latest/userspace-api/no_new_privs.html)
+### Enter [no new privileges](https://www.kernel.org/doc/html/latest/userspace-api/no_new_privs.html)
 Alice's `sudo`-based `rm -f /`-attack can be mitigated by a one-liner:
 [`prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0)`](https://man.archlinux.org/man/prctl.2#PR_SET_NO_NEW_PRIVS).
 This call is not expected to fail, but being a conscientious developer it never
-hurts to crash-don't-thrash and I present a copy-pastable snippet:
+hurts to crash-don't-thrash and I present a
+[copy-pastable snippet](https://github.com/rootmos/libr/blob/master/modules/no_new_privs.c):
 ```c
 #include <sys/prctl.h>
 #include <stdlib.h>
@@ -371,7 +372,7 @@ But again rlimits provides the mitigation:
 [`RLIMIT_FSIZE`](https://man.archlinux.org/man/core/man-pages/setrlimit.2.en#RLIMIT_FSIZE).
 The pattern is obvious: restrict all available `rlimits` to the minimum
 required to make the intended functionality succeed.
-The [code-snippet used](https://github.com/rootmos/libr/blob/master/src/rlimit.c)
+The [code-snippet used](https://github.com/rootmos/libr/blob/master/modules/rlimit.c)
 to restrict the `rlimits` sets any limits not expressively raised to zero.
 Check the `#define RLIMIT_DEFAULT_`:s at the top of [hlua](hlua/main.c),
 [hpython](hpython/hpython.c) and [hnode](hnode/main.cpp).

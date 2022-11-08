@@ -62,10 +62,10 @@ Meaning that it's very feasible to bundle a compiler for another language,
 however non-esoteric (check out: [fennel](https://fennel-lang.org) and
 [Amulet](https://amulet.works/)).
 But Lua (as well as Python, Node.js, C and many many more) are:
-any-effect-at-any-time languages.
-(This in contrast with [Haskell](https://www.haskell.org)
+[any-effect-at-any-time languages](https://www.youtube.com/watch?v=iSmkqocn0oQ).
+This in contrast with [Haskell](https://www.haskell.org)
 (check out [Learn You a Haskell for Great Good!](http://www.learnyouahaskell.com))
-or maybe [eff](https://www.eff-lang.org/) if you're feeling adventurous.)
+or maybe [eff](https://www.eff-lang.org/) if you're feeling adventurous.
 That means that an expected pure/side-effect free operation such as compiling a
 piece of source code can include an obfuscated `os.execute`-attack or worse if
 the attacker has a more insidious mind.
@@ -106,18 +106,22 @@ the operating system already has to assume the responsibility of clean up
 after a failing process:
 ever noticed that C coders don't free their allocations when exiting?
 Using `exit` and `atexit` reminds me of languages with exceptions and the
-nightmare when exception handlers raising exceptions.
+nightmare when exception handlers raise exceptions, ad inifitum.
 Instead consider programming models where failure-is-always-an-option thinking
 is prevalent.
 Consider the actor model where the non-delivery of a message is a scenario
-brought to the forefront (the real-world scenario is the fallibility of network
-connections).
+brought to the forefront (with the real-world scenario of the fallibility of
+network connections).
 If you are curious I recommend [Erlang](https://www.erlang.org/)
 (check out [Learn You Some Erlang for great good!](https://learnyousomeerlang.com/)).
+(Erlang does not implement the Actor model in a strict way, but provide a very
+enjoyable way to explore its concepts while writing useful highly concurrent
+applications.)
 
-Back to mitigating Alice's attacks: the above `no_new_privs` function call is
-so simple it should always be used.
-Unless *explicitly necessary* to gain new privileges.
+Back to mitigating Alice's attacks: the above
+[`no_new_privs`](https://github.com/rootmos/libr/blob/master/modules/no_new_privs.c)
+call is so simple it should always, *always*, be used:
+unless *explicitly necessary* to gain new privileges.
 This is the [Principle of least privilege](https://en.wikipedia.org/wiki/Principle_of_least_privilege):
 if the functionality you intend to provide does not require privileges your
 process should not have any privileges, and this is the red thread in this

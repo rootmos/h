@@ -333,16 +333,17 @@ Unless you allow `open`'s
 [`O_TMPFILE` flag](https://man.archlinux.org/man/open.2#O_TMPFILE)
 in your seccomp filter of course.
 
-The simple reason this section is bare of example code I found both the
-concepts behind landlock easily understandable and yet very powerful.
+The reason this section is bare of example code is that I found, and hope you
+will do too, the concepts behind landlock easily understandable and yet very
+powerful.
 Therefore I will not include any sample code here since the
 [the sample code provided with landlock](https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git/tree/samples/landlock/sandboxer.c?h=v6.0.7&id=3a2fa3c01fc7c2183eb3278bd912e5bcec20eb2a)
 is excellent, and is relatively
 [verbatim what I use](https://github.com/rootmos/libr/blob/master/modules/landlock.c).
-My perceived ratio of positive security impact versus time spent learning
+My experienced ratio of positive security impact versus time spent learning
 the feature is huge: 5/5 will use again.
 
-One criticism I have of the current implementation of landlock is the inability
+My one criticism of the current implementation of landlock is the inability
 to hide files: that is, even though landlock restricts access to a
 file, for example `/etc/passwd`, then `stat` (or similar) responds with
 `EACCESS` instead of `ENOENT`.
@@ -351,15 +352,16 @@ value, but revealing that `~/.aws/credentials` exist
 can enable an attacker to target her attack more effectively against the
 discovered files.
 
-Furthermore an attacker can, given enough access to (read: lots and lots of)
+Furthermore an attacker can, given enough access to
+(read: lots, lots, and lots of)
 system time, enumerate your entire file tree.
 This is of course a ridiculous endeavour;
 [`#define NAME_MAX 255`](https://git.musl-libc.org/cgit/musl/tree/include/limits.h?h=v1.2.3&id=7a43f6fea9081bdd53d8a11cef9e9fab0348c53d#n45)
 and [`pp`](tools/pp) `('z'-'a')+('Z'-'A')+('9'-'0')` says that the amount of
 filenames to try are *bounded from below* by
 [`59^255`](https://www.wolframalpha.com/input?i=59%5E255):
-which evaluates to an integer that starts with `36920` and ends with `89299`:
-not mentioning the other `442` digits.
+which evaluates to an integer that starts with `36920` and ends with `89299`
+(not mentioning the other `442` digits).
 
 The counter-argument is that there are other, perhaps better, ways of achieving
 this functionality
@@ -391,7 +393,36 @@ The paths are then
 [inspected and converted into a relevant landlock rules code snippet](tools/landlockc)
 which is then included and applied in the main program.
 
-TODO: `poor_ldd`
+Continuing the wrinkle into the [`hsh`](hsh) project that launch a `bash`
+process in the same security setting as the other script hosts programs.
+Being a full-fledged shell do-it-all binary it desires to link to quite a bit
+of dynamic libraries, which in turn want even more of that shared binary
+goodness: `ldd /bin/bash` shows us the lay of the land:
+```
+     linux-vdso.so.1 (0x00007ffe3bed2000)
+     libreadline.so.8 => /usr/lib/libreadline.so.8 (0x00007f45e8bcc000)
+     libdl.so.2 => /usr/lib/libdl.so.2 (0x00007f45e8bc7000)
+     libc.so.6 => /usr/lib/libc.so.6 (0x00007f45e89e0000)
+     libncursesw.so.6 => /usr/lib/libncursesw.so.6 (0x00007f45e896c000)
+     /lib64/ld-linux-x86-64.so.2 => /usr/lib64/ld-linux-x86-64.so.2 (0x00007f45e8d44000)
+```
+That indeed is a wrinkle to crease given the
+[diversity of Linux distributions](https://en.wikipedia.org/wiki/Linux_distribution#/media/File:Linux_Distribution_Timeline_21_10_2021.svg).
+My [`sed`-mid-legs twitch](https://en.wikipedia.org/wiki/The_Metamorphosis)
+but there is a better approach using [`objdump`](https://man.archlinux.org/man/ldd.1#Security):
+```shell
+objdump -p /path/to/program | grep NEEDED
+```
+which an insect has bundled into a `poor_ldd` utility
+(using the above mentioned [`dlinfo`](https://man.archlinux.org/man/dlinfo.3)
+based [`lib`](tools/lib.c) utility); `poor_ldd /bin/bash`:
+```
+/lib64/ld-linux-x86-64.so.2
+/usr/lib/libc.so.6
+/usr/lib/libdl.so.2
+/usr/lib/libncursesw.so.6
+/usr/lib/libreadline.so.8
+```
 
 ### Enter [drop capabilities](https://man.archlinux.org/man/capabilities.7)
 Lastly I have included a [code snippet](build/capabilities.c) to drop all

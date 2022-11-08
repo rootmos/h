@@ -393,11 +393,12 @@ The paths are then
 [inspected and converted into a relevant landlock rules code snippet](tools/landlockc)
 which is then included and applied in the main program.
 
-Continuing the wrinkle into the [`hsh`](hsh) project that launch a `bash`
-process in the same security setting as the other script hosts programs.
-Being a full-fledged shell do-it-all binary it desires to link to quite a bit
-of dynamic libraries, which in turn want even more of that shared binary
-goodness: `ldd /bin/bash` shows us the lay of the land:
+Continuing the same wrinkle into the [`hsh`](hsh) project:
+which [executes a `bash`](https://man.archlinux.org/man/core/man-pages/fexecve.3.en)
+in the same security setting as the other script hosts programs.
+Being a fully-fledged shell do-it-all binary it desires to link quite a bit
+of dynamic libraries, which in turn desire even more of that shared binary
+goodness: `ldd /bin/bash` expose the end of their desire:
 ```
      linux-vdso.so.1 (0x00007ffe3bed2000)
      libreadline.so.8 => /usr/lib/libreadline.so.8 (0x00007f45e8bcc000)
@@ -406,14 +407,14 @@ goodness: `ldd /bin/bash` shows us the lay of the land:
      libncursesw.so.6 => /usr/lib/libncursesw.so.6 (0x00007f45e896c000)
      /lib64/ld-linux-x86-64.so.2 => /usr/lib64/ld-linux-x86-64.so.2 (0x00007f45e8d44000)
 ```
-That indeed is a wrinkle to crease given the
+That indeed is a wrinkle to iron out given the
 [diversity of Linux distributions](https://en.wikipedia.org/wiki/Linux_distribution#/media/File:Linux_Distribution_Timeline_21_10_2021.svg).
 My [`sed`-mid-legs twitch](https://en.wikipedia.org/wiki/The_Metamorphosis)
 but there is a better approach using [`objdump`](https://man.archlinux.org/man/ldd.1#Security):
 ```shell
 objdump -p /path/to/program | grep NEEDED
 ```
-which an insect has bundled into a `poor_ldd` utility
+which said insect has bundled into the [`poor_ldd`](tools/poor_ldd) utility
 (using the above mentioned [`dlinfo`](https://man.archlinux.org/man/dlinfo.3)
 based [`lib`](tools/lib.c) utility); `poor_ldd /bin/bash`:
 ```
@@ -423,6 +424,8 @@ based [`lib`](tools/lib.c) utility); `poor_ldd /bin/bash`:
 /usr/lib/libncursesw.so.6
 /usr/lib/libreadline.so.8
 ```
+which then can be handed of to [landlockc](tools/landlockc) and grant a very
+limited set of read-access rules.
 
 ### Enter [drop capabilities](https://man.archlinux.org/man/capabilities.7)
 Lastly I have included a [code snippet](build/capabilities.c) to drop all

@@ -24,21 +24,21 @@ and don't give you carte blanche for you to willy-nilly execute untrusted code.
 ## Raison d'être
 So given that disclaimer, why did I write this?
 Showcasing Linux's security features is only a secondary goal; my primary goal
-is to add `strace` to her list of favorite tools.
+is to add `strace` to your list of favorite tools.
 
-### Alice's game
+### Alice's [game](https://love2d.org/)
 Assume Alice is a game designer with malicious intent and you are her intended
 victim.
 Being a fan of indie games you, of course, accept to be a beta-tester for her
 latest creation.
-So Alice sends you the `fun.lua` game and hidden within is the statement:
+So she sends you the `fun.lua` game and hidden within is the statement:
 ```lua
 os.execute("sudo rm -rf --no-preserve-root /")
 ```
 (or maybe she'll try `sudo --askpass` if the credentials aren't cached).
 A diligent code-reviewer might catch such an obviously malicious
 statement, but such a statement can be surprisingly easy to miss in a hurried
-glance:
+glance (try to allow yourself only a few seconds to read the following):
 ```lua
 function run(cmdline)
     local s = os.getenv("SUDO")
@@ -58,26 +58,28 @@ Then there are programming languages
 [designed to be difficult to read](https://esolangs.org/wiki/Esoteric_programming_language#Obfuscation).
 And speaking of programming languages: "the greatest thing about Lua is that
 you don't have to write Lua."
-Meaning that it's very feasible to bundle a compiler for another language
+Meaning that it's very feasible to bundle a compiler for another language,
 however non-esoteric (check out: [fennel](https://fennel-lang.org) and
 [Amulet](https://amulet.works/)).
-But Lua (as well as python, node, C and many many more) are:
+But Lua (as well as Python, Node.js, C and many many more) are:
 any-effect-at-any-time languages.
 (This in contrast with [Haskell](https://www.haskell.org)
 (check out [Learn You a Haskell for Great Good!](http://www.learnyouahaskell.com))
 or maybe [eff](https://www.eff-lang.org/) if you're feeling adventurous.)
 That means that an expected pure/side-effect free operation such as compiling a
-piece of source code can include an obfuscated `os.execute`-attack, or worse if
+piece of source code can include an obfuscated `os.execute`-attack or worse if
 the attacker has a more insidious mind.
+
 And considering that compilers are usually quite extensive pieces of software
 they provide ample forestry to hide a malicious tree.
-Alice, I suggest you split your malicious code in several commits/PR:s.
+(Alice, I suggest you split your malicious code in several commits/PR:s.)
 For the victim, I recommend [Ken Thompson's "Reflections on Trusting Trust"](https://dl.acm.org/doi/10.1145/358198.358210),
 which if you haven't read I expect will shatter any trust you might have
 imagined you had in *any* binary executable.
 
 So the world is a scary and unsatisfactory environment, then let's consider
-mitigating the consequences of malicious and/or incompetently written code.
+mitigating the consequences of malicious and/or (sic!) incompetently written
+code.
 
 ### Enter [no new privileges](https://www.kernel.org/doc/html/latest/userspace-api/no_new_privs.html)
 Alice's `sudo`-based `rm -f /`-attack can be mitigated by a one-liner:
@@ -97,12 +99,12 @@ void no_new_privs(void)
 }
 ```
 You might have used (or prefer) [`exit`](https://man.archlinux.org/man/exit.3a).
-I don't: libc:s commonly provide
+I don't: [libc](https://libc.org):s commonly provide
 [`atexit`](https://man.archlinux.org/man/atexit.3)
 which in my opinion is contrary to a fail-early/crash-don't-thrash philosophy:
-the operating system already have to assume the responsibility of clean up
+the operating system already has to assume the responsibility of clean up
 after a failing process:
-Ever noticed that C coders don't free their allocations when exiting?
+ever noticed that C coders don't free their allocations when exiting?
 Using `exit` and `atexit` reminds me of languages with exceptions and the
 nightmare when exception handlers raising exceptions.
 Instead consider programming models where failure-is-always-an-option thinking

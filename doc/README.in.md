@@ -67,15 +67,24 @@ This in contrast with [Haskell](https://www.haskell.org)
 (check out [Learn You a Haskell for Great Good!](http://www.learnyouahaskell.com))
 or maybe [eff](https://www.eff-lang.org/) if you're feeling adventurous.
 That means that an expected pure/side-effect free operation such as compiling a
-piece of source code can include an obfuscated `os.execute`-attack or worse if
-the attacker has a more insidious mind.
+piece of source code can include an obfuscated `os.execute`-attack or worse
+since the attacker has a more insidious mind.
 
-And considering that compilers are usually quite extensive pieces of software
+Considering that compilers are usually quite extensive pieces of software
 they provide ample forestry to hide a malicious tree.
-(Alice, I suggest you split your malicious code in several commits/PR:s.)
+Alice, I suggest you split your malicious code into several commits/PR:s,
+preferably large ones close to a deadline.
 For the victim, I recommend [Ken Thompson's "Reflections on Trusting Trust"](https://dl.acm.org/doi/10.1145/358198.358210),
 which if you haven't read I expect will shatter any trust you might have
-imagined you had in *any* binary executable.
+imagined you had in *any* binary executable:
+going back to punchcards and the [PDP-1](https://en.wikipedia.org/wiki/PDP-1).
+Well, that's ridiculous, but OCaml (my yardstick [language of languages](https://ocaml.org/)),
+still bundle a [bootstrapping binary](https://github.com/ocaml/ocaml/blob/trunk/boot/ocamlc)
+complier to build subsequent compilers: this is very much
+["tusting trust"](https://dl.acm.org/doi/10.1145/358198.358210)".
+Especially since [`Coq`](https://en.wikipedia.org/wiki/Coq) is implemented in
+OCaml; thus the trust stack ends in a binary blob: do you "trust, but verify
+it"?
 
 So the world is a scary and unsatisfactory environment, then let's consider
 mitigating the consequences of malicious and/or (sic!) incompetently written
@@ -289,9 +298,11 @@ with a filter usually including the
 (Unsurprisingly these have syscall numbers:
 [`0`, `1` and `3`](https://git.musl-libc.org/cgit/musl/tree/arch/x86_64/bits/syscall.h.in?h=v1.2.3&id=7a43f6fea9081bdd53d8a11cef9e9fab0348c53d#n1).)
 
-`write` is particularly fun to think about: without it how can you communicate
-the result of any computation in an "everything is a file" system?
-The syscall filtering way of expressing this thought is seccomp's strict mode:
+`write` is particularly fun to think about: without it
+[how can you communicate the result of any computation](https://youtu.be/iSmkqocn0oQ?t=195)
+in a "everything is a file" system?
+The syscall filtering way of expressing this is
+[seccomp's strict mode](https://man.archlinux.org/man/seccomp.2#SECCOMP_SET_MODE_STRICT):
 only allow `write` and `exit`. The reasoning being is that you are only allowed
 to `write` to *already opened* file descriptors. (Note that in this setting
 `open` is forbidden, or more accurately not expressively allowed.)

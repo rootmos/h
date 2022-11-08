@@ -266,7 +266,7 @@ syscalls falls short when it encounters the
 [`fcntl`](https://man.archlinux.org/man/fcntl.2),
 [`ioctl`](https://man.archlinux.org/man/ioctl.2) and
 [`prctl`](https://man.archlinux.org/man/prctl.2)
-(which [we encountered above](#enter-no-new-privs)).
+(which [we encountered above](#enter-no-new-privileges)).
 For these syscalls it becomes necessary to inspect the call arguments
 (from [`hlua`'s filter](hlua/filter.bpf)):
 ```
@@ -280,7 +280,8 @@ fcntl_end:
 Doing the "test-n-strace" dance for a non-trivial test-case you quickly end up
 with a filter usually including the
 `read`, `write` and `close` syscalls.
-(Unsurprisingly these have syscall numbers: `0`, `1` and `3`.)
+(Unsurprisingly these have syscall numbers:
+[`0`, `1` and `3`](https://git.musl-libc.org/cgit/musl/tree/arch/x86_64/bits/syscall.h.in?h=v1.2.3&id=7a43f6fea9081bdd53d8a11cef9e9fab0348c53d#n1).)
 
 `write` is particularly fun to think about: without it how can you communicate
 the result of any computation in an "everything is a file" system?
@@ -319,8 +320,7 @@ So what do we do about Alice's intent to remove your
 Landlock is a fairly recently added security feature, which is meant to
 restrict filesystem access for unprivileged processes, in addition to the
 standard UNIX file permissions.
-
-(I would say landlock is fairly recent when its new syscalls have, at the time
+(I argue landlock is fairly recent when its new syscalls have, at the time
 of writing, [the highest syscall number](https://git.musl-libc.org/cgit/musl/tree/arch/x86_64/bits/syscall.h.in?h=v1.2.3&id=7a43f6fea9081bdd53d8a11cef9e9fab0348c53d#n355))
 
 In essence landlock grants or restricts rights to filesystem operations
@@ -342,22 +342,24 @@ is excellent, and is relatively
 My perceived ratio of positive security impact versus time spent learning
 the feature is huge: 5/5 will use again.
 
-One criticism I have of the current implementation of landlock is the behavior
-inability to hide files: that is, even though landlock restricts access to a
-file, for example `/etc/passwd`, then `stat`/`open` responds with `EACCESS`
-instead of `ENOENT`. The knowledge that a Linux installation has a `/etc/passwd`
-file maybe of limited value, but revealing that `~/.aws/credentials` exist
+One criticism I have of the current implementation of landlock is the inability
+to hide files: that is, even though landlock restricts access to a
+file, for example `/etc/passwd`, then `stat` (or similar) responds with
+`EACCESS` instead of `ENOENT`.
+The knowledge that a Linux installation has a `/etc/passwd` maybe of limited
+value, but revealing that `~/.aws/credentials` exist
 can enable an attacker to target her attack more effectively against the
-exposed existing files.
+discovered files.
 
 Furthermore an attacker can, given enough access to (read: lots and lots of)
 system time, enumerate your entire file tree.
-This is of course a ridiculous endeavour:
-[`#define NAME_MAX 255`](https://git.musl-libc.org/cgit/musl/tree/include/limits.h?h=v1.2.3&id=7a43f6fea9081bdd53d8a11cef9e9fab0348c53d#n45),
-[`pp`](tools/pp) `('z'-'a')+('Z'-'A')+('9'-'0')` says that the amount of
-filenames to try are [`59^255`](https://www.wolframalpha.com/input?i=59%5E255)
+This is of course a ridiculous endeavour;
+[`#define NAME_MAX 255`](https://git.musl-libc.org/cgit/musl/tree/include/limits.h?h=v1.2.3&id=7a43f6fea9081bdd53d8a11cef9e9fab0348c53d#n45)
+and [`pp`](tools/pp) `('z'-'a')+('Z'-'A')+('9'-'0')` says that the amount of
+filenames to try are *bounded from below* by
+[`59^255`](https://www.wolframalpha.com/input?i=59%5E255):
 which evaluates to an integer that starts with `36920` and ends with `89299`:
-not including the other `442` digits.
+not mentioning the other `442` digits.
 
 The counter-argument is that there are other, perhaps better, ways of achieving
 this functionality

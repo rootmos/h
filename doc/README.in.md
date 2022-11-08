@@ -78,15 +78,16 @@ For the victim, I recommend [Ken Thompson's "Reflections on Trusting Trust"](htt
 which if you haven't read I expect will shatter any trust you might have
 imagined you had in *any* binary executable:
 going back to punchcards and the [PDP-1](https://en.wikipedia.org/wiki/PDP-1).
-Well, that's ridiculous, but OCaml (my yardstick [language of languages](https://ocaml.org/)),
-still bundle a [bootstrapping binary](https://github.com/ocaml/ocaml/blob/trunk/boot/ocamlc)
-complier to build subsequent compilers: this is very much
-["tusting trust"](https://dl.acm.org/doi/10.1145/358198.358210)".
-Especially since [`Coq`](https://en.wikipedia.org/wiki/Coq) is implemented in
-OCaml; thus the trust stack ends in a binary blob: do you "trust, but verify
-it"?
+Well, that may seem ridiculous, but [OCaml](https://ocaml.org/)
+(my yardstick language of languages):
+still bundle a [bootstrapping binary complier](https://github.com/ocaml/ocaml/blob/trunk/boot/ocamlc)
+to build subsequent compilers: this is very much
+["Tusting Trust"](https://dl.acm.org/doi/10.1145/358198.358210).
+Even more so since [`Coq`](https://en.wikipedia.org/wiki/Coq) is implemented in,
+and thus compiled by, OCaml; now your trust stack ends in a binary blob:
+do you "trust, but verify" it?
 
-So the world is a scary and unsatisfactory environment, then let's consider
+So, the world is a scary and unsatisfactory environment, instead let's consider
 mitigating the consequences of malicious and/or (sic!) incompetently written
 code.
 
@@ -337,10 +338,11 @@ So what do we do about Alice's intent to remove your
 Landlock is a fairly recently added security feature, which is meant to
 restrict filesystem access for unprivileged processes, in addition to the
 standard UNIX file permissions.
-(I argue landlock is fairly recent when its new syscalls have, at the time
-of writing, [the highest syscall number](https://git.musl-libc.org/cgit/musl/tree/arch/x86_64/bits/syscall.h.in?h=v1.2.3&id=7a43f6fea9081bdd53d8a11cef9e9fab0348c53d#n355))
+I will argue landlock is fairly recent when its new syscalls have, at the time
+of writing: [the highest syscall number](https://git.musl-libc.org/cgit/musl/tree/arch/x86_64/bits/syscall.h.in?h=v1.2.3&id=7a43f6fea9081bdd53d8a11cef9e9fab0348c53d#n355).
 
-In essence landlock grants or restricts rights to filesystem operations
+In essence [landlock](https://man.archlinux.org/man/landlock.7)
+grants or restricts rights to filesystem operations
 on whole filesystem hierarchies. (Note that a single file is a trivial
 hierarchy.)
 So we can grant read access to `/usr/lib` only and mitigate Alice's attack on

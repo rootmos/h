@@ -333,30 +333,41 @@ Unless you allow `open`'s
 [`O_TMPFILE` flag](https://man.archlinux.org/man/open.2#O_TMPFILE)
 in your seccomp filter of course.
 
-The simple reason this section is on the shorter scale is that I found both the
+The simple reason this section is bare of example code I found both the
 concepts behind landlock easily understandable and yet very powerful.
-Also I will not include any sample code here since the
+Therefore I will not include any sample code here since the
 [the sample code provided with landlock](https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git/tree/samples/landlock/sandboxer.c?h=v6.0.7&id=3a2fa3c01fc7c2183eb3278bd912e5bcec20eb2a)
-is excellent.
-Hence the ratio of the positive security impact versus the time spent learning
-to use the feature is huge: 5/5 will use again.
+is excellent, and is relatively
+[verbatim what I use](https://github.com/rootmos/libr/blob/master/modules/landlock.c).
+My perceived ratio of positive security impact versus time spent learning
+the feature is huge: 5/5 will use again.
 
 One criticism I have of the current implementation of landlock is the behavior
 inability to hide files: that is, even though landlock restricts access to a
 file, for example `/etc/passwd`, then `stat`/`open` responds with `EACCESS`
 instead of `ENOENT`. The knowledge that a Linux installation has a `/etc/passwd`
-file maybe of very limited value, but revealing that `~/.aws/credentials` exist
-can enable an attacker to target/redirect her attack.
-Furthermore an attacker can (theoretically and with a huge amount of time)
-enumerate your entire file tree.
-The counter-argument is that there are other perhaps better ways of achieving
+file maybe of limited value, but revealing that `~/.aws/credentials` exist
+can enable an attacker to target her attack more effectively against the
+exposed existing files.
+
+Furthermore an attacker can, given enough access to (read: lots and lots of)
+system time, enumerate your entire file tree.
+This is of course a ridiculous endeavour:
+[`#define NAME_MAX 255`](https://git.musl-libc.org/cgit/musl/tree/include/limits.h?h=v1.2.3&id=7a43f6fea9081bdd53d8a11cef9e9fab0348c53d#n45),
+[`pp`](tools/pp) `('z'-'a')+('Z'-'A')+('9'-'0')` says that the amount of
+filenames to try are [`59^255`](https://www.wolframalpha.com/input?i=59%5E255)
+which evaluates to an integer that starts with `36920` and ends with `89299`:
+not including the other `442` digits.
+
+The counter-argument is that there are other, perhaps better, ways of achieving
 this functionality
 ([`chroot`](https://man.archlinux.org/man/chroot.2.en) maybe?),
-reducing my criticism to a mere down-prioritized item on my wishlist.
+reducing my criticism to a mere down-prioritized item on a wishlist.
 
-One wrinkle in our concrete setting of providing script hosts is that sometimes
+The wrinkle in our concrete setting of providing script hosts is that sometimes
 the interpreters want to dynamically load shared libraries which boast a
-notorious elusiveness and never appear in the same place twice.
+notorious elusiveness and never appear in the same place twice
+([which implies we know their velocity](https://en.wikipedia.org/wiki/Uncertainty_principle)).
 Hence I have added a set of tools to, at compile time,
 tell `hpython`'s landlock rules to allow read access to the path where the
 embedded `python` instance will look for, say, the `libz` library.

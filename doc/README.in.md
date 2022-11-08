@@ -256,9 +256,31 @@ good: ret #$SECCOMP_RET_ALLOW
 Eventually when the test passes you have achieved a list of syscalls
 living up to the [principle of least privilege](https://en.wikipedia.org/wiki/Principle_of_least_privilege).
 
-Doing this dance for some non-trivial test-cases you end up with a filter
-usually including the: `write`, `read`, `close` file descriptor manipulating
-functions.
+The filter you produce might appear very long, but remember that Linux has a
+[*massive* amount of syscalls](https://git.musl-libc.org/cgit/musl/tree/arch/x86_64/bits/syscall.h.in?h=v1.2.3&id=7a43f6fea9081bdd53d8a11cef9e9fab0348c53d).
+Viewed from a security perspective even a moderately long filter is still
+a huge reduction of the exposed kernel surface.
+But a simple (but still very effective) yes/no approach to filtering
+syscalls falls short when it encounters the
+"functionality-grouping" syscalls such as
+[`fcntl`](https://man.archlinux.org/man/fcntl.2),
+[`ioctl`](https://man.archlinux.org/man/ioctl.2) and
+[`prctl`](https://man.archlinux.org/man/prctl.2)
+(which [we encountered above](#enter-no-new-privs)).
+For these syscalls it becomes necessary to inspect the call arguments
+(from [`hlua`'s filter](hlua/filter.bpf)):
+```
+jne #$__NR_fcntl, fcntl_end
+ld [$$offsetof(struct seccomp_data, args[1])$$]
+jeq #$F_GETFL, good
+jmp bad
+fcntl_end:
+```
+
+Doing the "test-n-strace" dance for a non-trivial test-case you quickly end up
+with a filter usually including the
+`read`, `write` and `close` syscalls.
+(Unsurprisingly these have syscall numbers: `0`, `1` and `3`.)
 
 `write` is particularly fun to think about: without it how can you communicate
 the result of any computation in an "everything is a file" system?
@@ -268,8 +290,9 @@ to `write` to *already opened* file descriptors. (Note that in this setting
 `open` is forbidden, or more accurately not expressively allowed.)
 
 But even moderately interesting Lua applications enjoy using `require`. So it's
-not unreasonable to allow Lua to `open` files. But then Alice changes her
-`fun.lua` game to include (obfuscated):
+not unreasonable to allow Lua to `open` files (which fills in the number `2`
+syscall numbering slot).
+But then Alice changes her `fun.lua` game to include (obfuscated):
 ```lua
 io.open(os.getenv("HOME") .. "/.aws/credentials", "r"):read("*a")
 ```
@@ -296,6 +319,10 @@ So what do we do about Alice's intent to remove your
 Landlock is a fairly recently added security feature, which is meant to
 restrict filesystem access for unprivileged processes, in addition to the
 standard UNIX file permissions.
+
+(I would say landlock is fairly recent when its new syscalls have, at the time
+of writing, [the highest syscall number](https://git.musl-libc.org/cgit/musl/tree/arch/x86_64/bits/syscall.h.in?h=v1.2.3&id=7a43f6fea9081bdd53d8a11cef9e9fab0348c53d#n355))
+
 In essence landlock grants or restricts rights to filesystem operations
 on whole filesystem hierarchies. (Note that a single file is a trivial
 hierarchy.)
@@ -305,6 +332,53 @@ to `/tmp`, and maybe allow removing (i.e. unlinking).
 Unless you allow `open`'s
 [`O_TMPFILE` flag](https://man.archlinux.org/man/open.2#O_TMPFILE)
 in your seccomp filter of course.
+
+The simple reason this section is on the shorter scale is that I found both the
+concepts behind landlock easily understandable and yet very powerful.
+Also I will not include any sample code here since the
+[the sample code provided with landlock](https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git/tree/samples/landlock/sandboxer.c?h=v6.0.7&id=3a2fa3c01fc7c2183eb3278bd912e5bcec20eb2a)
+is excellent.
+Hence the ratio of the positive security impact versus the time spent learning
+to use the feature is huge: 5/5 will use again.
+
+One criticism I have of the current implementation of landlock is the behavior
+inability to hide files: that is, even though landlock restricts access to a
+file, for example `/etc/passwd`, then `stat`/`open` responds with `EACCESS`
+instead of `ENOENT`. The knowledge that a Linux installation has a `/etc/passwd`
+file maybe of very limited value, but revealing that `~/.aws/credentials` exist
+can enable an attacker to target/redirect her attack.
+Furthermore an attacker can (theoretically and with a huge amount of time)
+enumerate your entire file tree.
+The counter-argument is that there are other perhaps better ways of achieving
+this functionality
+([`chroot`](https://man.archlinux.org/man/chroot.2.en) maybe?),
+reducing my criticism to a mere down-prioritized item on my wishlist.
+
+One wrinkle in our concrete setting of providing script hosts is that sometimes
+the interpreters want to dynamically load shared libraries which boast a
+notorious elusiveness and never appear in the same place twice.
+Hence I have added a set of tools to, at compile time,
+tell `hpython`'s landlock rules to allow read access to the path where the
+embedded `python` instance will look for, say, the `libz` library.
+This is the functionality exercised in
+[`hpython`'s `import` test](hpython/test/import).
+The tool-chain starts with the [`paths`](tools/paths) utility:
+```shell
+paths --python-site -lz
+```
+which, for my Arch Linux system, suggest that these file system trees are of
+particular interest:
+```
+/usr/lib/python3.10
+/usr/lib/libz.so.1
+```
+Behind the scenes [`dlinfo`](https://man.archlinux.org/man/dlinfo.3) is used to
+resolve the shared libraries.
+The paths are then
+[inspected and converted into a relevant landlock rules code snippet](tools/landlockc)
+which is then included and applied in the main program.
+
+TODO: `poor_ldd`
 
 ### Enter [drop capabilities](https://man.archlinux.org/man/capabilities.7)
 Lastly I have included a [code snippet](build/capabilities.c) to drop all

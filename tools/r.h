@@ -1,4 +1,4 @@
-// libr 0.2.0 (1dbe1799252e4b97a820e44d38c2726ce8a3af16) (https://github.com/rootmos/libr.git) (2022-11-07T15:06:05+01:00)
+// libr 0.2.0 (c2d53939d7b3587873a08543075063c6590b39bb) (https://github.com/rootmos/libr.git) (2022-11-08T06:46:29+01:00)
 // modules: fail logging now util char devnull
 
 #ifndef LIBR_HEADER
@@ -157,7 +157,7 @@ inline int is_whitespace(char c)
 // libr: devnull.h
 
 int devnull(int flags);
-void devnull_to(int fd);
+void devnull2(int fd, int flags);
 #endif // LIBR_HEADER
 
 #ifdef LIBR_IMPLEMENTATION
@@ -249,7 +249,6 @@ const char* now_iso8601_compact(void)
 
 int devnull(int flags)
 {
-    flags |= O_CLOEXEC;
     int fd = open("/dev/null", flags);
     CHECK(fd, "open(/dev/null, %d)", flags);
     return fd;

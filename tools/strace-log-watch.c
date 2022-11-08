@@ -317,7 +317,7 @@ static void trace_init(struct trace* t, const char* dir, const char* name)
         r = sigprocmask(SIG_UNBLOCK, &state.sm, NULL);
         CHECK(r, "sigprocmask");
 
-        devnull2(0, 0);
+        devnull2(0, O_RDONLY);
         r = dup2(pipefd[1], 1); CHECK(r, "dup2(.., 1)");
 
         r = execlp("tail", "tail", "--lines=+1", "--follow", path, NULL);

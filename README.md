@@ -5,7 +5,7 @@ Unprivileged sandboxing of popular script languages.
 
 |Unprivileged|sandboxing|script languages|
 |------------|----------|----------------|
-|Alice: "Why not Docker?"<br>Bob: Because `sudo docker`.|[landlock](https://www.kernel.org/doc/html/latest/userspace-api/landlock.html) <br> [seccomp](https://www.kernel.org/doc/html/latest/userspace-api/seccomp_filter.html)|[lua](http://lua.org/) -> [hlua](hlua) <br> [python](https://python.org/) -> [hpython](hpython) <br> [node](https://nodejs.org/) -> [hnode](hnode) <br> [bash](https://www.gnu.org/software/bash/) -> [hsh](hsh)|
+|Alice: "Why not Docker?"<br>Bob: "Because `sudo docker`".|[landlock](https://www.kernel.org/doc/html/latest/userspace-api/landlock.html) <br> [seccomp](https://www.kernel.org/doc/html/latest/userspace-api/seccomp_filter.html)|[lua](http://lua.org/) -> [hlua](hlua) <br> [python](https://python.org/) -> [hpython](hpython) <br> [node](https://nodejs.org/) -> [hnode](hnode) <br> [bash](https://www.gnu.org/software/bash/) -> [hsh](hsh)|
 
 ## DISCLAIMER
 This project is a work in progress and has not been audited by security
@@ -24,7 +24,7 @@ and don't give you carte blanche for you to willy-nilly execute untrusted code.
 ## Raison d'être
 So given that disclaimer, why did I write this?
 Showcasing Linux's security features is only a secondary goal; my primary goal
-is to add `strace` to your list of favorite tools.
+is for the reader to add `strace` to your list of favorite tools.
 
 ### Alice's [game](https://love2d.org/)
 Assume Alice is a game designer with malicious intent and you are her intended
@@ -137,7 +137,7 @@ unless *explicitly necessary* to gain new privileges.
 This is the [Principle of least privilege](https://en.wikipedia.org/wiki/Principle_of_least_privilege):
 if the functionality you intend to provide does not require privileges your
 process should not have any privileges, and this is the red thread in this
-attempt at raison d'être.
+attempted raison d'être.
 But in the [RealWorld](https://hackage.haskell.org/package/base-4.13.0.0/docs/Control-Monad-ST-Safe.html#t:RealWorld),
 processes inherit quite a handful of privileges that Alice can still abuse,
 as we shall see.
@@ -150,7 +150,7 @@ The naive Lua specific mitigation is to `os.execute = nil` before running the
 entrypoint of Alice's game.
 Well, that may be good enough
 (I haven't figured out a way around that mitigation, but I'm reasonably sure
-there may exist an exploit and would be interested in seeing it).
+there is an exploit and would be interested in seeing it).
 Continuing this idea we can tweak it into at least making this first naive
 mitigation useful:
 ```lua
@@ -166,27 +166,27 @@ kernel surface.
 Fancy words aside, this means that when you receive in your email inbox the
 notification of a new vulnerability you can feel certain that you are not
 affected because the vulnerable syscalls are rejected by your program.
-If you aren't subscribing to any [CVE](https://en.wikipedia.org/wiki/Common_Vulnerabilities_and_Exposures)
+If you aren't subscribed to any [CVE](https://en.wikipedia.org/wiki/Common_Vulnerabilities_and_Exposures)
 mailing lists I recommend:
 - [Arch Linux's](https://lists.archlinux.org/mailman3/lists/arch-security.lists.archlinux.org/),
 - [Ubuntu's](https://lists.ubuntu.com/mailman/listinfo/ubuntu-security-announce) or
 - [OpenBSD's](https://www.openbsd.org/mail.html) mailing lists.
 
-The simplest seccomp filters are essentially accept/reject lists, but can do
-more complex things.
+The simplest seccomp filters are essentially accept/reject lists, but they can
+do more complex things.
 But when it comes to security: easily understandable code is always preferred.
 
 Back to Alice's `os.execute`-based attacks:
 with seccomp enabled with a filter that forbids `exec`:s,
 the kernel will politely kill your process and suggest to the rest of the
 system that you received a `SIGSYS` signal.
-In practice this means that your process immediately vanish, so without a
-syscall inspection tool such as `strace` one is reduced to debugging by: "thou
-shalt printf".
+In practice this means that your process immediately vanishes, so without a
+syscall inspection tool such as `strace` one is reduced to debugging by
+Thou shalt `printf("are we nearly here yet?")`.
 
 ### Enter [strace](https://man.archlinux.org/man/strace.1)
 If you haven't invoked strace before, or you are curious what syscalls are
-being used by a program then try:
+being used by a program, then try:
 ```shell
 strace lua -e 'print("hello")'
 strace python -c 'print("hello")'
@@ -322,9 +322,9 @@ multiplayer game? Or she obfuscates it in the game's log file and exclaims:
 "Oh the game crashed, why don't you send me the logs?"
 
 But Alice's intentions might only go as far as
-[griefing](https://en.wikipedia.org/wiki/Griefing), and will try to
+[griefing](https://en.wikipedia.org/wiki/Griefing), and she will try to
 `os.remove` your access tokens.
-(Alice, try removing Chrome/Firefox cookies as well.
+(Alice: try removing Chrome/Firefox cookies as well.
 This would definitely lose me my sunny disposition.)
 
 Removing files map to the [`unlink`](https://man.archlinux.org/man/unlink.2)
@@ -471,10 +471,11 @@ Maybe this sounds convoluted, but in our current Dockerized world I would say
 its fairly common to see images invoke executables in a privileged mode
 (as `root`).
 
-And noteworthy configuration option of Linux is that you don't have to include
-the bothersome userland? Here I imagine a barebones server setup: the kernel,
-a single stand-alone server executable and nothing else. So in that setting
-dropping all capabilities could be useful.
+And a noteworthy configuration option of Linux is that you don't have to include
+the bothersome userland. Here I imagine a barebones server setup: the kernel,
+a single stand-alone server executable (serving as the
+[init](https://man.archlinux.org/man/init.1) process) and nothing else.
+In that setting dropping capabilities could be useful.
 
 But even with these restrictions Alice can cause quite a bother:
 
@@ -528,10 +529,10 @@ attack is no longer viable:
 Given Alice's game you're itching to play regardless of her malicious intent:
 do you now feel safe to evaluate her code?
 - We can enforce a list of allowed syscalls and their arguments using
-  [secccomp](#enter-berkeley-packet-filters)
-- We can imposed an additional layer of access restriction upon the file
+  [seccomp](#enter-berkeley-packet-filters)
+- We can impose an additional layer of access restriction upon the file
   system hierarchy using [landlock](#enter-landlock)
-- We can enforce [strict limits on resource usage](#enter-rlimits) on:
+- We can enforce [strict resource usage limits](#enter-rlimits) on:
   memory usage, file-descriptor and thread/processes allocation
 
 You might feel safe: but what

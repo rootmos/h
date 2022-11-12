@@ -11,25 +11,25 @@ Unprivileged sandboxing of popular script languages.
 This project is a work in progress and has not been audited by security
 experts.
 
-However I think it it remains useful for educational purposes regarding Linux's
+However I think it remains useful for educational purposes regarding Linux's
 sometimes daunting security features and using `strace` to illustrate how a
 program written in a high level language is translated into syscalls to obtain
 its desired (or undesired) effects.
 
 ... and it is certainly better than nothing as I will try to exemplify in the
-following section. But as always, remember that sandboxing and containers (yes
-I'm looking at you Docker fans) only limit the extent of a successful attack,
-and don't give you carte blanche for you to willy-nilly execute untrusted code.
+following section. But as always, remember that sandboxing and containerization
+only limit the extent of a successful attack,
+and don't give you carte blanche to willy-nilly execute untrusted code.
 
 ## Raison d'être
 So given that disclaimer, why did I write this?
 Showcasing Linux's security features is only a secondary goal; my primary goal
-is for the reader to add `strace` to your list of favorite tools.
+is for the reader to add `strace` to her list of favorite tools.
 
 ### Alice's [game](https://love2d.org/)
 Assume Alice is a game designer with malicious intent and you are her intended
 victim.
-Being a fan of indie games you, of course, accept to be a beta-tester for her
+Being a fan of indie games you of course accept to be a beta-tester for her
 latest creation.
 She sends you the `fun.lua` game and hidden within is the statement:
 ```lua
@@ -54,12 +54,13 @@ function clean_cache()
     run(string.format("rm -r %s/%s", cache, project))
 end
 ```
-Did you see the malicious/unintended transposition?
-(Don't feel bad, this is the hardships presented to us by the PR-culture.)
-Now there are programming languages
+Did you spot the malicious or unintended transposition?
+This is the hardship presented to us by the PR-culture, and can provide a false
+sense of security.
+There are also programming languages
 [designed to be difficult to read](https://esolangs.org/wiki/Esoteric_programming_language#Obfuscation).
-And speaking of programming languages: "the greatest thing about Lua is that
-you don't have to write Lua."
+And speaking of programming languages:
+"the greatest thing about Lua is that you don't have to write Lua."
 Meaning that it's very feasible to bundle a compiler for another language,
 however non-esoteric (check out: [fennel](https://fennel-lang.org) and
 [Amulet](https://amulet.works/)).
@@ -70,31 +71,32 @@ This in contrast with [Haskell](https://www.haskell.org)
 or maybe [eff](https://www.eff-lang.org/) if you're feeling adventurous.
 That means that an expected pure/side-effect free operation such as compiling a
 piece of source code can include an obfuscated `os.execute`-attack or worse
-since the attacker has a more insidious mind.
+if the attacker has a more insidious mind.
 
 Considering that compilers are usually quite extensive pieces of software
 they provide ample forestry to hide a malicious tree.
-Alice, I suggest you split your malicious code into several commits/PR:s,
-preferably large ones close to a deadline.
+Alice, I suggest you split your malicious code into several commits and PR:s
+(preferably large ones close to a deadline).
 For the victim, I recommend [Ken Thompson's "Reflections on Trusting Trust"](https://dl.acm.org/doi/10.1145/358198.358210),
 which if you haven't read I expect will shatter any trust you might have
-imagined you had in *any* binary executable:
-going back to punchcards and the [PDP-1](https://en.wikipedia.org/wiki/PDP-1).
-Well, that may seem ridiculous, but [OCaml](https://ocaml.org/)
+imagined you had in *any* binary executable
+(going all the way back to punchcards and the [PDP-1](https://en.wikipedia.org/wiki/PDP-1)).
+This may seem ridiculous, but [OCaml](https://ocaml.org/)
 (my yardstick language of languages):
 still bundle a [bootstrapping binary complier](https://github.com/ocaml/ocaml/blob/trunk/boot/ocamlc)
 to build subsequent compilers: this is very much
-["Tusting Trust"](https://dl.acm.org/doi/10.1145/358198.358210).
-Even more so since [`Coq`](https://en.wikipedia.org/wiki/Coq) is implemented in,
-and thus compiled by, OCaml; now your trust stack ends in a binary blob:
-do you "trust, but verify" it?
+["tusting trust"](https://dl.acm.org/doi/10.1145/358198.358210).
+Even more so since [`Coq`](https://en.wikipedia.org/wiki/Coq) is implemented
+in and thus compiled by OCaml; now your trust stack ends in a binary blob:
+do you trust it? And do you have the incredibly time consuming task of
+verifying no malicious opcodes hide within?
 
-So, the world is a scary and unsatisfactory environment, instead let's consider
-mitigating the consequences of malicious and/or (sic!) incompetently written
+So the world is a scary and unsatisfactory environment, let's consider
+mitigating the consequences of malicious and/or incompetently written
 code.
 
 ### Enter [no new privileges](https://www.kernel.org/doc/html/latest/userspace-api/no_new_privs.html)
-Alice's `sudo`-based `rm -f /`-attack can be mitigated by a one-liner:
+Alice's `sudo`-based `rm`-attack can be mitigated by a one-liner:
 [`prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0)`](https://man.archlinux.org/man/prctl.2#PR_SET_NO_NEW_PRIVS).
 This call is not expected to fail, but being a conscientious developer it never
 hurts to crash-don't-thrash and I present a
@@ -110,24 +112,24 @@ void no_new_privs(void)
     }
 }
 ```
-You might have used (or prefer) [`exit`](https://man.archlinux.org/man/exit.3a).
+You might prefer [`exit`](https://man.archlinux.org/man/exit.3a).
 I don't: [libc](https://libc.org):s commonly provide
 [`atexit`](https://man.archlinux.org/man/atexit.3)
 which in my opinion is contrary to a fail-early/crash-don't-thrash philosophy:
 the operating system already has to assume the responsibility of clean up
-after a failing process:
-ever noticed that C coders don't free their allocations when exiting?
+after a failing process.
+(Ever noticed that C coders don't free their allocations when exiting?)
 Using `exit` and `atexit` reminds me of languages with exceptions and the
-nightmare when exception handlers raise exceptions, ad inifitum.
+nightmare when exception handlers raise exceptions ad infinitum.
 Instead consider programming models where failure-is-always-an-option thinking
-is prevalent.
-Consider the actor model where the non-delivery of a message is a scenario
+is prevalent, such as the actor model:
+where the non-delivery of a message is a scenario
 brought to the forefront (with the real-world scenario of the fallibility of
 network connections).
 If you are curious I recommend [Erlang](https://www.erlang.org/)
 (check out [Learn You Some Erlang for great good!](https://learnyousomeerlang.com/)).
 (Erlang does not implement the Actor model in a strict way, but provide a very
-enjoyable way to explore its concepts while writing useful highly concurrent
+enjoyable way to explore its concepts while writing highly concurrent
 applications.)
 
 Back to mitigating Alice's attacks: the above
@@ -156,8 +158,8 @@ mitigation useful:
 ```lua
 os.execute = function() error("not allowed") end
 ```
-Especially since the mitigation I suggest below produces a far less
-user-friendly error message.
+Especially since the mitigation I suggest below do not even allow for the
+program to try to provide a user-friendly error message.
 
 ### Enter [seccomp](https://www.kernel.org/doc/html/latest/userspace-api/seccomp_filter.html)
 Seccomp is Linux's way of filtering syscalls and so limiting the exposed
@@ -174,15 +176,16 @@ mailing lists I recommend:
 
 The simplest seccomp filters are essentially accept/reject lists, but they can
 do more complex things.
-But when it comes to security: easily understandable code is always preferred.
+But as always when it comes to security:
+easily understandable code is always preferred.
 
 Back to Alice's `os.execute`-based attacks:
 with seccomp enabled with a filter that forbids `exec`:s,
 the kernel will politely kill your process and suggest to the rest of the
 system that you received a `SIGSYS` signal.
 In practice this means that your process immediately vanishes, so without a
-syscall inspection tool such as `strace` one is reduced to debugging by
-Thou shalt `printf("are we nearly here yet?")`.
+syscall inspection tool such as `strace` one is reduced to debugging by:
+thou shalt `printf("are we nearly here yet?");`
 
 ### Enter [strace](https://man.archlinux.org/man/strace.1)
 If you haven't invoked strace before, or you are curious what syscalls are
@@ -211,7 +214,7 @@ almost as trivial piece of code:
 strace -f lua -e 'os.execute("echo hello")'
 strace -f python -c 'import os; os.system("echo hello")'
 ```
-Note the `-f` (`--follow-forks`) option that tells `strace` continue tracing
+Note the `-f` (`--follow-forks`) option that tells `strace` to continue tracing
 spawned child processes.
 And now we look for
 [`clone`](https://man.archlinux.org/man/clone.2) (the syscall that implements
@@ -227,20 +230,20 @@ execve("/bin/sh", ["sh", "-c", "echo hello"], 0x7ffebf549aa8 /* 52 vars */) = 0
 ```
 
 So why not reject `clone` as well?
-Remember, in Linux threads and processes are the same abstraction, one with
-shared virtual memory space and the other without.
-Now both threads as well as processes are no longer things you need to reason
-about.
+Remember, in Linux threads and processes are the same abstraction:
+essentially one with shared virtual memory space and the other without
+(but even a casual glance at clone's options makes the difference no longer so
+clear cut).
+Now with `clone` rejected: both threads as well as processes are no longer
+things you need to reason about.
+
+So how do we actually tell seccomp what to accept and what to reject?
 
 ### Enter [Berkeley Packet Filters](https://www.kernel.org/doc/html/latest/bpf/index.html)
 Seccomp filters are expected to be binary representations of
 [cBPF](https://www.kernel.org/doc/Documentation/networking/filter.txt), the c
 stands for "classic" BPF (in contrast with
 extended BPF ([eBPF](https://www.kernel.org/doc/html/latest/bpf/index.html)).
-For instance it might be useful to reject a syscall, return `-1` and set
-`errno` to `EPERM` or `ENOSYS` to allow a child to recover:
-see for example the `prlimit` check in
-[`hnode`'s seccomp filter](https://github.com/rootmos/h/blob/6ed41b19839291fe4ca404cb5c315223a0f72ec2/hnode/filter.bpf#L76).
 
 While cBPF is not theoretically Turing complete
 because of lack of infinite memory; it is restricted to the scratch memory:
@@ -295,6 +298,12 @@ jmp bad
 fcntl_end:
 ```
 
+Sometimes it may be useful to "tamper" with a syscall instead of rejecting it
+outright:
+return `-1` and set `errno` to `EPERM` or `ENOSYS` to allow a child to recover:
+see for example the `prlimit` check in
+[`hnode`'s seccomp filter](https://github.com/rootmos/h/blob/6ed41b19839291fe4ca404cb5c315223a0f72ec2/hnode/filter.bpf#L76).
+
 Doing the "test-n-strace" dance for a non-trivial test-case you quickly end up
 with a filter usually including the
 `read`, `write` and `close` syscalls.
@@ -307,13 +316,14 @@ in a "everything is a file" system?
 The syscall filtering way of expressing this is
 [seccomp's strict mode](https://man.archlinux.org/man/seccomp.2#SECCOMP_SET_MODE_STRICT):
 only allow `write` and `exit`. The reasoning being is that you are only allowed
-to `write` to *already opened* file descriptors. (Note that in this setting
-`open` is forbidden, or more accurately not expressively allowed.)
+to `write` to *already opened* file descriptors (since in this setting
+`open` is forbidden, or more accurately not expressively allowed).
 
-But even moderately interesting Lua applications enjoy using `require`. So it's
-not unreasonable to allow Lua to `open` files (which fills in the number `2`
-syscall numbering slot).
-But then Alice changes her `fun.lua` game to include (obfuscated):
+But even moderately interesting Lua applications enjoy using
+[`require`](https://www.lua.org/manual/5.4/manual.html#pdf-require).
+So it's not unreasonable to allow Lua to `open` files (which fills in the
+number `2` syscall numbering slot).
+But then Alice changes her `fun.lua` game to include (obfuscated of course):
 ```lua
 io.open(os.getenv("HOME") .. "/.aws/credentials", "r"):read("*a")
 ```
@@ -321,17 +331,17 @@ Now Alice has to get this information back to her, but maybe it's a
 multiplayer game? Or she obfuscates it in the game's log file and exclaims:
 "Oh the game crashed, why don't you send me the logs?"
 
-But Alice's intentions might only go as far as
+Alice's intentions might only go as far as
 [griefing](https://en.wikipedia.org/wiki/Griefing), and she will try to
 `os.remove` your access tokens.
-(Alice: try removing Chrome/Firefox cookies as well.
-This would definitely lose me my sunny disposition.)
+Alice, try removing Chrome/Firefox cookies as well.
+This would definitely lose me my sunny disposition.
 
 Removing files map to the [`unlink`](https://man.archlinux.org/man/unlink.2)
 syscall.
-Certainly it commonly makes sense to reject that syscall,
+Certainly it commonly makes sense to reject it,
 but a plausible scenario is using `unlink` is to remove intermediately
-created files (during compilation or other).
+created files (during compilation maybe).
 
 So what do we do about Alice's intent to remove your
 `with-blood-sweat-and-tears.doc` file?
@@ -340,8 +350,8 @@ So what do we do about Alice's intent to remove your
 Landlock is a fairly recently added security feature, which is meant to
 restrict filesystem access for unprivileged processes, in addition to the
 standard UNIX file permissions.
-I will argue landlock is fairly recent when its new syscalls have, at the time
-of writing: [the highest syscall number](https://git.musl-libc.org/cgit/musl/tree/arch/x86_64/bits/syscall.h.in?h=v1.2.3&id=7a43f6fea9081bdd53d8a11cef9e9fab0348c53d#n355).
+(I will argue landlock is fairly recent when its new syscalls have, at the time
+of writing: [the highest syscall number](https://git.musl-libc.org/cgit/musl/tree/arch/x86_64/bits/syscall.h.in?h=v1.2.3&id=7a43f6fea9081bdd53d8a11cef9e9fab0348c53d#n355).)
 
 In essence [landlock](https://man.archlinux.org/man/landlock.7)
 grants or restricts rights to filesystem operations
@@ -362,7 +372,7 @@ Therefore I will not include any sample code here since the
 is excellent, and is relatively
 [verbatim what I use](https://github.com/rootmos/libr/blob/master/modules/landlock.c).
 My experienced ratio of positive security impact versus time spent learning
-the feature is huge: 5/5 will use again.
+the feature is huge.
 
 My one criticism of the current implementation of landlock is the inability
 to hide files: that is, even though landlock restricts access to a
@@ -374,7 +384,7 @@ can enable an attacker to target her attack more effectively against the
 discovered files.
 
 Furthermore an attacker can, given enough access to
-(read: lots, lots, and lots of)
+(lots, lots and lots of)
 system time, enumerate your entire file tree.
 This is of course a ridiculous endeavour;
 [`#define NAME_MAX 255`](https://git.musl-libc.org/cgit/musl/tree/include/limits.h?h=v1.2.3&id=7a43f6fea9081bdd53d8a11cef9e9fab0348c53d#n45)
@@ -382,27 +392,27 @@ and [`pp`](tools/pp) `('z'-'a')+('Z'-'A')+('9'-'0')` says that the amount of
 filenames to try are *bounded from below* by
 [`59^255`](https://www.wolframalpha.com/input?i=59%5E255):
 which evaluates to an integer that starts with `36920` and ends with `89299`
-(not mentioning the other `442` digits).
+(not mentioning the other 442 digits).
 
 The counter-argument is that there are other, perhaps better, ways of achieving
 this functionality
-([`chroot`](https://man.archlinux.org/man/chroot.2.en) maybe?),
+([`chroot`](https://man.archlinux.org/man/chroot.2.en) maybe),
 reducing my criticism to a mere down-prioritized item on a wishlist.
 
 The wrinkle in our concrete setting of providing script hosts is that sometimes
 the interpreters want to dynamically load shared libraries which boast a
 notorious elusiveness and never appear in the same place twice
-([which implies we know their velocity](https://en.wikipedia.org/wiki/Uncertainty_principle)).
+([which implies we at least know their velocity](https://en.wikipedia.org/wiki/Uncertainty_principle)).
 Hence I have added a set of tools to, at compile time,
-tell `hpython`'s landlock rules to allow read access to the path where the
-embedded `python` instance will look for, say, the `libz` library.
+tell [`hpython`](hpython)'s landlock rules to allow read access to the path
+where the embedded Python instance will look for, say, the `libz` library.
 This is the functionality exercised in
 [`hpython`'s `import` test](hpython/test/import).
-The tool-chain starts with the [`paths`](tools/paths) utility:
+The journey starts with the [`paths`](tools/paths) utility:
 ```shell
 paths --python-site -lz
 ```
-which, for my Arch Linux system, suggest that these file system trees are of
+which for my system suggest that these file system trees are of
 particular interest:
 ```
 /usr/lib/python3.10
@@ -414,12 +424,15 @@ The paths are then
 [inspected and converted into a relevant landlock rules code snippet](tools/landlockc)
 which is then included and applied in the main program.
 
-Continuing the same wrinkle into the [`hsh`](hsh) project:
+Continuing the same wrinkle into the [`hsh`](hsh) project
 which [executes a `bash`](https://man.archlinux.org/man/core/man-pages/fexecve.3.en)
-in the same security setting as the other script hosts programs.
-Being a fully-fledged shell do-it-all binary it desires to link quite a bit
+in the same security setting as the other script hosts programs
+produce another complication.
+Being a fully-fledged shell it desires to link quite a bit
 of dynamic libraries, which in turn desire even more of that shared binary
-goodness: `ldd /bin/bash` expose the end of their desire:
+goodness.
+[`ldd /bin/bash`](https://man.archlinux.org/man/ldd.1) expose the extent of
+their desire:
 ```
      linux-vdso.so.1 (0x00007ffe3bed2000)
      libreadline.so.8 => /usr/lib/libreadline.so.8 (0x00007f45e8bcc000)
@@ -430,14 +443,15 @@ goodness: `ldd /bin/bash` expose the end of their desire:
 ```
 That indeed is a wrinkle to iron out given the
 [diversity of Linux distributions](https://en.wikipedia.org/wiki/Linux_distribution#/media/File:Linux_Distribution_Timeline_21_10_2021.svg).
-My [`sed`-mid-legs twitch](https://en.wikipedia.org/wiki/The_Metamorphosis)
+My [`awk`-front-leds and `sed`-mid-legs twitch](https://en.wikipedia.org/wiki/The_Metamorphosis)
 but there is a better approach using [`objdump`](https://man.archlinux.org/man/ldd.1#Security):
 ```shell
 objdump -p /path/to/program | grep NEEDED
 ```
 which said insect has bundled into the [`poor_ldd`](tools/poor_ldd) utility
 (using the above mentioned [`dlinfo`](https://man.archlinux.org/man/dlinfo.3)
-based [`lib`](tools/lib.c) utility); `poor_ldd /bin/bash`:
+based [`lib`](tools/lib.c) utility).
+Now `poor_ldd /bin/bash` produce a similar output as `ldd`:
 ```
 /lib64/ld-linux-x86-64.so.2
 /usr/lib/libc.so.6
@@ -448,15 +462,17 @@ based [`lib`](tools/lib.c) utility); `poor_ldd /bin/bash`:
 which then can be handed of to [landlockc](tools/landlockc) and grant a very
 limited set of read-access rules.
 
+Alice's set attack vectors are now quite diminished, but we can do even better.
+
 ### Enter [drop capabilities](https://man.archlinux.org/man/capabilities.7)
-Lastly I have included a [code snippet](build/capabilities.c) to drop all
-capabilities.
+I have included a [code snippet](build/capabilities.c) to drop capabilities.
 This is a Linux feature I previously hadn't had the need to explore (so take
-that code and what comes next with a grain of salt and trust, but verify).
+that code and what comes next with a grain of salt and always:
+"trust, but verify").
 The classic selling point of capabilities is the scenario to allow unprivileged
 users to run `ping`.
 In a pre-capabilities world one would have to have to obtain the full
-power of the privileged user (read: `root`) in order to use `ping`.
+power of the privileged user (`root`) in order to use `ping`.
 Of course `setsuid` reduces the mess of every user `su`:ing, but still
 provides a nice potential attack vector on the `ping` binary.
 The capabilities is basically the idea to split `root` into separate, well,
@@ -464,12 +480,13 @@ capabilities that can be granted independently.
 (`ping` requires the [`CAP_NET_RAW`](https://man.archlinux.org/man/capabilities.7.en#CAP_NET_RAW)
 capability).
 
-In this project this scenario isn't really applicable. But what is applicable
-is the functionality to relinquish granted capabilities from the current
-process.
+In this project this scenario isn't really applicable
+(since we start out as unprivileged users.)
+But what may be applicable is the functionality to relinquish granted
+capabilities from the current process.
 Maybe this sounds convoluted, but in our current Dockerized world I would say
 its fairly common to see images invoke executables in a privileged mode
-(as `root`).
+(i.e. [not setting another user](https://docs.docker.com/engine/reference/builder/#user)).
 
 And a noteworthy configuration option of Linux is that you don't have to include
 the bothersome userland. Here I imagine a barebones server setup: the kernel,
@@ -480,9 +497,9 @@ In that setting dropping capabilities could be useful.
 But even with these restrictions Alice can cause quite a bother:
 
 ### Enter [rlimits](https://man.archlinux.org/man/core/man-pages/setrlimit.2.en)
-Now Alice is restricted to using a restricted set of syscalls and restricted
-to a pre-approved set of file-system operations on an equally pre-approved
-subset of the file-system tree.
+Now Alice is restricted to using a pre-approved set of syscalls
+and restricted to a pre-approved set of file-system operations on an
+equally pre-approved subset of the file-system tree.
 
 Her last-ditch effort is to execute a
 [Denial-of-service attack](https://en.wikipedia.org/wiki/Denial-of-service_attack).
@@ -507,16 +524,19 @@ instance: [`node`](hnode) is determined to spawn worker threads making such a
 mitigation ineffective.
 Once more rlimits come to the rescue:
 [`RLIMIT_NPROC`](https://man.archlinux.org/man/core/man-pages/setrlimit.2.en#RLIMIT_NPROC)
-restricts the number of process a process can spawn (including threads).
+restricts the number of process a process can spawn
+(including threads of course).
 
 Alice, your next attack vector should be to exhaust any available block-devices
 by creating huge files with your pseduo-random generator.
 But again rlimits provides the mitigation:
 [`RLIMIT_FSIZE`](https://man.archlinux.org/man/core/man-pages/setrlimit.2.en#RLIMIT_FSIZE).
-The pattern is obvious: restrict all available `rlimits` to the minimum
+
+The pattern should be obvious: restrict all available `rlimits` to the minimum
 required to make the intended functionality succeed.
 The [code-snippet used](https://github.com/rootmos/libr/blob/master/modules/rlimit.c)
-to restrict the `rlimits` sets any limits not expressively raised to zero.
+to restrict the `rlimits` zeroes any resource restriction not expressively
+required non-zero limit.
 Check the `#define RLIMIT_DEFAULT_`:s at the top of [hlua](hlua/main.c),
 [hpython](hpython/hpython.c) and [hnode](hnode/main.cpp).
 Again we encounter the [principle of least privilege](https://en.wikipedia.org/wiki/Principle_of_least_privilege).
@@ -526,8 +546,8 @@ attack is no longer viable:
 [`RLIMIT_NOFILE`](https://man.archlinux.org/man/core/man-pages/setrlimit.2.en#RLIMIT_NOFILE).
 
 ### Conclusion
-Given Alice's game you're itching to play regardless of her malicious intent:
-do you now feel safe to evaluate her code?
+So given Alice's game you're itching to play regardless of her malicious intent:
+do you now feel safe enough to evaluate her code?
 - We can enforce a list of allowed syscalls and their arguments using
   [seccomp](#enter-berkeley-packet-filters)
 - We can impose an additional layer of access restriction upon the file
@@ -535,14 +555,14 @@ do you now feel safe to evaluate her code?
 - We can enforce [strict resource usage limits](#enter-rlimits) on:
   memory usage, file-descriptor and thread/processes allocation
 
-You might feel safe: but what
+You might feel safe enough: but what
 [surreal thing will she think of next](https://cs.stanford.edu/~knuth/sn.html)‽
 
 ## Frequently unasked questions
 - "No, but seriously, why not `sudo docker`?"<br>
   Yes, and seriously, no `sudo`, but yes Docker. My opinion is that Docker is
   great (for me `Docker := cgroups+overlayfs` packaged into a sleek product,
-  but that's fine), especially in professional (CI/Kubernetes/what-have-you)
+  but that's fine), especially in professional CI/Kubernetes/what-have-you
   settings. With this project I want to showcase a Linux way of sandboxing
   applications *unprivileged*: hence no `sudo`, but yes Docker.
   Also my guiding principle (other than "trust, but verify" that is);
@@ -553,22 +573,22 @@ You might feel safe: but what
   want to spend the time to study each of them and mess up anyway.
   Also my aim for this project to be an educational showcase and a sandbox to
   let users experiment and get hands on experience with the Linux security
-  features in a non-toy setting: reduce the value of a pre-built binary package
-  distributed without the sources and tools.
-  The laziness argument coupled with this aim argument guides me to only offer
+  features in a non-toy setting: reducing the value of a pre-built binary
+  package distributed without the sources and tools.
+  The laziness argument coupled with this argument guides me to only offer
   source packages: mostly as a guide for users who do not feel comfortable to
-  jump straight into the deep end with `git clone` and `make`.
+  jump into the deep end with `git clone` and `make`.
 
 ## Installation and build instructions
 
 ### Building from sources
-This project is intended to be built using `Makefile`:s and common `c` build
+This project is intended to be built using `Makefile`:s and common C build
 tools, except for the `bpf_asm` tool (found in the
 [Linux kernel sources](https://github.com/torvalds/linux/tree/master/tools/bpf)).
 Arch Linux users can use the [`bpf`](https://archlinux.org/packages/community/x86_64/bpf/)
 package, but other distributions might have to build their own copies.
 I have prepared a [build script](tools/bpf/build) which is used when `bpf_asm`
-is not found (the script is used in the Ubuntu CI-job).
+is not found (the script is used in the Ubuntu workflow job).
 
 The steps to build the project is then:
 ```shell
@@ -616,3 +636,4 @@ subfolder) without a system-wide installation.
 - [ ] [readline](https://en.wikipedia.org/wiki/GNU_Readline) or naive
   [REPL](https://en.wikipedia.org/wiki/Read%E2%80%93eval%E2%80%93print_loop)
   with [rlwrap](https://github.com/hanslub42/rlwrap)
+- [ ] reference [OpenBSD's pledge(2)](https://man.openbsd.org/pledge.2)

@@ -31,14 +31,14 @@ Assume Alice is a game designer with malicious intent and you are her intended
 victim.
 Being a fan of indie games you, of course, accept to be a beta-tester for her
 latest creation.
-So she sends you the `fun.lua` game and hidden within is the statement:
+She sends you the `fun.lua` game and hidden within is the statement:
 ```lua
 os.execute("sudo rm -rf --no-preserve-root /")
 ```
-(or maybe she'll try `sudo --askpass` if the credentials aren't cached).
+(or she'll try `sudo --askpass` if the credentials aren't cached).
 A diligent code-reviewer might catch such an obviously malicious
-statement, but such a statement can be surprisingly easy to miss in a hurried
-glance (try to allow yourself only a few seconds to read the following):
+statement, but it can be surprisingly easy to miss in a hurried
+glance; try to allow yourself only a few seconds to read the following:
 ```lua
 function run(cmdline)
     local s = os.getenv("SUDO")
@@ -54,7 +54,9 @@ function clean_cache()
     run(string.format("rm -r %s/%s", cache, project))
 end
 ```
-Then there are programming languages
+Did you see the malicious/unintended transposition?
+(Don't feel bad, this is the hardships presented to us by the PR-culture.)
+Now there are programming languages
 [designed to be difficult to read](https://esolangs.org/wiki/Esoteric_programming_language#Obfuscation).
 And speaking of programming languages: "the greatest thing about Lua is that
 you don't have to write Lua."

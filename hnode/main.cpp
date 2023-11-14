@@ -265,7 +265,7 @@ int main(int argc, char* argv[])
                 if(more) continue;
 
                 debug("emit before exit");
-#if (NODE_MAJOR_VERSION == 19)
+#if (NODE_MAJOR_VERSION >= 19)
                 node::EmitProcessBeforeExit(env.get());
 #elif (NODE_MAJOR_VERSION == 12)
                 node::EmitBeforeExit(env.get());
@@ -278,7 +278,7 @@ int main(int argc, char* argv[])
         }
 
         debug("emit exit");
-#if (NODE_MAJOR_VERSION == 19)
+#if (NODE_MAJOR_VERSION >= 19)
         exit_code = node::EmitProcessExit(env.get()).FromJust();
 #elif (NODE_MAJOR_VERSION == 12)
         exit_code = node::EmitExit(env.get());
@@ -312,7 +312,7 @@ int main(int argc, char* argv[])
     v8::V8::Dispose();
 
     debug("dispose platform");
-#if (NODE_MAJOR_VERSION == 19)
+#if (NODE_MAJOR_VERSION >= 19)
     v8::V8::DisposePlatform();
     node::TearDownOncePerProcess();
 #elif (NODE_MAJOR_VERSION == 12)

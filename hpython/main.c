@@ -114,11 +114,6 @@ int main(int argc, char* argv[])
 
     seccomp_apply_filter();
 
-    wchar_t *pgr = Py_DecodeLocale(argv[0], NULL);
-    CHECK_NOT(pgr, NULL, "Py_DecodeLocale(%s)", argv[0]);
-    Py_SetProgramName(pgr);
-    PyMem_RawFree(pgr);
-
     PyPreConfig preconfig;
     PyPreConfig_InitIsolatedConfig(&preconfig);
     PyStatus s = Py_PreInitialize(&preconfig);
@@ -126,9 +121,14 @@ int main(int argc, char* argv[])
 
     PyConfig config;
     PyConfig_InitIsolatedConfig(&config);
+
+    config.program_name = Py_DecodeLocale(argv[0], NULL);
+    CHECK_NOT(config.program_name, NULL, "Py_DecodeLocale(%s)", argv[0]);
+
     s = Py_InitializeFromConfig(&config);
     CHECK_PYTHON(s, "Py_InitializeFromConfig");
     PyConfig_Clear(&config);
+    PyMem_RawFree(config.program_name);
 
     debug("opening input file: %s", o.input);
     FILE* f = fopen(o.input, "r");

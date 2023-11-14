@@ -14,15 +14,9 @@ jeq #$__NR_dup2, good
 jeq #$__NR_readlink, good
 
 jne #$__NR_mmap, mmap_end
-ld [$$offsetof(struct seccomp_data, args[4])$$]
-jne #-1, bad
 ld [$$offsetof(struct seccomp_data, args[2])$$]
 jset #$PROT_EXEC, bad
-ld [$$offsetof(struct seccomp_data, args[3])$$]
-jeq #$$(MAP_PRIVATE|MAP_ANONYMOUS)$$, good
-jeq #$$(MAP_PRIVATE|MAP_ANONYMOUS|MAP_STACK)$$, good
-jeq #$$(MAP_PRIVATE|MAP_ANONYMOUS|MAP_NORESERVE)$$, good
-jmp bad
+jmp good
 mmap_end:
 
 # NB: this allows PROT_EXEC
@@ -86,6 +80,7 @@ jeq #$__NR_capget, good
 jeq #$__NR_epoll_create1, good
 jeq #$__NR_epoll_ctl, good
 jeq #$__NR_epoll_wait, good
+jeq #$__NR_epoll_pwait, good
 
 jeq #$__NR_pipe2, good
 jeq #$__NR_eventfd2, good
@@ -101,6 +96,10 @@ jeq #$__NR_clone3, good
 # TODO
 jeq #$__NR_rseq, good
 jeq #$__NR_set_robust_list, good
+
+# TODO
+jeq #$__NR_io_uring_setup, good
+jeq #$__NR_io_uring_enter, good
 
 jeq #$__NR_tgkill, good
 jeq #$__NR_exit, good

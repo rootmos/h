@@ -2,7 +2,7 @@ name: Build and test
 on:
   push:
   schedule:
-    - cron: "* * 7 * *"
+    - cron: "0 0 7 * *"
 
 jobs:
   ubuntu:

@@ -14,15 +14,15 @@ cd "$SCRIPT_DIR"
 
 URL="https://gitlab.archlinux.org/archlinux/packaging/packages/nodejs/-/raw/main/PKGBUILD"
 echo 1>&2 "PKGBUILD URL: $URL"
-wget -O"PKGBUILD" "$URL"
-#cp "$SCRIPT_DIR/PKGBUILD" .
+wget -q -O"PKGBUILD" "$URL"
 
 echo 1>&2 "PKGBUILD SHA256: $(sha256sum PKGBUILD | cut -f1 -d' ')"
 
 cp PKGBUILD PKGBUILD.shared
 
-sed -i "s/pkgname=nodejs/pkgname=nodejs-shared\\nconflicts=(nodejs)/" PKGBUILD.shared
+sed -i "s/pkgname=nodejs/pkgname=nodejs-shared\\nconflicts=('"'"'nodejs'"'"')/" PKGBUILD.shared
 sed -i "s,./configure,./configure --shared," PKGBUILD.shared
+sed -i 's/^makedepends=\(.*\)$/makedepends=\1\nmakedepends+=('"'"'g++'"'"')/' PKGBUILD.shared
 
 SHA256=$(sha256sum PKGBUILD.shared | cut -f1 -d' ')
 echo "PKGBUILD.shared SHA256: $SHA256"

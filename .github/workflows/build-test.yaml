@@ -82,6 +82,16 @@ jobs:
       with:
         fetch-depth: 0
 
+    - name: install libnode
+      run: build/archlinux/node/install-libnode
+
+    - name: Archive nodejs' PKGBUILD.shared
+      uses: actions/upload-artifact@v3
+      with:
+        name: nodejs.PKGBUILD.shared.${{github.sha}}
+        retention-days: 7
+        path: "build/archlinux/node/PKGBUILD.shared"
+
     - name: Create an unprivileged user
       run: |
         useradd -m $UNPRIVILEGED

@@ -1,0 +1,37 @@
+#!/bin/bash
+
+set -o nounset -o pipefail -o errexit
+
+SCRIPT_DIR=$(readlink -f "$0" | xargs dirname)
+
+if grep -cq libnode <(pacman -Ql nodejs); then
+    echo 1>&2 "libnode found in official package"
+    exit 0
+fi
+echo 1>&2 "libnode not found in official package"
+
+cd "$SCRIPT_DIR"
+
+URL="https://gitlab.archlinux.org/archlinux/packaging/packages/nodejs/-/raw/main/PKGBUILD"
+echo 1>&2 "PKGBUILD URL: $URL"
+wget -O"PKGBUILD" "$URL"
+#cp "$SCRIPT_DIR/PKGBUILD" .
+
+echo 1>&2 "PKGBUILD SHA256: $(sha256sum PKGBUILD | cut -f1 -d' ')"
+
+cp PKGBUILD PKGBUILD.shared
+
+sed -i "s/pkgname=nodejs/pkgname=nodejs-shared\\nconflicts=(nodejs)/" PKGBUILD.shared
+sed -i "s,./configure,./configure --shared," PKGBUILD.shared
+
+SHA256=$(sha256sum PKGBUILD.shared | cut -f1 -d' ')
+echo "PKGBUILD.shared SHA256: $SHA256"
+
+makepkg -si --noconfirm
+
+pkgname=$(. PKGBUILD.shared; echo "$pkgname")
+pkgver=$(. PKGBUILD.shared; echo "$pkgver")
+pkgrel=$(. PKGBUILD.shared; echo "$pkgrel")
+PACKAGE="$pkgname-$pkgver-$pkgrel-x86_64.pkg.tar.zst"
+
+echo 1>&2 "$PACKAGE: $(sha256sum "$PACKAGE" | cut -f1 -d' ')"

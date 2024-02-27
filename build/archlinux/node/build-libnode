@@ -3,13 +3,6 @@
 set -o nounset -o pipefail -o errexit
 
 SCRIPT_DIR=$(readlink -f "$0" | xargs dirname)
-
-if grep -cq libnode <(pacman -Ql nodejs); then
-    echo 1>&2 "libnode found in official package"
-    exit 0
-fi
-echo 1>&2 "libnode not found in official package"
-
 cd "$SCRIPT_DIR"
 
 URL="https://gitlab.archlinux.org/archlinux/packaging/packages/nodejs/-/raw/main/PKGBUILD"
@@ -20,8 +13,8 @@ echo 1>&2 "PKGBUILD SHA256: $(sha256sum PKGBUILD | cut -f1 -d' ')"
 
 cp PKGBUILD PKGBUILD.shared
 
-sed -i "s/pkgname=nodejs/pkgname=nodejs-shared\\nconflicts=('"'"'nodejs'"'"')/" PKGBUILD.shared
-sed -i "s,./configure,./configure --shared," PKGBUILD.shared
+sed -i 's/pkgname=nodejs/pkgname=nodejs-shared\nconflicts=('"'"'nodejs'"'"')/' PKGBUILD.shared
+sed -i 's,./configure,./configure --shared,' PKGBUILD.shared
 sed -i 's/^makedepends=\(.*\)$/makedepends=\1\nmakedepends+=('"'"'g++'"'"')/' PKGBUILD.shared
 
 SHA256=$(sha256sum PKGBUILD.shared | cut -f1 -d' ')

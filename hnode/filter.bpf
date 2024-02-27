@@ -34,6 +34,7 @@ jeq #$__NR_futex, good
 jeq #$__NR_getrandom, good
 
 jeq #$__NR_newfstatat, good
+jeq #$__NR_fstat, good
 jeq #$__NR_statx, good
 
 jeq #$__NR_getpid, good

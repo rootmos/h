@@ -11,6 +11,7 @@ jeq #$__NR_read, good
 jeq #$__NR_write, good
 jeq #$__NR_close, good
 jeq #$__NR_newfstatat, good
+jeq #$__NR_fstat, good
 jeq #$__NR_lseek, good
 jeq #$__NR_unlink, good
 

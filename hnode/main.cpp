@@ -4,7 +4,7 @@
 #include <uv.h>
 
 #define RLIMIT_DEFAULT_CPU (1<<2)
-#define RLIMIT_DEFAULT_DATA (1<<25)
+#define RLIMIT_DEFAULT_DATA (1<<26)
 #define RLIMIT_DEFAULT_NOFILE (1<<5)
 #define RLIMIT_DEFAULT_NPROC (1<<11)
 #define RLIMIT_DEFAULT_RSS (1<<28)

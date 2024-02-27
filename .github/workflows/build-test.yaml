@@ -21,7 +21,7 @@ jobs:
         apt-get install -y --no-install-recommends git sudo gettext-base ca-certificates
 
     - name: Check out repository code
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       with:
         fetch-depth: 0
 
@@ -35,7 +35,7 @@ jobs:
       run: sudo -u $UNPRIVILEGED --preserve-env=WORKDIR env SUDO=sudo build/ubuntu/mk
 
     - name: Archive source package
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: source-package.${{github.sha}}.${{env.ARCH}}
         retention-days: 7
@@ -58,7 +58,7 @@ jobs:
         run hsh
 
     - name: Archive test results
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: success() || failure()
       with:
         name: tests.${{github.sha}}.${{env.ARCH}}
@@ -75,10 +75,20 @@ jobs:
       TEST_OUTPUT_DIR: /tmp/tests
     steps:
     - name: Install minimal dependencies
-      run: pacman -Suy --noconfirm sudo fakeroot binutils which wget git
+      run: pacman -Suy --noconfirm base-devel wget git
+
+    # workaround for upstream nodejs package does not include libnode.so
+    # https://gitlab.archlinux.org/archlinux/packaging/packages/nodejs/-/issues/1
+    - name: Install nodejs-shared
+      env:
+        GH_TOKEN: ${{github.token}}
+      run: |
+        pacman -S --noconfirm github-cli
+        gh --repo rootmos/nodejs-shared release download --pattern "nodejs-shared*x86_64*"
+        pacman --noconfirm -U nodejs-shared*x86_64*
 
     - name: Check out repository code
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       with:
         fetch-depth: 0
 
@@ -92,7 +102,7 @@ jobs:
       run: sudo -u $UNPRIVILEGED build/archlinux/mk
 
     - name: Archive PKGBUILD
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: PKGBUILD.${{github.sha}}
         retention-days: 7
@@ -116,7 +126,7 @@ jobs:
         run hsh
 
     - name: Archive test results
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: success() || failure()
       with:
         name: tests.${{github.sha}}.${{env.ARCH}}

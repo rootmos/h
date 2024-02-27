@@ -9,8 +9,18 @@ import signal
 import subprocess
 import sys
 import tempfile
-import toml
 import uuid
+
+try:
+    import tomllib
+    def toml_load(path):
+        with open(path, "rb") as f:
+            return tomllib.load(f)
+except ImportError:
+    import toml
+    def toml_load(path):
+        with open(path, "r") as f:
+            return toml.load(f)
 
 TOOLS = os.environ.get("TOOLS", os.path.dirname(os.path.realpath(__file__)))
 CAPTURE = os.environ.get("CAPTURE", os.path.join(TOOLS, "capture"))
@@ -68,8 +78,7 @@ class Test:
             raise RuntimeError("unable to read test spec", fn)
         self.fn = fn
 
-        with open(fn, "r") as f:
-            self.spec = toml.load(f)
+        self.spec = toml_load(fn)
         logger.debug(f"test spec: {self.spec}")
 
         self.cwd = os.path.realpath(os.path.dirname(fn))

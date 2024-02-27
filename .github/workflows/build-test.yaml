@@ -82,8 +82,14 @@ jobs:
       with:
         fetch-depth: 0
 
-    - name: install libnode
-      run: build/archlinux/node/install-libnode
+    - name: Create an unprivileged user
+      run: |
+        useradd -m $UNPRIVILEGED
+        chown -R $UNPRIVILEGED:$UNPRIVILEGED .
+        tee -a /etc/sudoers.d/$UNPRIVILEGED <<< "$UNPRIVILEGED ALL = NOPASSWD: $(which pacman)"
+
+    - name: Build libnode
+      run: sudo -u $UNPRIVILEGED build/archlinux/node/build-libnode
 
     - name: Archive nodejs' PKGBUILD.shared
       uses: actions/upload-artifact@v3
@@ -92,11 +98,8 @@ jobs:
         retention-days: 7
         path: "build/archlinux/node/PKGBUILD.shared"
 
-    - name: Create an unprivileged user
-      run: |
-        useradd -m $UNPRIVILEGED
-        chown -R $UNPRIVILEGED:$UNPRIVILEGED .
-        tee -a /etc/sudoers.d/$UNPRIVILEGED <<< "$UNPRIVILEGED ALL = NOPASSWD: $(which pacman)"
+    - name: Install libnode
+      run: pacman -S -p build/archlinux/node/nodejs-shared-*.pkg.tar.zst
 
     - name: Create PKGBUILD
       run: sudo -u $UNPRIVILEGED build/archlinux/mk

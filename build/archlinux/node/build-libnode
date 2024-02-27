@@ -27,7 +27,7 @@ sed -i "s,./configure,./configure --shared," PKGBUILD.shared
 SHA256=$(sha256sum PKGBUILD.shared | cut -f1 -d' ')
 echo "PKGBUILD.shared SHA256: $SHA256"
 
-makepkg -si --noconfirm
+makepkg
 
 pkgname=$(. PKGBUILD.shared; echo "$pkgname")
 pkgver=$(. PKGBUILD.shared; echo "$pkgver")

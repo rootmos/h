@@ -21,7 +21,7 @@ jobs:
         apt-get install -y --no-install-recommends git sudo gettext-base ca-certificates
 
     - name: Check out repository code
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       with:
         fetch-depth: 0
 
@@ -35,7 +35,7 @@ jobs:
       run: sudo -u $UNPRIVILEGED --preserve-env=WORKDIR env SUDO=sudo build/ubuntu/mk
 
     - name: Archive source package
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: source-package.${{github.sha}}.${{env.ARCH}}
         retention-days: 7
@@ -58,7 +58,7 @@ jobs:
         run hsh
 
     - name: Archive test results
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: success() || failure()
       with:
         name: tests.${{github.sha}}.${{env.ARCH}}
@@ -78,7 +78,7 @@ jobs:
       run: pacman -Suy --noconfirm sudo fakeroot binutils which wget git
 
     - name: Check out repository code
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       with:
         fetch-depth: 0
 
@@ -92,7 +92,7 @@ jobs:
       run: sudo -u $UNPRIVILEGED build/archlinux/node/build-libnode
 
     - name: Archive nodejs' PKGBUILD.shared
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: nodejs.PKGBUILD.shared.${{github.sha}}
         retention-days: 7
@@ -105,7 +105,7 @@ jobs:
       run: sudo -u $UNPRIVILEGED build/archlinux/mk
 
     - name: Archive PKGBUILD
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: PKGBUILD.${{github.sha}}
         retention-days: 7
@@ -129,7 +129,7 @@ jobs:
         run hsh
 
     - name: Archive test results
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: success() || failure()
       with:
         name: tests.${{github.sha}}.${{env.ARCH}}

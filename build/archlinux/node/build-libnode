@@ -15,7 +15,7 @@ cp PKGBUILD PKGBUILD.shared
 
 sed -i 's/pkgname=nodejs/pkgname=nodejs-shared\nconflicts=('"'"'nodejs'"'"')/' PKGBUILD.shared
 sed -i 's,./configure,./configure --shared,' PKGBUILD.shared
-sed -i 's/^makedepends=\(.*\)$/makedepends=\1\nmakedepends+=('"'"'gcc'"'"')/' PKGBUILD.shared
+sed -i 's/^makedepends=\(.*\)$/makedepends=\1\nmakedepends+=('"'"'gcc'"'"' '"'"'icu'"'"')/' PKGBUILD.shared
 
 SHA256=$(sha256sum PKGBUILD.shared | cut -f1 -d' ')
 echo "PKGBUILD.shared SHA256: $SHA256"

@@ -17,7 +17,7 @@ sed -i 's/pkgname=nodejs/pkgname=nodejs-shared\nconflicts=('"'"'nodejs'"'"')/' P
 sed -i 's,./configure,./configure --shared,' PKGBUILD.shared
 
 EXTRA_makedepends=
-for d in gcc make icu pkgconf; do
+for d in gcc make icu pkgconf debugedit; do
     if [ -n "$EXTRA_makedepends" ]; then
         EXTRA_makedepends="$EXTRA_makedepends "
     fi
@@ -28,7 +28,10 @@ sed -i 's/^makedepends=\(.*\)$/makedepends=\1\nmakedepends+=('"$EXTRA_makedepend
 SHA256=$(sha256sum PKGBUILD.shared | cut -f1 -d' ')
 echo "PKGBUILD.shared SHA256: $SHA256"
 
-export MAKEFLAGS="-j $(grep -c ^processor /proc/cpuinfo)"
+NCPU=$(grep -c ^processor /proc/cpuinfo)
+J=$((2*NCPU))
+export MAKEFLAGS="-j $J"
+echo 1>&2 "j: $J"
 makepkg -s --noconfirm -p PKGBUILD.shared
 
 pkgname=$(. PKGBUILD.shared; echo "$pkgname")

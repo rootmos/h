@@ -103,7 +103,7 @@ jobs:
         path: "build/archlinux/node/PKGBUILD.shared"
 
     - name: Install libnode
-      run: pacman -U build/archlinux/node/nodejs-shared-*.pkg.tar.zst
+      run: pacman -U --noconfirm build/archlinux/node/nodejs-shared-*.pkg.tar.zst
 
     - name: Create PKGBUILD
       run: sudo -u $UNPRIVILEGED build/archlinux/mk

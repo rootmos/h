@@ -89,7 +89,11 @@ jobs:
         tee -a /etc/sudoers.d/$UNPRIVILEGED <<< "$UNPRIVILEGED ALL = NOPASSWD: $(which pacman)"
 
     - name: Build libnode
-      run: sudo -u $UNPRIVILEGED build/archlinux/node/build-libnode
+      run: |
+          df -h .
+          sudo -u $UNPRIVILEGED build/archlinux/node/build-libnode
+          du -sh .
+          df -h .
 
     - name: Archive nodejs' PKGBUILD.shared
       uses: actions/upload-artifact@v4
@@ -99,7 +103,7 @@ jobs:
         path: "build/archlinux/node/PKGBUILD.shared"
 
     - name: Install libnode
-      run: pacman -S -p build/archlinux/node/nodejs-shared-*.pkg.tar.zst
+      run: pacman -U build/archlinux/node/nodejs-shared-*.pkg.tar.zst
 
     - name: Create PKGBUILD
       run: sudo -u $UNPRIVILEGED build/archlinux/mk

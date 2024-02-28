@@ -28,6 +28,7 @@ sed -i 's/^makedepends=\(.*\)$/makedepends=\1\nmakedepends+=('"$EXTRA_makedepend
 SHA256=$(sha256sum PKGBUILD.shared | cut -f1 -d' ')
 echo "PKGBUILD.shared SHA256: $SHA256"
 
+export MAKEFLAGS="-j $(grep -c ^processor /proc/cpuinfo)"
 makepkg -s --noconfirm -p PKGBUILD.shared
 
 pkgname=$(. PKGBUILD.shared; echo "$pkgname")

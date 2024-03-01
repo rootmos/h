@@ -75,7 +75,7 @@ jobs:
       TEST_OUTPUT_DIR: /tmp/tests
     steps:
     - name: Install minimal dependencies
-      run: pacman -Suy --noconfirm sudo fakeroot binutils which wget git
+      run: pacman -Suy --noconfirm sudo fakeroot binutils which wget git diffutils
 
     - name: Check out repository code
       uses: actions/checkout@v4

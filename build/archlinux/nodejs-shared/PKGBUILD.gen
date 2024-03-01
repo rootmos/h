@@ -15,7 +15,7 @@ echo 1>&2 "$(basename "$ORIGINAL") SHA256: $ORIGINAL_SHA256"
 
 SHARED="$SCRIPT_DIR/PKGBUILD.shared"
 
-cp -v "$ORIGINAL" "$SHARED"
+cp 1>&2 -v "$ORIGINAL" "$SHARED"
 
 sed -i 's/pkgname=nodejs/pkgname=nodejs-shared\nconflicts=('"'"'nodejs'"'"')/' "$SHARED"
 sed -i 's,./configure,./configure --shared,' "$SHARED"
@@ -27,15 +27,15 @@ for d in gcc make icu pkgconf debugedit; do
     fi
     EXTRA_makedepends="$EXTRA_makedepends'$d'"
 done
-sed -i 's/^makedepends=\(.*\)$/makedepends=\1\nmakedepends+=('"$EXTRA_makedepends"')/' PKGBUILD.shared
+sed -i 's/^makedepends=\(.*\)$/makedepends=\1\nmakedepends+=('"$EXTRA_makedepends"')/' "$SHARED"
 
-if diff "$ORIGINAL" "$SHARED"; then
+if diff 1>&2 "$ORIGINAL" "$SHARED"; then
     echo 1>&2 "unexpectedly similar files!"
     exit 1
 fi
 
 SHARED_SHA256=$(sha256sum "$SHARED" | cut -f1 -d' ')
-echo "$(basename "$SHARED") SHA256: $SHARED_SHA256"
+echo 1>&2 "$(basename "$SHARED") SHA256: $SHARED_SHA256"
 
 . "$SHARED"
 

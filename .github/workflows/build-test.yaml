@@ -113,6 +113,13 @@ jobs:
       if: steps.nodejs_shared_cache.outputs.cache-hit != 'true'
       run: sudo -u $UNPRIVILEGED build/archlinux/nodejs-shared/build
 
+    - name: Cache nodejs-shared package
+      if: steps.nodejs_shared_cache.outputs.cache-hit != 'true'
+      uses: actions/cache/save@v4
+      with:
+        path: build/archlinux/nodejs-shared/${{ steps.nodejs_shared_pkgbuild.outputs.pkg }}
+        key: ${{ steps.nodejs_shared_pkgbuild.outputs.pkg }}
+
     - name: Install nodejs-shared
       run: pacman -U --noconfirm build/archlinux/nodejs-shared/${{ steps.nodejs_shared_pkgbuild.outputs.pkg }}
 

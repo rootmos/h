@@ -1,0 +1,43 @@
+#!/bin/bash
+
+set -o nounset -o pipefail -o errexit
+
+SCRIPT_DIR=$(readlink -f "$0" | xargs dirname)
+
+ORIGINAL="$SCRIPT_DIR/PKGBUILD.original"
+
+URL="https://gitlab.archlinux.org/archlinux/packaging/packages/nodejs/-/raw/main/PKGBUILD"
+echo 1>&2 "PKGBUILD URL: $URL"
+wget -q -O"$ORIGINAL" "$URL"
+
+ORIGINAL_SHA256=$(sha256sum "$ORIGINAL" | cut -f1 -d' ')
+echo 1>&2 "$(basename "$ORIGINAL") SHA256: $ORIGINAL_SHA256"
+
+SHARED="$SCRIPT_DIR/PKGBUILD.shared"
+
+cp -v "$ORIGINAL" "$SHARED"
+
+sed -i 's/pkgname=nodejs/pkgname=nodejs-shared\nconflicts=('"'"'nodejs'"'"')/' "$SHARED"
+sed -i 's,./configure,./configure --shared,' "$SHARED"
+
+EXTRA_makedepends=
+for d in gcc make icu pkgconf debugedit; do
+    if [ -n "$EXTRA_makedepends" ]; then
+        EXTRA_makedepends="$EXTRA_makedepends "
+    fi
+    EXTRA_makedepends="$EXTRA_makedepends'$d'"
+done
+sed -i 's/^makedepends=\(.*\)$/makedepends=\1\nmakedepends+=('"$EXTRA_makedepends"')/' PKGBUILD.shared
+
+if diff "$ORIGINAL" "$SHARED"; then
+    echo 1>&2 "unexpectedly similar files!"
+    exit 1
+fi
+
+SHARED_SHA256=$(sha256sum "$SHARED" | cut -f1 -d' ')
+echo "$(basename "$SHARED") SHA256: $SHARED_SHA256"
+
+. "$SHARED"
+
+PACKAGE="$pkgname-$pkgver-$pkgrel-x86_64.pkg.tar.zst"
+echo "$PACKAGE"

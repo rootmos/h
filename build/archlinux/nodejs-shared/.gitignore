@@ -1,0 +1,4 @@
+*.pkg.tar.zst
+
+PKGBUILD.original
+PKGBUILD.shared

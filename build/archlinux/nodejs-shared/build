@@ -1,0 +1,8 @@
+#!/bin/bash
+
+set -o nounset -o pipefail -o errexit
+
+SCRIPT_DIR=$(readlink -f "$0" | xargs dirname)
+cd "$SCRIPT_DIR"
+
+makepkg -s --noconfirm -p PKGBUILD.shared

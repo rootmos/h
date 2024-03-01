@@ -88,22 +88,34 @@ jobs:
         chown -R $UNPRIVILEGED:$UNPRIVILEGED .
         tee -a /etc/sudoers.d/$UNPRIVILEGED <<< "$UNPRIVILEGED ALL = NOPASSWD: $(which pacman)"
 
-    - name: Build libnode
-      run: |
-          df -h .
-          sudo -u $UNPRIVILEGED build/archlinux/node/build-libnode
-          du -sh .
-          df -h .
 
-    - name: Archive nodejs' PKGBUILD.shared
+    - name: Generate nodejs-shared's PKGBUILD
+      id: nodejs_shared_pkgbuild
+      run: |
+          PKG=$(build/archlinux/nodejs-shared/PKGBUILD.gen)
+          echo "pkg=$PKG" >> "$GITHUB_OUTPUT"
+
+    - name: Archive nodejs-shared's PKGBUILD
       uses: actions/upload-artifact@v4
       with:
-        name: nodejs.PKGBUILD.shared.${{github.sha}}
+        name: nodejs-shared.PKGBUILD
         retention-days: 7
-        path: "build/archlinux/node/PKGBUILD.shared"
+        path: "build/archlinux/nodejs-shared/PKGBUILD.shared"
 
-    - name: Install libnode
-      run: pacman -U --noconfirm build/archlinux/node/nodejs-shared-*.pkg.tar.zst
+    - name: Restore nodejs-shared package
+      id: nodejs_shared_cache
+      uses: actions/cache/restore@v4
+      with:
+        path: build/archlinux/nodejs-shared/${{ steps.nodejs_shared_pkgbuild.outputs.pkg }}
+        key: ${{ steps.nodejs_shared_pkgbuild.outputs.pkg }}
+
+    - name: Build nodejs-shared
+      if: steps.nodejs_shared_cache.outputs.cache-hit != 'true'
+      run: sudo -u $UNPRIVILEGED build/archlinux/nodejs-shared/build
+
+    - name: Install nodejs-shared
+      run: pacman -U --noconfirm build/archlinux/nodejs-shared/${{ steps.nodejs_shared_pkgbuild.outputs.pkg }}
+
 
     - name: Create PKGBUILD
       run: sudo -u $UNPRIVILEGED build/archlinux/mk

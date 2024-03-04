@@ -29,6 +29,8 @@ for d in gcc make icu pkgconf debugedit; do
 done
 sed -i 's/^makedepends=\(.*\)$/makedepends=\1\nmakedepends+=('"$EXTRA_makedepends"')/' "$SHARED"
 
+sed -i 's,^\(\s\+\)\(install.*LICENSE.*\)$,\1\2\n\n\1cd "$pkgdir"/usr/lib\n\1ln -s libnode.so.* libnode.so,' "$SHARED"
+
 if diff 1>&2 "$ORIGINAL" "$SHARED"; then
     echo 1>&2 "unexpectedly similar files!"
     exit 1

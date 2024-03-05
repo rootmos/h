@@ -114,7 +114,10 @@ jobs:
 
     - name: Build nodejs-shared
       if: steps.nodejs_shared_cache.outputs.cache-hit != 'true'
-      run: sudo -u $UNPRIVILEGED build/archlinux/nodejs-shared/build
+      run: |
+        df -h
+        sudo -u $UNPRIVILEGED build/archlinux/nodejs-shared/build
+        df -h
 
     - name: Cache nodejs-shared package
       if: steps.nodejs_shared_cache.outputs.cache-hit != 'true'

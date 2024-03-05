@@ -21,7 +21,7 @@ sed -i 's/pkgname=nodejs/pkgname=nodejs-shared\nconflicts=('"'"'nodejs'"'"')/' "
 sed -i 's,./configure,./configure --shared,' "$SHARED"
 
 EXTRA_makedepends=
-for d in gcc make icu pkgconf debugedit; do
+for d in gcc make pkgconf debugedit; do
     if [ -n "$EXTRA_makedepends" ]; then
         EXTRA_makedepends="$EXTRA_makedepends "
     fi

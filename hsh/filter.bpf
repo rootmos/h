@@ -36,6 +36,7 @@ jeq #$__NR_writev, good
 jeq #$__NR_lseek, good
 jeq #$__NR_access, good
 jeq #$__NR_newfstatat, good
+jeq #$__NR_fstat, good
 jeq #$__NR_dup2, good
 jeq #$__NR_readlink, good
 

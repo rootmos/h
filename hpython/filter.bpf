@@ -16,6 +16,7 @@ jeq #$__NR_getrandom, good
 
 jeq #$__NR_openat, good
 jeq #$__NR_newfstatat, good
+jeq #$__NR_fstat, good
 
 jeq #$__NR_getpid, good
 jeq #$__NR_gettid, good

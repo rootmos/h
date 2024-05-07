@@ -18,6 +18,19 @@ jobs:
       - name: Check version
         run: (tools/version -C && echo "RELEASE=1" || echo "RELEASE=") >> "$GITHUB_ENV"
 
+      - name: Check if release already exists
+        if: ${{env.RELEASE == '1'}}
+        run: |
+            set +o errexit
+            (env DRY_RUN=1 .github/release && RC=$?) || RC=$?
+            if [ "$RC" -eq 2 ]; then
+                echo "RELEASE=0" >> "$GITHUB_ENV"
+            elif [ "$RC" -neq 0 ]; then
+                exit "$RC"
+            fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Create artifacts directory
         if: ${{env.RELEASE == '1'}}
         run: |

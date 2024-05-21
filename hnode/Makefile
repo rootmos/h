@@ -7,6 +7,13 @@ LDFLAGS += -lnode
 CFLAGS += $(shell $(PKG_CONFIG) --cflags libuv)
 LDFLAGS += $(shell $(PKG_CONFIG) --libs libuv)
 
+ifeq ($(CXX), g++)
+MAJOR = $(shell g++ -dumpfullversion | cut -d. -f1)
+ifeq ($(shell expr $(MAJOR) \>= 14), 1)
+CFLAGS += -Wno-error=template-id-cdtor
+endif
+endif
+
 EXE ?= hnode
 SRC ?= main.cpp
 

@@ -1,6 +1,7 @@
 ROOT := $(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
 include $(ROOT)/../build/common.makefile
 
+CFLAGS += -std=c++20 # nodejs >= 23.0.0 requires C++20
 CFLAGS += -I/usr/include/node
 LDFLAGS += -lnode
 

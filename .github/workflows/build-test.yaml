@@ -14,6 +14,8 @@ jobs:
       UNPRIVILEGED: ubuntu
       TEST_OUTPUT_DIR: /tmp/tests
       WORKDIR: /tmp/workdir
+      #TRACE: true
+      TIMEOUT: 10
     steps:
     - name: Install minimal dependencies
       run: |
@@ -32,7 +34,7 @@ jobs:
         echo "$UNPRIVILEGED ALL = NOPASSWD: $(which apt-get)" | tee -a /etc/sudoers
 
     - name: Build package
-      run: sudo -u $UNPRIVILEGED --preserve-env=WORKDIR env SUDO=sudo build/ubuntu/mk
+      run: sudo -u $UNPRIVILEGED --preserve-env=WORKDIR,TEST_OUTPUT_DIR,TIMEOUT,TRACE env SUDO=sudo build/ubuntu/mk
 
     - name: Archive source package
       uses: actions/upload-artifact@v4
@@ -48,7 +50,7 @@ jobs:
       run: |
         export TOOLS=$(readlink -f "$WORKDIR"/*/tools)
         run() {
-          sudo -u $UNPRIVILEGED --preserve-env=TEST_OUTPUT_DIR,TOOLS \
+          sudo -u $UNPRIVILEGED --preserve-env=TEST_OUTPUT_DIR,TOOLS,TIMEOUT,TRACE \
             env SUT=$(which $1) SHOW_IDS=1 \
             tools/test-harness -c $1
         }
@@ -73,9 +75,11 @@ jobs:
       ARCH: archlinux
       UNPRIVILEGED: arch
       TEST_OUTPUT_DIR: /tmp/tests
+      #TRACE: true
+      TIMEOUT: 10
     steps:
     - name: Install minimal dependencies
-      run: pacman -Suy --noconfirm base-devel wget git
+      run: pacman -Suy --noconfirm base-devel wget git strace
 
     # workaround for upstream nodejs package does not include libnode.so
     # https://gitlab.archlinux.org/archlinux/packaging/packages/nodejs/-/issues/1
@@ -109,14 +113,14 @@ jobs:
         path: "build/archlinux/PKGBUILD"
 
     - name: Build package
-      run: sudo -u $UNPRIVILEGED makepkg -si --noconfirm
+      run: sudo -u $UNPRIVILEGED --preserve-env=TEST_OUTPUT_DIR,TIMEOUT,TRACE makepkg -si --noconfirm
       working-directory: build/archlinux
 
     - name: Test system installation
       run: |
         export TOOLS=$(readlink -f build/archlinux/src/*/tools)
         run() {
-          sudo -u $UNPRIVILEGED --preserve-env=TEST_OUTPUT_DIR,TOOLS \
+          sudo -u $UNPRIVILEGED --preserve-env=TEST_OUTPUT_DIR,TOOLS,TIMEOUT,TRACE \
             env SUT=$(which $1) SHOW_IDS=1 \
             tools/test-harness -c $1
         }

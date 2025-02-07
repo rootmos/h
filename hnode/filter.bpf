@@ -112,5 +112,10 @@ jeq #$__NR_rt_sigreturn, good
 
 jeq #$__NR_sysinfo, good
 
+jne #$__NR_prctl, bad
+ld [$$offsetof(struct seccomp_data, args[0])$$]
+jset #$$(PR_SET_NAME)$$, good
+jmp bad
+
 bad: ret #$SECCOMP_RET_KILL_THREAD
 good: ret #$SECCOMP_RET_ALLOW

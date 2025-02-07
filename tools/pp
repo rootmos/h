@@ -10,6 +10,7 @@ INCLUDE+=("errno.h")
 INCLUDE+=("linux/unistd.h")
 INCLUDE+=("linux/seccomp.h" "linux/audit.h")
 INCLUDE+=("sys/mman.h" "sys/ioctl.h")
+INCLUDE+=("linux/prctl.h")
 
 LONG=${PP_LONG-l}
 FMT=%${LONG}d

@@ -73,9 +73,11 @@ jobs:
       ARCH: archlinux
       UNPRIVILEGED: arch
       TEST_OUTPUT_DIR: /tmp/tests
+      TRACE: true
+      TIMEOUT: 10
     steps:
     - name: Install minimal dependencies
-      run: pacman -Suy --noconfirm base-devel wget git
+      run: pacman -Suy --noconfirm base-devel wget git strace
 
     # workaround for upstream nodejs package does not include libnode.so
     # https://gitlab.archlinux.org/archlinux/packaging/packages/nodejs/-/issues/1
@@ -109,7 +111,7 @@ jobs:
         path: "build/archlinux/PKGBUILD"
 
     - name: Build package
-      run: sudo -u $UNPRIVILEGED makepkg -si --noconfirm
+      run: sudo -u $UNPRIVILEGED --preserve-env=TEST_OUTPUT_DIR,TIMEOUT,TRACE makepkg -si --noconfirm
       working-directory: build/archlinux
 
     - name: Test system installation

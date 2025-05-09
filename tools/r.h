@@ -1,8 +1,14 @@
-// libr 0.2.0 (c2d53939d7b3587873a08543075063c6590b39bb) (https://github.com/rootmos/libr.git) (2022-11-08T06:46:29+01:00)
+// libr 0.5.2 (20f582ad9ea9fd35f227a0044a599a66ddbd89fc) (https://github.com/rootmos/libr.git) (2025-05-09T09:56:55+02:00)
 // modules: fail logging now util char devnull
 
 #ifndef LIBR_HEADER
 #define LIBR_HEADER
+
+#define LIBR(x) x
+#define PRIVATE __attribute__((visibility("hidden")))
+#define PUBLIC __attribute__((visibility("default")))
+#define API PRIVATE
+
 
 // libr: fail.h
 
@@ -13,26 +19,28 @@
 
 #define CHECK_IF(cond, format, ...) do { \
     if(cond) { \
-        r_failwith(__extension__ __FUNCTION__, __extension__ __FILE__, \
-                   __extension__ __LINE__, 1, \
-                   format "\n", ##__VA_ARGS__); \
+        LIBR(failwith0)(__extension__ __FUNCTION__, __extension__ __FILE__, \
+            __extension__ __LINE__, 1, \
+            format "\n", ##__VA_ARGS__); \
     } \
 } while(0)
 
 #define CHECK_MALLOC(x) CHECK_NOT(x, NULL, "memory allocation failed")
+#define CHECK_MMAP(x) CHECK_NOT(x, MAP_FAILED, "memory mapping failed")
 
 #define failwith(format, ...) \
-    r_failwith(__extension__ __FUNCTION__, __extension__ __FILE__, \
-               __extension__ __LINE__, 0, format "\n", ##__VA_ARGS__)
+    LIBR(failwith0)(__extension__ __FUNCTION__, __extension__ __FILE__, \
+        __extension__ __LINE__, 0, format "\n", ##__VA_ARGS__)
 
-#define not_implemented() failwith("not implemented")
+#define not_implemented() do { failwith("not implemented"); } while(0)
 
-void r_failwith(const char* const caller,
-                const char* const file,
-                const unsigned int line,
-                const int include_errno,
-                const char* const fmt, ...)
-    __attribute__ ((noreturn, format (printf, 5, 6)));
+void LIBR(failwith0)(
+    const char* const caller,
+    const char* const file,
+    const unsigned int line,
+    const int include_errno,
+    const char* const fmt, ...)
+__attribute__ ((noreturn, format (printf, 5, 6)));
 
 // libr: logging.h
 
@@ -49,64 +57,66 @@ void r_failwith(const char* const caller,
 #define LOG_LEVEL LOG_INFO
 #endif
 
+extern int LIBR(logger_fd);
+
 #define __r_log(level, format, ...) do { \
-    r_log(level, __extension__ __FUNCTION__, __extension__ __FILE__, \
+    LIBR(logger)(level, __extension__ __FUNCTION__, __extension__ __FILE__, \
           __extension__ __LINE__, format "\n", ##__VA_ARGS__); \
 } while(0)
 
-#ifdef __cplusplus
-void r_dummy(...);
-#else
-void r_dummy();
-#endif
+API void LIBR(dummy)(int foo, ...);
 
 #if LOG_LEVEL >= LOG_ERROR
 #define error(format, ...) __r_log(LOG_ERROR, format, ##__VA_ARGS__)
 #else
-#define error(format, ...) do { if(0) r_dummy(__VA_ARGS__); } while(0)
+#define error(format, ...) do { if(0) LIBR(dummy)(0, ##__VA_ARGS__); } while(0)
 #endif
 
 #if LOG_LEVEL >= LOG_WARNING
 #define warning(format, ...) __r_log(LOG_WARNING, format, ##__VA_ARGS__)
 #else
-#define warning(format, ...) do { if(0) r_dummy(__VA_ARGS__); } while(0)
+#define warning(format, ...) do { if(0) LIBR(dummy)(0, ##__VA_ARGS__); } while(0)
 #endif
 
 #if LOG_LEVEL >= LOG_INFO
 #define info(format, ...) __r_log(LOG_INFO, format, ##__VA_ARGS__)
 #else
-#define info(format, ...) do { if(0) r_dummy(__VA_ARGS__); } while(0)
+#define info(format, ...) do { if(0) LIBR(dummy)(0, ##__VA_ARGS__); } while(0)
 #endif
 
 #if LOG_LEVEL >= LOG_DEBUG
 #define debug(format, ...) __r_log(LOG_DEBUG, format, ##__VA_ARGS__)
 #else
-#define debug(format, ...) do { if(0) r_dummy(__VA_ARGS__); } while(0)
+#define debug(format, ...) do { if(0) LIBR(dummy)(0, ##__VA_ARGS__); } while(0)
 #endif
 
 #if LOG_LEVEL >= LOG_TRACE
 #define trace(format, ...) __r_log(LOG_TRACE, format, ##__VA_ARGS__)
 #else
-#define trace(format, ...) do { if(0) r_dummy(__VA_ARGS__); } while(0)
+#define trace(format, ...) do { if(0) LIBR(dummy)(0, ##__VA_ARGS__); } while(0)
 #endif
 
-void r_log(int level,
-           const char* const caller,
-           const char* const file,
-           const unsigned int line,
-           const char* const fmt, ...)
-    __attribute__ ((format (printf, 5, 6)));
+void LIBR(logger)(
+    int level,
+    const char* const caller,
+    const char* const file,
+    const unsigned int line,
+    const char* const fmt, ...)
+__attribute__ ((format (printf, 5, 6)));
 
-void r_vlog(int level,
-            const char* const caller,
-            const char* const file,
-            const unsigned int line,
-            const char* const fmt, va_list vl);
+void LIBR(vlogger)(
+    int level,
+    const char* const caller,
+    const char* const file,
+    const unsigned int line,
+    const char* const fmt,
+    va_list vl
+);
 
 // libr: now.h
 
 // returns current time formated as compact ISO8601: 20190123T182628Z
-const char* now_iso8601_compact(void);
+const char* LIBR(now_iso8601_compact)(void);
 
 // libr: util.h
 
@@ -116,6 +126,10 @@ const char* now_iso8601_compact(void);
 
 #ifndef LIT
 #define LIT(x) x,sizeof(x)
+#endif
+
+#ifndef STR
+#define STR(x) x,strlen(x)
 #endif
 
 #ifndef MAX
@@ -156,8 +170,8 @@ inline int is_whitespace(char c)
 
 // libr: devnull.h
 
-int devnull(int flags);
-void devnull2(int fd, int flags);
+int LIBR(devnull)(int flags);
+void LIBR(devnull2)(int fd, int flags);
 #endif // LIBR_HEADER
 
 #ifdef LIBR_IMPLEMENTATION
@@ -169,20 +183,23 @@ void devnull2(int fd, int flags);
 #include <stdio.h>
 #include <string.h>
 
-void r_failwith(const char* const caller,
-                const char* const file,
-                const unsigned int line,
-                const int include_errno,
-                const char* const fmt, ...)
+API void LIBR(failwith0)(
+    const char* const caller,
+    const char* const file,
+    const unsigned int line,
+    const int include_errno,
+    const char* const fmt, ...)
 {
     va_list vl;
     va_start(vl, fmt);
 
     if(include_errno) {
-        r_log(LOG_ERROR, caller, file, line, "(%s) ", strerror(errno));
-        vfprintf(stderr, fmt, vl);
+        LIBR(logger)(LOG_ERROR, caller, file, line, "(%s) ", strerror(errno));
+        if(vdprintf(LIBR(logger_fd), fmt, vl) < 0) {
+            abort();
+        }
     } else {
-        r_vlog(LOG_ERROR, caller, file, line, fmt, vl);
+        LIBR(vlogger)(LOG_ERROR, caller, file, line, fmt, vl);
     }
     va_end(vl);
 
@@ -195,36 +212,42 @@ void r_failwith(const char* const caller,
 #include <unistd.h>
 #include <stdlib.h>
 
-#ifdef __cplusplus
-void r_dummy(...)
-#else
-void r_dummy()
-#endif
+API void LIBR(dummy)(int foo, ...)
 {
     abort();
 }
 
-void r_vlog(int level,
-            const char* const caller,
-            const char* const file,
-            const unsigned int line,
-            const char* const fmt, va_list vl)
-{
-    fprintf(stderr, "%s:%d:%s:%s:%u ",
-            now_iso8601_compact(), getpid(), caller, file, line);
+int LIBR(logger_fd) API = 2;
 
-    vfprintf(stderr, fmt, vl);
+API void LIBR(vlogger)(
+    int level,
+    const char* const caller,
+    const char* const file,
+    const unsigned int line,
+    const char* const fmt, va_list vl)
+{
+    int r = dprintf(LIBR(logger_fd), "%s:%d:%s:%s:%u ",
+        LIBR(now_iso8601_compact)(), getpid(), caller, file, line);
+    if(r < 0) {
+        abort();
+    }
+
+    r = vdprintf(LIBR(logger_fd), fmt, vl);
+    if(r < 0) {
+        abort();
+    }
 }
 
-void r_log(int level,
-           const char* const caller,
-           const char* const file,
-           const unsigned int line,
-           const char* const fmt, ...)
+API void LIBR(logger)(
+    int level,
+    const char* const caller,
+    const char* const file,
+    const unsigned int line,
+    const char* const fmt, ...)
 {
     va_list vl;
     va_start(vl, fmt);
-    r_vlog(level, caller, file, line, fmt, vl);
+    LIBR(vlogger)(level, caller, file, line, fmt, vl);
     va_end(vl);
 }
 
@@ -233,7 +256,7 @@ void r_log(int level,
 #include <time.h>
 #include <stdlib.h>
 
-const char* now_iso8601_compact(void)
+PRIVATE const char* LIBR(now_iso8601_compact)(void)
 {
     static char buf[17];
     const time_t t = time(NULL);
@@ -247,16 +270,16 @@ const char* now_iso8601_compact(void)
 #include <fcntl.h>
 #include <unistd.h>
 
-int devnull(int flags)
+API int LIBR(devnull)(int flags)
 {
     int fd = open("/dev/null", flags);
     CHECK(fd, "open(/dev/null, %d)", flags);
     return fd;
 }
 
-void devnull2(int fd, int flags)
+API void LIBR(devnull2)(int fd, int flags)
 {
-    int null = devnull(flags);
+    int null = LIBR(devnull)(flags);
     int r = dup2(null, fd); CHECK(r, "dup2(.., %d)", fd);
     r = close(null); CHECK(r, "close");
 }

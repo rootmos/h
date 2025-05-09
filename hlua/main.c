@@ -14,9 +14,9 @@
 #include "seccomp.c"
 #include "capabilities.c"
 
-void openlibs(struct lua_State* L)
+static int openlibs(struct lua_State* L)
 {
-    lua_stack_neutral_begin(L);
+    luaR_stack(L);
 
     static const luaL_Reg loadedlibs[] = {
         {LUA_GNAME, luaopen_base},
@@ -37,13 +37,13 @@ void openlibs(struct lua_State* L)
         lua_pop(L, 1);
     }
 
-    lua_stack_neutral_end(L);
+    luaR_return(L, 0);
 }
 
-void remove_stdlib_function(struct lua_State* L,
-                            const char* lib, const char* f)
+static int remove_stdlib_function(struct lua_State* L,
+                                  const char* lib, const char* f)
 {
-    lua_stack_neutral_begin(L);
+    luaR_stack(L);
 
     int t = lua_getglobal(L, lib);
     LUA_EXPECT_TYPE(L, t, LUA_TTABLE, "%s", lib);
@@ -60,7 +60,7 @@ void remove_stdlib_function(struct lua_State* L,
     lua_setfield(L, -2, f);
     lua_pop(L, 1);
 
-    lua_stack_neutral_end(L);
+    luaR_return(L, 0);
 }
 
 // https://www.lua.org/source/5.4/loslib.c.html#LUA_TMPNAMTEMPLATE

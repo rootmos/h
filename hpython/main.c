@@ -87,10 +87,10 @@ static void parse_options(struct options* o, int argc, char* argv[])
 
 #define CHECK_PYTHON(status, format, ...) do { \
     if(PyStatus_Exception(status)) { \
-        r_failwith(__extension__ __FUNCTION__, __extension__ __FILE__, \
-                   __extension__ __LINE__, 0, \
-                   format " (%s: %s)\n", ##__VA_ARGS__, \
-                   status.func, status.err_msg); \
+        LIBR(failwith0)(__extension__ __FUNCTION__, __extension__ __FILE__, \
+                        __extension__ __LINE__, 0, \
+                        format " (%s: %s)\n", ##__VA_ARGS__, \
+                        status.func, status.err_msg); \
     } \
 } while(0)
 

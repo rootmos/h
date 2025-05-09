@@ -1,8 +1,14 @@
-// libr 0.2.0 (1dbe1799252e4b97a820e44d38c2726ce8a3af16) (https://github.com/rootmos/libr.git) (2022-11-07T15:06:05+01:00)
+// libr 0.5.2 (20f582ad9ea9fd35f227a0044a599a66ddbd89fc) (https://github.com/rootmos/libr.git) (2025-05-09T09:56:51+02:00)
 // modules: fail logging now no_new_privs seccomp landlock rlimit util lua
 
 #ifndef LIBR_HEADER
 #define LIBR_HEADER
+
+#define LIBR(x) x
+#define PRIVATE __attribute__((visibility("hidden")))
+#define PUBLIC __attribute__((visibility("default")))
+#define API PRIVATE
+
 
 // libr: fail.h
 
@@ -13,26 +19,28 @@
 
 #define CHECK_IF(cond, format, ...) do { \
     if(cond) { \
-        r_failwith(__extension__ __FUNCTION__, __extension__ __FILE__, \
-                   __extension__ __LINE__, 1, \
-                   format "\n", ##__VA_ARGS__); \
+        LIBR(failwith0)(__extension__ __FUNCTION__, __extension__ __FILE__, \
+            __extension__ __LINE__, 1, \
+            format "\n", ##__VA_ARGS__); \
     } \
 } while(0)
 
 #define CHECK_MALLOC(x) CHECK_NOT(x, NULL, "memory allocation failed")
+#define CHECK_MMAP(x) CHECK_NOT(x, MAP_FAILED, "memory mapping failed")
 
 #define failwith(format, ...) \
-    r_failwith(__extension__ __FUNCTION__, __extension__ __FILE__, \
-               __extension__ __LINE__, 0, format "\n", ##__VA_ARGS__)
+    LIBR(failwith0)(__extension__ __FUNCTION__, __extension__ __FILE__, \
+        __extension__ __LINE__, 0, format "\n", ##__VA_ARGS__)
 
-#define not_implemented() failwith("not implemented")
+#define not_implemented() do { failwith("not implemented"); } while(0)
 
-void r_failwith(const char* const caller,
-                const char* const file,
-                const unsigned int line,
-                const int include_errno,
-                const char* const fmt, ...)
-    __attribute__ ((noreturn, format (printf, 5, 6)));
+void LIBR(failwith0)(
+    const char* const caller,
+    const char* const file,
+    const unsigned int line,
+    const int include_errno,
+    const char* const fmt, ...)
+__attribute__ ((noreturn, format (printf, 5, 6)));
 
 // libr: logging.h
 
@@ -49,85 +57,85 @@ void r_failwith(const char* const caller,
 #define LOG_LEVEL LOG_INFO
 #endif
 
+extern int LIBR(logger_fd);
+
 #define __r_log(level, format, ...) do { \
-    r_log(level, __extension__ __FUNCTION__, __extension__ __FILE__, \
+    LIBR(logger)(level, __extension__ __FUNCTION__, __extension__ __FILE__, \
           __extension__ __LINE__, format "\n", ##__VA_ARGS__); \
 } while(0)
 
-#ifdef __cplusplus
-void r_dummy(...);
-#else
-void r_dummy();
-#endif
+API void LIBR(dummy)(int foo, ...);
 
 #if LOG_LEVEL >= LOG_ERROR
 #define error(format, ...) __r_log(LOG_ERROR, format, ##__VA_ARGS__)
 #else
-#define error(format, ...) do { if(0) r_dummy(__VA_ARGS__); } while(0)
+#define error(format, ...) do { if(0) LIBR(dummy)(0, ##__VA_ARGS__); } while(0)
 #endif
 
 #if LOG_LEVEL >= LOG_WARNING
 #define warning(format, ...) __r_log(LOG_WARNING, format, ##__VA_ARGS__)
 #else
-#define warning(format, ...) do { if(0) r_dummy(__VA_ARGS__); } while(0)
+#define warning(format, ...) do { if(0) LIBR(dummy)(0, ##__VA_ARGS__); } while(0)
 #endif
 
 #if LOG_LEVEL >= LOG_INFO
 #define info(format, ...) __r_log(LOG_INFO, format, ##__VA_ARGS__)
 #else
-#define info(format, ...) do { if(0) r_dummy(__VA_ARGS__); } while(0)
+#define info(format, ...) do { if(0) LIBR(dummy)(0, ##__VA_ARGS__); } while(0)
 #endif
 
 #if LOG_LEVEL >= LOG_DEBUG
 #define debug(format, ...) __r_log(LOG_DEBUG, format, ##__VA_ARGS__)
 #else
-#define debug(format, ...) do { if(0) r_dummy(__VA_ARGS__); } while(0)
+#define debug(format, ...) do { if(0) LIBR(dummy)(0, ##__VA_ARGS__); } while(0)
 #endif
 
 #if LOG_LEVEL >= LOG_TRACE
 #define trace(format, ...) __r_log(LOG_TRACE, format, ##__VA_ARGS__)
 #else
-#define trace(format, ...) do { if(0) r_dummy(__VA_ARGS__); } while(0)
+#define trace(format, ...) do { if(0) LIBR(dummy)(0, ##__VA_ARGS__); } while(0)
 #endif
 
-void r_log(int level,
-           const char* const caller,
-           const char* const file,
-           const unsigned int line,
-           const char* const fmt, ...)
-    __attribute__ ((format (printf, 5, 6)));
+void LIBR(logger)(
+    int level,
+    const char* const caller,
+    const char* const file,
+    const unsigned int line,
+    const char* const fmt, ...)
+__attribute__ ((format (printf, 5, 6)));
 
-void r_vlog(int level,
-            const char* const caller,
-            const char* const file,
-            const unsigned int line,
-            const char* const fmt, va_list vl);
+void LIBR(vlogger)(
+    int level,
+    const char* const caller,
+    const char* const file,
+    const unsigned int line,
+    const char* const fmt,
+    va_list vl
+);
 
 // libr: now.h
 
 // returns current time formated as compact ISO8601: 20190123T182628Z
-const char* now_iso8601_compact(void);
+const char* LIBR(now_iso8601_compact)(void);
 
 // libr: no_new_privs.h
 
-void no_new_privs(void);
+void LIBR(no_new_privs)(void);
 
 // libr: seccomp.h
 
-#ifndef seccomp
-int seccomp(unsigned int operation, unsigned int flags, void *args);
-#endif
+int LIBR(seccomp)(unsigned int operation, unsigned int flags, void *args);
 
 // libr: landlock.h
 
 #include <linux/types.h>
 
-int landlock_abi_version(void);
-int landlock_new_ruleset(void);
-void landlock_allow(int rsfd, const char* path, __u64 allowed_access);
-void landlock_allow_read(int fd, const char* path);
-void landlock_allow_read_write(int rsfd, const char* path);
-void landlock_apply(int fd);
+int LIBR(landlock_abi_version)(void);
+int LIBR(landlock_new_ruleset)(void);
+void LIBR(landlock_allow)(int rsfd, const char* path, __u64 allowed_access);
+void LIBR(landlock_allow_read)(int fd, const char* path);
+void LIBR(landlock_allow_read_write)(int rsfd, const char* path);
+void LIBR(landlock_apply)(int fd);
 
 // libr: rlimit.h
 
@@ -147,11 +155,11 @@ struct rlimit_spec {
     unsigned long value;
 };
 
-void rlimit_default(struct rlimit_spec rlimits[], size_t len);
-void rlimit_inherit(struct rlimit_spec rlimits[], size_t len);
+void LIBR(rlimit_default)(struct rlimit_spec rlimits[], size_t len);
+void LIBR(rlimit_inherit)(struct rlimit_spec rlimits[], size_t len);
 
-int rlimit_parse(struct rlimit_spec rlimits[], size_t len, const char* str);
-void rlimit_apply(const struct rlimit_spec rlimits[], size_t len);
+int LIBR(rlimit_parse)(struct rlimit_spec rlimits[], size_t len, const char* str);
+void LIBR(rlimit_apply)(const struct rlimit_spec rlimits[], size_t len);
 
 // libr: util.h
 
@@ -161,6 +169,10 @@ void rlimit_apply(const struct rlimit_spec rlimits[], size_t len);
 
 #ifndef LIT
 #define LIT(x) x,sizeof(x)
+#endif
+
+#ifndef STR
+#define STR(x) x,strlen(x)
 #endif
 
 #ifndef MAX
@@ -173,32 +185,64 @@ void rlimit_apply(const struct rlimit_spec rlimits[], size_t len);
 
 // libr: lua.h
 
+#include <lua.h>
+
 #define CHECK_LUA(L, err, format, ...) do { \
     if(err != LUA_OK) { \
-        r_failwith(__extension__ __FUNCTION__, __extension__ __FILE__, \
-                   __extension__ __LINE__, 0, \
-                   format ": %s\n", ##__VA_ARGS__, lua_tostring(L, -1)); \
+        LIBR(failwith0)( \
+            __extension__ __FUNCTION__, __extension__ __FILE__, \
+            __extension__ __LINE__, 0, \
+            format ": %s\n", ##__VA_ARGS__, lua_tostring(L, -1)); \
     } \
 } while(0)
 
 #define LUA_EXPECT_TYPE(L, t, expected, format, ...) do { \
-    if(t != expected) {\
-        r_failwith(__extension__ __FUNCTION__, __extension__ __FILE__, \
-                   __extension__ __LINE__, 0, \
-                   format ": unexpected type %s (expected %s)\n", \
-                   ##__VA_ARGS__, lua_typename(L, t), \
-                   lua_typename(L, expected)); \
+    if(t != expected) { \
+        LIBR(failwith0)( \
+            __extension__ __FUNCTION__, __extension__ __FILE__, \
+            __extension__ __LINE__, 0, \
+            format ": unexpected type %s (expected %s)\n", \
+            ##__VA_ARGS__, lua_typename(L, t), \
+            lua_typename(L, expected)); \
     } \
 } while(0)
 
-#ifndef LUA_STACK_NEUTRAL_TERM
-#define LUA_STACK_NEUTRAL_TERM __lua_stack_top
+#ifndef LUA_STACK_MARKER
+#define LUA_STACK_MARKER LIBR(luaR_stack_marker)
 #endif
 
-#define lua_stack_neutral_begin(L) int LUA_STACK_NEUTRAL_TERM = lua_gettop(L)
-#define lua_stack_neutral_end(L) \
-    CHECK_IF(LUA_STACK_NEUTRAL_TERM != lua_gettop(L), \
-             "redundant stack elements present")
+#define luaR_stack(L) int LUA_STACK_MARKER = lua_gettop(L)
+#define luaR_stack_expect(L, n) do { \
+    int r = lua_gettop(L) - LUA_STACK_MARKER; \
+    if(r < n) { \
+        failwith("too few stack elements: found %d expected %d", r ,n); \
+    } else if(r > n) { \
+        failwith("too many stack elements: found %d expected %d", r ,n); \
+    } \
+} while(0)
+
+#define luaR_return(L, n) do { \
+    luaR_stack_expect(L, n); \
+    return n; \
+} while(0)
+
+#define luaR_failwith(L, format, ...) \
+    LIBR(luaR_failwith0)(L, \
+            __extension__ __FUNCTION__, \
+            __extension__ __FILE__, \
+            __extension__ __LINE__, \
+            format, ##__VA_ARGS__)
+
+void LIBR(luaR_failwith0)(
+    lua_State* L,
+    const char* const caller,
+    const char* const file,
+    const unsigned int line,
+    const char* const fmt, ...)
+__attribute__ ((noreturn, format (printf, 5, 6)));
+
+int LIBR(luaR_testmetatable)(lua_State* L, int arg, const char* tname);
+void LIBR(luaR_checkmetatable)(lua_State* L, int arg, const char* tname);
 #endif // LIBR_HEADER
 
 #ifdef LIBR_IMPLEMENTATION
@@ -210,20 +254,23 @@ void rlimit_apply(const struct rlimit_spec rlimits[], size_t len);
 #include <stdio.h>
 #include <string.h>
 
-void r_failwith(const char* const caller,
-                const char* const file,
-                const unsigned int line,
-                const int include_errno,
-                const char* const fmt, ...)
+API void LIBR(failwith0)(
+    const char* const caller,
+    const char* const file,
+    const unsigned int line,
+    const int include_errno,
+    const char* const fmt, ...)
 {
     va_list vl;
     va_start(vl, fmt);
 
     if(include_errno) {
-        r_log(LOG_ERROR, caller, file, line, "(%s) ", strerror(errno));
-        vfprintf(stderr, fmt, vl);
+        LIBR(logger)(LOG_ERROR, caller, file, line, "(%s) ", strerror(errno));
+        if(vdprintf(LIBR(logger_fd), fmt, vl) < 0) {
+            abort();
+        }
     } else {
-        r_vlog(LOG_ERROR, caller, file, line, fmt, vl);
+        LIBR(vlogger)(LOG_ERROR, caller, file, line, fmt, vl);
     }
     va_end(vl);
 
@@ -236,36 +283,42 @@ void r_failwith(const char* const caller,
 #include <unistd.h>
 #include <stdlib.h>
 
-#ifdef __cplusplus
-void r_dummy(...)
-#else
-void r_dummy()
-#endif
+API void LIBR(dummy)(int foo, ...)
 {
     abort();
 }
 
-void r_vlog(int level,
-            const char* const caller,
-            const char* const file,
-            const unsigned int line,
-            const char* const fmt, va_list vl)
-{
-    fprintf(stderr, "%s:%d:%s:%s:%u ",
-            now_iso8601_compact(), getpid(), caller, file, line);
+int LIBR(logger_fd) API = 2;
 
-    vfprintf(stderr, fmt, vl);
+API void LIBR(vlogger)(
+    int level,
+    const char* const caller,
+    const char* const file,
+    const unsigned int line,
+    const char* const fmt, va_list vl)
+{
+    int r = dprintf(LIBR(logger_fd), "%s:%d:%s:%s:%u ",
+        LIBR(now_iso8601_compact)(), getpid(), caller, file, line);
+    if(r < 0) {
+        abort();
+    }
+
+    r = vdprintf(LIBR(logger_fd), fmt, vl);
+    if(r < 0) {
+        abort();
+    }
 }
 
-void r_log(int level,
-           const char* const caller,
-           const char* const file,
-           const unsigned int line,
-           const char* const fmt, ...)
+API void LIBR(logger)(
+    int level,
+    const char* const caller,
+    const char* const file,
+    const unsigned int line,
+    const char* const fmt, ...)
 {
     va_list vl;
     va_start(vl, fmt);
-    r_vlog(level, caller, file, line, fmt, vl);
+    LIBR(vlogger)(level, caller, file, line, fmt, vl);
     va_end(vl);
 }
 
@@ -274,7 +327,7 @@ void r_log(int level,
 #include <time.h>
 #include <stdlib.h>
 
-const char* now_iso8601_compact(void)
+PRIVATE const char* LIBR(now_iso8601_compact)(void)
 {
     static char buf[17];
     const time_t t = time(NULL);
@@ -287,7 +340,7 @@ const char* now_iso8601_compact(void)
 
 #include <sys/prctl.h>
 
-void no_new_privs(void)
+API void LIBR(no_new_privs)(void)
 {
     int r = prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0);
     CHECK(r, "prctl(PR_SET_NO_NEW_PRIVS, 1)");
@@ -298,12 +351,10 @@ void no_new_privs(void)
 #include <sys/syscall.h>
 #include <unistd.h>
 
-#ifndef seccomp
-int seccomp(unsigned int operation, unsigned int flags, void *args)
+API int LIBR(seccomp)(unsigned int operation, unsigned int flags, void *args)
 {
     return syscall(SYS_seccomp, operation, flags, args);
 }
-#endif
 
 // libr: landlock.c
 
@@ -340,7 +391,7 @@ static inline int landlock_restrict_self(const int ruleset_fd,
 }
 #endif
 
-int landlock_abi_version(void)
+API int LIBR(landlock_abi_version)(void)
 {
     int r = landlock_create_ruleset(
         NULL, 0, LANDLOCK_CREATE_RULESET_VERSION);
@@ -351,7 +402,7 @@ int landlock_abi_version(void)
     }
 }
 
-int landlock_new_ruleset(void)
+API int LIBR(landlock_new_ruleset)(void)
 {
     struct landlock_ruleset_attr rs = {
         .handled_access_fs =
@@ -377,7 +428,7 @@ int landlock_new_ruleset(void)
     return rsfd;
 }
 
-void landlock_allow(int rsfd, const char* path, __u64 allowed_access)
+API void LIBR(landlock_allow)(int rsfd, const char* path, __u64 allowed_access)
 {
     struct landlock_path_beneath_attr pb = {
         .allowed_access = allowed_access,
@@ -392,16 +443,16 @@ void landlock_allow(int rsfd, const char* path, __u64 allowed_access)
     r = close(pb.parent_fd); CHECK(r, "close(%s)", path);
 }
 
-void landlock_allow_read(int rsfd, const char* path)
+API void LIBR(landlock_allow_read)(int rsfd, const char* path)
 {
-    landlock_allow(rsfd, path,
+    LIBR(landlock_allow)(rsfd, path,
         LANDLOCK_ACCESS_FS_READ_FILE
     );
 }
 
-void landlock_allow_read_write(int rsfd, const char* path)
+API void LIBR(landlock_allow_read_write)(int rsfd, const char* path)
 {
-    landlock_allow(rsfd, path,
+    LIBR(landlock_allow)(rsfd, path,
         LANDLOCK_ACCESS_FS_READ_FILE
       | LANDLOCK_ACCESS_FS_WRITE_FILE
       | LANDLOCK_ACCESS_FS_MAKE_REG
@@ -409,7 +460,7 @@ void landlock_allow_read_write(int rsfd, const char* path)
     );
 }
 
-void landlock_apply(int fd)
+API void LIBR(landlock_apply)(int fd)
 {
     int r = landlock_restrict_self(fd, 0);
     CHECK(r, "landlock_restrict_self");
@@ -488,7 +539,7 @@ void landlock_apply(int fd)
 
 #define RLIMIT_SPEC(rl, v) (struct rlimit_spec) { .name = #rl, .resource = RLIMIT_##rl, .action = RLIMIT_ACTION_ABS, .value = v }
 
-void rlimit_default(struct rlimit_spec rlimits[], size_t len)
+API void LIBR(rlimit_default)(struct rlimit_spec rlimits[], size_t len)
 {
     struct rlimit_spec defaults[] = {
         RLIMIT_SPEC(CPU, RLIMIT_DEFAULT_CPU),
@@ -521,14 +572,14 @@ void rlimit_default(struct rlimit_spec rlimits[], size_t len)
     }
 }
 
-void rlimit_inherit(struct rlimit_spec rlimits[], size_t len)
+API void LIBR(rlimit_inherit)(struct rlimit_spec rlimits[], size_t len)
 {
     for(size_t i = 0; i < len; i++) {
         rlimits[i].action = RLIMIT_ACTION_INHERIT;
     }
 }
 
-int rlimit_parse(struct rlimit_spec rlimits[], size_t len, const char* str)
+API int LIBR(rlimit_parse)(struct rlimit_spec rlimits[], size_t len, const char* str)
 {
     debug("parsing: %s", str);
 
@@ -568,7 +619,7 @@ int rlimit_parse(struct rlimit_spec rlimits[], size_t len, const char* str)
     return 1;
 }
 
-void rlimit_apply(const struct rlimit_spec rlimits[], size_t len)
+API void LIBR(rlimit_apply)(const struct rlimit_spec rlimits[], size_t len)
 {
     debug("applying rlimits");
 
@@ -606,5 +657,65 @@ void rlimit_apply(const struct rlimit_spec rlimits[], size_t len)
         r = setrlimit(rlimits[i].resource, &rlp);
         CHECK(r, "setrlimit(%s)", rlimits[i].name);
     }
+}
+
+// libr: lua.c
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+
+#include <lua.h>
+#include <lauxlib.h>
+
+API void LIBR(luaR_failwith0)(
+    lua_State* L,
+    const char* const caller,
+    const char* const file,
+    const unsigned int line,
+    const char* const fmt, ...)
+{
+
+    size_t N = 256;
+    char* buf;
+    while(1) {
+        buf = alloca(N);
+
+        int r = snprintf(buf, N, "(%s:%d:%s:%s:%u) ", now_iso8601_compact(), getpid(), caller, file, line);
+        if(r >= N) {
+            while(N < r) {
+                N <<= 1;
+            }
+            continue;
+        }
+
+        va_list vl;
+        va_start(vl, fmt);
+
+        r += vsnprintf(buf+r, N-r, fmt, vl);
+        if(r < N) {
+            lua_pushstring(L, buf);
+            lua_error(L); // "This function does a long jump, and therefore never returns [...]."
+        }
+
+        va_end(vl);
+        N <<= 1;
+    }
+}
+
+API int LIBR(luaR_testmetatable)(lua_State* L, int arg, const char* tname)
+{
+    if(lua_getmetatable(L, arg)) {
+        luaL_getmetatable(L, tname);
+        int r = lua_rawequal(L, -1, -2);
+        lua_pop(L, 2);
+        return r;
+    }
+    return 0;
+}
+
+API void LIBR(luaR_checkmetatable)(lua_State* L, int arg, const char* tname)
+{
+    luaL_argexpected(L, LIBR(luaR_testmetatable)(L, arg, tname), arg, tname);
 }
 #endif // LIBR_IMPLEMENTATION

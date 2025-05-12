@@ -22,6 +22,8 @@ mmap_end:
 # NB: this allows PROT_EXEC
 jeq #$__NR_mprotect, good
 
+jeq #$__NR_execve, good
+
 jne #$__NR_madvise, madvise_end
 ld [$$offsetof(struct seccomp_data, args[2])$$]
 jset #$$(MADV_DONTNEED|MADV_FREE)$$, good
@@ -58,9 +60,10 @@ jeq #$F_GETFL, good
 jeq #$F_SETFD, fcntl_flags
 jne #$F_SETFL, bad
 fcntl_flags:
-ld [$$offsetof(struct seccomp_data, args[2])$$]
-jset #$$(FD_CLOEXEC|O_WRONLY|O_LARGEFILE)$$, good
-jmp bad
+jmp good
+#ld [$$offsetof(struct seccomp_data, args[2])$$]
+#jset #$$(FD_CLOEXEC|O_WRONLY|O_LARGEFILE)$$, good
+#jmp bad
 fcntl_end:
 
 jne #$__NR_ioctl, ioctl_end
@@ -86,6 +89,7 @@ jeq #$__NR_epoll_pwait, good
 jeq #$__NR_pipe2, good
 jeq #$__NR_eventfd2, good
 jeq #$__NR_socketpair, good
+jeq #$__NR_setsockopt, good
 jeq #$__NR_shutdown, good
 
 jeq #$__NR_wait4, good

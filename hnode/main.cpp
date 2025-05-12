@@ -115,6 +115,9 @@ int main(int argc, char* argv[])
 
         debug("allowing read access beneath: %s", script_dir);
         landlock_allow_read(rsfd, script_dir);
+
+        debug("allowing execute access beneath: %s", script_dir);
+        landlock_allow(rsfd, script_dir, LANDLOCK_ACCESS_FS_EXECUTE);
     } else {
         debug("allowing read access: %s", o.input);
         landlock_allow_read(rsfd, o.input);
@@ -122,6 +125,8 @@ int main(int argc, char* argv[])
 
     // necessary since node 19.0.1
     landlock_allow_read(rsfd, "/etc/ssl/openssl.cnf");
+
+    //landlock_allow_read(rsfd, "/dev/null");
 
     landlock_apply(rsfd);
     int r = close(rsfd); CHECK(r, "close");

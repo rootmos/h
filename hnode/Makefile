@@ -2,8 +2,8 @@ ROOT := $(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
 include $(ROOT)/../build/common.makefile
 
 CFLAGS += -std=c++20 # nodejs >= 23.0.0 requires C++20
-CFLAGS += -I/usr/include/node
-LDFLAGS += -lnode
+CFLAGS += -I$(ROOT)/../nodejs-shared/usr/include/node
+LDFLAGS += -L$(ROOT)/../nodejs-shared/usr/lib -lnode
 
 CFLAGS += $(shell $(PKG_CONFIG) --cflags libuv)
 LDFLAGS += $(shell $(PKG_CONFIG) --libs libuv)

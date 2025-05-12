@@ -1,2 +1,3 @@
+# TODO which rlimit breaks the test?
 cmdline = ["$0", "-R", "-x", "main.js"]
 prepare = ["make", "--quiet"]

@@ -15,7 +15,7 @@ jobs:
       UNPRIVILEGED: ubuntu
       TEST_OUTPUT_DIR: /tmp/tests
       WORKDIR: /tmp/workdir
-      TRACE: true
+      #TRACE: true
       TIMEOUT: 10
     steps:
     - name: Install minimal dependencies

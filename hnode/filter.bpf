@@ -58,13 +58,14 @@ jeq #$__NR_sched_yield, good
 jne #$__NR_fcntl, fcntl_end
 ld [$$offsetof(struct seccomp_data, args[1])$$]
 jeq #$F_GETFL, good
+jeq #$F_GETFD, good
 jeq #$F_SETFD, fcntl_flags
 jne #$F_SETFL, bad
 fcntl_flags:
-jmp good
-#ld [$$offsetof(struct seccomp_data, args[2])$$]
-#jset #$$(FD_CLOEXEC|O_WRONLY|O_LARGEFILE)$$, good
-#jmp bad
+ld [$$offsetof(struct seccomp_data, args[2])$$]
+jeq #0, good
+jset #$$(FD_CLOEXEC|O_WRONLY|O_LARGEFILE)$$, good
+jmp bad
 fcntl_end:
 
 jne #$__NR_ioctl, ioctl_end

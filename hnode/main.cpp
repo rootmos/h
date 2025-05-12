@@ -19,7 +19,8 @@
 struct options {
     const char* input;
 
-    int allow_script_dir;
+    int allow_script_dir_read;
+    int allow_script_dir_exec;
 
     struct rlimit_spec rlimits[RLIMIT_NLIMITS];
 };
@@ -30,6 +31,7 @@ static void print_usage(int fd, const char* prog)
     dprintf(fd, "\n");
     dprintf(fd, "options:\n");
     dprintf(fd, "  -s       allow reading files beneath the input script's directory\n");
+    dprintf(fd, "  -x       allow executing files beneath the input script's directory (imples read access)\n");
     dprintf(fd, "  -h       print this message\n");
     dprintf(fd, "  -v       print version information\n");
     dprintf(fd, "\n");
@@ -47,10 +49,13 @@ static void parse_options(struct options* o, int argc, char* argv[])
     rlimit_default(o->rlimits, LENGTH(o->rlimits));
 
     int res;
-    while((res = getopt(argc, argv, "hvsr:R")) != -1) {
+    while((res = getopt(argc, argv, "hvsxr:R")) != -1) {
         switch(res) {
         case 's':
-            o->allow_script_dir = 1;
+            o->allow_script_dir_read = 1;
+            break;
+        case 'x':
+            o->allow_script_dir_exec = 1;
             break;
         case 'r': {
             int r = rlimit_parse(o->rlimits, LENGTH(o->rlimits), optarg);
@@ -103,7 +108,7 @@ int main(int argc, char* argv[])
 
     int rsfd = landlock_new_ruleset();
 
-    if(o.allow_script_dir) {
+    if(o.allow_script_dir_read || o.allow_script_dir_exec) {
         char buf0[PATH_MAX];
         strncpy(buf0, o.input, sizeof(buf0)-1);
         buf0[sizeof(buf0)-1] = '\0';
@@ -113,11 +118,15 @@ int main(int argc, char* argv[])
         char* script_dir = realpath(dir, buf2);
         CHECK_NOT(script_dir, NULL, "realpath(%s)", dir);
 
-        debug("allowing read access beneath: %s", script_dir);
-        landlock_allow_read(rsfd, script_dir);
+        if(o.allow_script_dir_read || o.allow_script_dir_exec) {
+            debug("allowing read access beneath: %s", script_dir);
+            landlock_allow_read(rsfd, script_dir);
+        }
 
-        debug("allowing execute access beneath: %s", script_dir);
-        landlock_allow(rsfd, script_dir, LANDLOCK_ACCESS_FS_EXECUTE);
+        if(o.allow_script_dir_exec) {
+            debug("allowing execute access beneath: %s", script_dir);
+            landlock_allow(rsfd, script_dir, LANDLOCK_ACCESS_FS_EXECUTE);
+        }
     } else {
         debug("allowing read access: %s", o.input);
         landlock_allow_read(rsfd, o.input);
@@ -125,8 +134,6 @@ int main(int argc, char* argv[])
 
     // necessary since node 19.0.1
     landlock_allow_read(rsfd, "/etc/ssl/openssl.cnf");
-
-    //landlock_allow_read(rsfd, "/dev/null");
 
     landlock_apply(rsfd);
     int r = close(rsfd); CHECK(r, "close");

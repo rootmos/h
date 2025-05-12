@@ -1,2 +1,2 @@
-cmdline = ["$0", "-R", "-s", "main.js"]
+cmdline = ["$0", "-R", "-x", "main.js"]
 prepare = ["make", "--quiet"]

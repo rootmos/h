@@ -35,6 +35,8 @@ def parse_args():
 
     parser.add_argument("--log", default=os.environ.get("LOG_LEVEL", "WARN"), help="set log level")
 
+    parser.add_argument("-p", "--prepare-only", action="store_true")
+
     parser.add_argument("-q", "--quiet", action="store_true")
     parser.add_argument("-Q", "--very-quiet", action="store_true")
     parser.add_argument("-t", "--trace", action="store_true", default=os.environ.get("TRACE") != None)
@@ -52,10 +54,9 @@ def parse_args():
 
     return args
 
-logger = None
+logger: logging.Logger = logging.getLogger("test-runner")
 def setup_logger(level):
-    l = logging.getLogger("test-runner")
-    l.setLevel(level)
+    logger.setLevel(level)
 
     ch = logging.StreamHandler()
     ch.setLevel(level)
@@ -65,9 +66,7 @@ def setup_logger(level):
         datefmt="%Y-%m-%dT%H:%M:%S%z")
     ch.setFormatter(f)
 
-    l.addHandler(ch)
-
-    return l
+    logger.addHandler(ch)
 
 class Test:
     def __init__(self, fn):
@@ -125,8 +124,22 @@ class Test:
             self.expected_returncode = -int(signal.__dict__[self.expected_returncode])
         logger.debug(f"test expected exit: {self.expected_returncode}")
 
+        self.preparation = self.spec.get("prepare")
+
     def run(self, args):
         return Run(test=self, args=args)
+
+    def prepare(self):
+        if not self.preparation:
+            logger.debug("nothing to prepare")
+            return
+
+        cmdline = self.preparation
+        if isinstance(cmdline, str):
+            cmdline = [ cmdline ]
+
+        logger.info("preparing: %s", cmdline)
+        subprocess.check_call(cmdline, cwd=self.cwd)
 
     def to_json(self):
         d = {
@@ -143,6 +156,9 @@ class Test:
             d["expected_stdout_fn"] = self.expected_stdout_fn
         if self.expected_stdout is not None:
             d["expected_stdout"] = self.expected_stdout
+
+        if self.prepare is not None:
+            d["prepare"] = self.preparation
 
         return d
 
@@ -197,7 +213,8 @@ class Run:
             self.messages = []
             try:
                 self.when = datetime.datetime.now().astimezone()
-                p = subprocess.run(self.cmdline, cwd=test.cwd, timeout=args.timeout)
+                logger.debug("running: %s", self.cmdline)
+                subprocess.run(self.cmdline, cwd=test.cwd, timeout=args.timeout)
                 with open(returncode, "r") as f:
                     self.returncode = int(f.read())
             except subprocess.TimeoutExpired:
@@ -245,11 +262,7 @@ class Run:
 
         return d
 
-if __name__ == "__main__":
-    args = parse_args()
-    logger = setup_logger(args.log.upper())
-    logger.debug(f"args: {args}")
-
+def main(args):
     if args.test is None:
         tests = discover_tests(TEST_ROOT)
         if tests:
@@ -258,13 +271,26 @@ if __name__ == "__main__":
                     print(os.path.relpath(t.cwd, start=TEST_ROOT))
                 else:
                     print(t.fn)
-            sys.exit(0)
+            return True
         else:
-            sys.exit(1)
-    else:
-        t = Test(args.test)
-        r = t.run(args)
-        if args.output:
-            with open(args.output, "w") as f:
-                f.write(json.dumps(r.to_json()))
-        sys.exit(0 if r.result else 1)
+            return False
+
+    t = Test(args.test)
+
+    t.prepare()
+    if args.prepare_only:
+        logger.debug("asked to only prepare: bailing out")
+        return True
+
+    r = t.run(args)
+    if args.output:
+        with open(args.output, "w") as f:
+            json.dump(r.to_json(), f)
+    return r.result
+
+if __name__ == "__main__":
+    args = parse_args()
+    setup_logger(args.log.upper())
+    logger.debug(f"args: {args}")
+
+    sys.exit(0 if main(args) else 1)

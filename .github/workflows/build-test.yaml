@@ -15,13 +15,13 @@ jobs:
       UNPRIVILEGED: ubuntu
       TEST_OUTPUT_DIR: /tmp/tests
       WORKDIR: /tmp/workdir
-      #TRACE: true
+      TRACE: true
       TIMEOUT: 10
     steps:
     - name: Install minimal dependencies
       run: |
         apt-get update
-        apt-get install -y --no-install-recommends git sudo gettext-base ca-certificates
+        apt-get install -y --no-install-recommends git sudo gettext-base ca-certificates strace
 
     - name: Check out repository code
       uses: actions/checkout@v4

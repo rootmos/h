@@ -12,6 +12,7 @@ jeq #$__NR_close, good
 jeq #$__NR_dup2, good
 
 jeq #$__NR_readlink, good
+jeq #$__NR_readlinkat, good
 
 jne #$__NR_mmap, mmap_end
 ld [$$offsetof(struct seccomp_data, args[2])$$]
@@ -116,10 +117,13 @@ jeq #$__NR_rt_sigreturn, good
 
 jeq #$__NR_sysinfo, good
 
-jne #$__NR_prctl, bad
+jne #$__NR_prctl, prctl_end
 ld [$$offsetof(struct seccomp_data, args[0])$$]
 jset #$$(PR_SET_NAME)$$, good
-jmp bad
+prctl_end:
+
+jeq #$__NR_arch_prctl, good
+jeq #$__NR_set_tid_address, good
 
 bad: ret #$SECCOMP_RET_KILL_THREAD
 good: ret #$SECCOMP_RET_ALLOW

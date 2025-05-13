@@ -47,7 +47,7 @@ jobs:
               run_id: context.payload.workflow_run.id,
             });
             let matchedArtifacts = allArtifacts.data.artifacts.filter((artifact) => {
-              return artifact.name.startsWith("PKGBUILD") || artifact.name.contains("source-package")
+              return artifact.name.startsWith("PKGBUILD") || artifact.name.includes("source-package")
             });
             let fs = require('fs');
             for(const artifact of matchedArtifacts) {

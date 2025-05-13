@@ -26,6 +26,11 @@ ld [$$offsetof(struct seccomp_data, args[3])$$]
 jeq #$$(MAP_PRIVATE|MAP_ANONYMOUS)$$, good
 jeq #$$(MAP_PRIVATE|MAP_DENYWRITE)$$, good
 jeq #$$(MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE)$$, good
+
+# https://github.com/torvalds/linux/blob/e9565e23cd89d4d5cd4388f8742130be1d6f182d/include/uapi/linux/mman.h#L20
+# #define MAP_DROPPABLE 0x08
+jeq #$$(0x08|MAP_ANONYMOUS)$$, good
+
 jmp bad
 mmap_end:
 

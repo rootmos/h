@@ -56,8 +56,8 @@ elif command -v git >/dev/null \
     GIT_DIRTY=$([ -n "$(git status --porcelain)" ] && echo "1" || echo)
 
     if [ -n "$GIT_DIRTY" ]; then
-        GIT_USER_NAME=$(git config user.name)
-        GIT_USER_EMAIL=$(git config user.email)
+        GIT_USER_NAME=$(git config user.name || echo "")
+        GIT_USER_EMAIL=$(git config user.email || echo "")
     else
         GIT_USER_NAME=$(git --no-pager log --format=format:'%an' -n 1)
         GIT_USER_EMAIL=$(git --no-pager log --format=format:'%ae' -n 1)

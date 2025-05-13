@@ -109,14 +109,11 @@ int main(int argc, char* argv[])
     int rsfd = landlock_new_ruleset();
 
     if(o.allow_script_dir_read || o.allow_script_dir_exec) {
-        char buf0[PATH_MAX];
-        strncpy(buf0, o.input, sizeof(buf0)-1);
-        buf0[sizeof(buf0)-1] = '\0';
-        char* dir = dirname(buf0);
+        char buf[PATH_MAX];
+        char* input = realpath(o.input, buf);
+        CHECK_NOT(input, NULL, "realpath(%s)", o.input);
 
-        char buf2[PATH_MAX];
-        char* script_dir = realpath(dir, buf2);
-        CHECK_NOT(script_dir, NULL, "realpath(%s)", dir);
+        char* script_dir = dirname(input);
 
         if(o.allow_script_dir_read || o.allow_script_dir_exec) {
             debug("allowing read access beneath: %s", script_dir);
@@ -132,8 +129,14 @@ int main(int argc, char* argv[])
         landlock_allow_read(rsfd, o.input);
     }
 
-    // necessary since node 19.0.1
+#if (NODE_MAJOR_VERSION >= 19)
     landlock_allow_read(rsfd, "/etc/ssl/openssl.cnf");
+#endif
+
+#if (NODE_MAJOR_VERSION == 18)
+    landlock_allow_read(rsfd, "/usr/share/nodejs");
+    landlock_allow_read(rsfd, "/usr/lib/ssl/openssl.cnf");
+#endif
 
     landlock_apply(rsfd);
     int r = close(rsfd); CHECK(r, "close");
@@ -277,7 +280,7 @@ int main(int argc, char* argv[])
                 if(more) continue;
 
                 debug("emit before exit");
-#if (NODE_MAJOR_VERSION >= 19)
+#if (NODE_MAJOR_VERSION >= 18)
                 node::EmitProcessBeforeExit(env.get());
 #elif (NODE_MAJOR_VERSION == 12)
                 node::EmitBeforeExit(env.get());
@@ -290,7 +293,7 @@ int main(int argc, char* argv[])
         }
 
         debug("emit exit");
-#if (NODE_MAJOR_VERSION >= 19)
+#if (NODE_MAJOR_VERSION >= 18)
         exit_code = node::EmitProcessExit(env.get()).FromJust();
 #elif (NODE_MAJOR_VERSION == 12)
         exit_code = node::EmitExit(env.get());
@@ -324,7 +327,7 @@ int main(int argc, char* argv[])
     v8::V8::Dispose();
 
     debug("dispose platform");
-#if (NODE_MAJOR_VERSION >= 19)
+#if (NODE_MAJOR_VERSION >= 18)
     v8::V8::DisposePlatform();
     node::TearDownOncePerProcess();
 #elif (NODE_MAJOR_VERSION == 12)

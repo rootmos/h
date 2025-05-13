@@ -21,9 +21,24 @@ while getopts "rbcm-" OPT; do
 done
 shift $((OPTIND-1))
 
-RELEASE=jammy # 22.04
-LUA_VER=5.4
-PYTHON_VER=3
+get_release() {
+    grep "VERSION_CODENAME" /etc/os-release | sed 's/VERSION_CODENAME=//'
+}
+
+RELEASE=${RELEASE-$(get_release)}
+
+if [ "$RELEASE" = "jammy" ]; then # 22.04
+    LIBNODE_VER=72
+    LUA_VER=5.4
+    PYTHON_VER=3
+elif [ "$RELEASE" = "noble" ]; then # 24.04
+    LIBNODE_VER=109
+    LUA_VER=5.4
+    PYTHON_VER=3
+else
+    echo 1>&2 "unsupported release: $RELEASE"
+    exit 1
+fi
 
 PKGS=()
 
@@ -31,7 +46,7 @@ if [ -n "$RUNTIME" ]; then
     PKGS+=(libcap2)
     PKGS+=("lua$LUA_VER")
     PKGS+=("python$PYTHON_VER")
-    PKGS+=("libnode72")
+    PKGS+=("libnode$LIBNODE_VER")
     PKGS+=("bash")
 fi
 
@@ -45,7 +60,9 @@ if [ -n "$BUILD" ]; then
 fi
 
 if [ -n "$CHECK" ]; then
-    PKGS+=("python$PYTHON_VER-toml") # TODO until python >= 3.11
+    if [ "$RELEASE" = "jammy" ]; then
+        PKGS+=("python$PYTHON_VER-toml")
+    fi
 fi
 
 if [ -z "$MARKDOWN" ]; then

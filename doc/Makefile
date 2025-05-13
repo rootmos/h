@@ -17,7 +17,7 @@ $(ROOT)/tools/README.md: tools.in.md hlua.tests.txt
 	./include "$<" "$@"
 
 hlua.tests.txt:
-	env TEST_ROOT="$(ROOT)/hlua" HUMAN=1 "$(TOOLS)/test-runner" > "$@"
+	env TEST_ROOT="$(ROOT)/hlua" HUMAN=1 "$(TOOLS)/test-runner" | sort > "$@"
 
 deps-table.md: \
 	$(ROOT)/build/ubuntu/deps \

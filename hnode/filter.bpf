@@ -6,6 +6,7 @@ ld [$$offsetof(struct seccomp_data, nr)$$]
 jeq #$__NR_brk, good
 
 jeq #$__NR_read, good
+jeq #$__NR_pread64, good
 jeq #$__NR_write, good
 jeq #$__NR_openat, good
 jeq #$__NR_close, good
@@ -104,9 +105,9 @@ jeq #$__NR_clone3, good
 jeq #$__NR_rseq, good
 jeq #$__NR_set_robust_list, good
 
-# TODO
-jeq #$__NR_io_uring_setup, good
-jeq #$__NR_io_uring_enter, good
+# TODO disableable with UV_USE_IO_URING=0 ?
+#jeq #$__NR_io_uring_setup, good
+#jeq #$__NR_io_uring_enter, good
 
 jeq #$__NR_tgkill, good
 jeq #$__NR_exit, good

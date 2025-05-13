@@ -32,7 +32,7 @@ if ! command -v dpkg-checkbuilddeps >/dev/null ; then
     PRELIM_DEPS=(dpkg-dev)
     if [ -n "$INSTALL" ]; then
         set +o errexit
-        $SUDO apt-get install $YES --no-install-recommends "${PRELIM_DEPS[@]}"
+        $SUDO apt-get install "$YES" --no-install-recommends "${PRELIM_DEPS[@]}"
         EC=$?
         set -o errexit
         if [ "$EC" -ne 0 ]; then

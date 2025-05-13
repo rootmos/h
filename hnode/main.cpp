@@ -132,8 +132,14 @@ int main(int argc, char* argv[])
         landlock_allow_read(rsfd, o.input);
     }
 
-    // necessary since node 19.0.1
+#if (NODE_MAJOR_VERSION >= 19)
     landlock_allow_read(rsfd, "/etc/ssl/openssl.cnf");
+#endif
+
+#if (NODE_MAJOR_VERSION == 18)
+    landlock_allow_read(rsfd, "/usr/share/nodejs");
+    landlock_allow_read(rsfd, "/usr/lib/ssl/openssl.cnf");
+#endif
 
     landlock_apply(rsfd);
     int r = close(rsfd); CHECK(r, "close");
@@ -277,7 +283,7 @@ int main(int argc, char* argv[])
                 if(more) continue;
 
                 debug("emit before exit");
-#if (NODE_MAJOR_VERSION >= 19)
+#if (NODE_MAJOR_VERSION >= 18)
                 node::EmitProcessBeforeExit(env.get());
 #elif (NODE_MAJOR_VERSION == 12)
                 node::EmitBeforeExit(env.get());
@@ -290,7 +296,7 @@ int main(int argc, char* argv[])
         }
 
         debug("emit exit");
-#if (NODE_MAJOR_VERSION >= 19)
+#if (NODE_MAJOR_VERSION >= 18)
         exit_code = node::EmitProcessExit(env.get()).FromJust();
 #elif (NODE_MAJOR_VERSION == 12)
         exit_code = node::EmitExit(env.get());
@@ -324,7 +330,7 @@ int main(int argc, char* argv[])
     v8::V8::Dispose();
 
     debug("dispose platform");
-#if (NODE_MAJOR_VERSION >= 19)
+#if (NODE_MAJOR_VERSION >= 18)
     v8::V8::DisposePlatform();
     node::TearDownOncePerProcess();
 #elif (NODE_MAJOR_VERSION == 12)

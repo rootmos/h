@@ -25,15 +25,15 @@ trap 'rm -rf $TMP' EXIT
 ASSETS=$TMP/assets
 mkdir -p "$ASSETS"
 
-unzip "$ARTIFACTS/PKGBUILD.$BUILD_GIT_REF.zip" -d "$ASSETS"
+unzip "$ARTIFACTS/PKGBUILD.$BUILD_GIT_REF.ubuntu-24.04.zip" -d "$ASSETS"
 
-unzip "$ARTIFACTS/source-package.$BUILD_GIT_REF.ubuntu2204.zip" -d "$TMP"
+unzip "$ARTIFACTS/ubuntu-source-package.$BUILD_GIT_REF.ubuntu-24.04.ubuntu2404.zip" -d "$TMP"
 for f in "$TMP/"*"$BUILD_VERSION.tar"; do
     UBUNTU_FILENAME=$(sed 's/.tar$/_ubuntu.tar/' <<< "$(basename "$f")")
     mv "$f" "$ASSETS/$UBUNTU_FILENAME"
 done
 
-gh release create --target=$BUILD_GIT_REF \
+gh release create --target="$BUILD_GIT_REF" \
     "$TAG" \
     "$ASSETS/PKGBUILD#Arch Linux PKGBUILD" \
     "$ASSETS/$UBUNTU_FILENAME#Ubuntu source package"

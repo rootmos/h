@@ -11,12 +11,15 @@ jobs:
     strategy:
       matrix:
         host: [ "ubuntu-22.04", "ubuntu-24.04" ]
-        container: [ "ubuntu:22.04", "ubuntu:24.04" ]
+        os:
+        - name: "ubuntu2204"
+          image: "ubuntu:22.04"
+        - name: "ubuntu2404"
+          image: "ubuntu:24.04"
     runs-on: ${{ matrix.host }}
     container:
-      image: ${{ matrix.container }}
+      image: ${{ matrix.os.image }}
     env:
-      ARCH: ubuntu2204
       UNPRIVILEGED: ubuntu
       TEST_OUTPUT_DIR: /tmp/tests
       WORKDIR: /tmp/workdir
@@ -34,7 +37,7 @@ jobs:
         fetch-depth: 0
 
     - name: Create an unprivileged user
-      if: ${{ matrix.container == 'ubuntu:22.04' }}
+      if: ${{ matrix.os.name == 'ubuntu2204' }}
       run: useradd -m $UNPRIVILEGED
 
     - name: Allow the unprivileged user to sudo
@@ -50,7 +53,7 @@ jobs:
     - name: Archive source package
       uses: actions/upload-artifact@v4
       with:
-        name: source-package.${{github.sha}}.${{github.job}}.${{matrix.host}}.${{matrix.container}}
+        name: source-package.${{github.sha}}.${{github.job}}.${{matrix.host}}.${{matrix.os.name}}
         retention-days: 7
         path: build/ubuntu/out/*.tar
 
@@ -74,7 +77,7 @@ jobs:
       uses: actions/upload-artifact@v4
       if: success() || failure()
       with:
-        name: tests.${{github.sha}}.${{github.job}}.${{matrix.host}}.${{matrix.container}}
+        name: tests.${{github.sha}}.${{github.job}}.${{matrix.host}}.${{matrix.os.name}}
         retention-days: 7
         path: "${{env.TEST_OUTPUT_DIR}}/*-tests-*.tar.gz"
 

@@ -27,7 +27,7 @@ get_release() {
 
 RELEASE=$(get_release)
 
-if [ "$RELEASE" = "yammy" ]; then # 22.04
+if [ "$RELEASE" = "jammy" ]; then # 22.04
     LIBNODE_VER=72
     LUA_VER=5.4
     PYTHON_VER=3

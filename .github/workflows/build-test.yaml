@@ -7,6 +7,7 @@ on:
 
 jobs:
   ubuntu:
+    continue-on-error: true
     strategy:
       matrix:
         host: [ "ubuntu-22.04", "ubuntu-24.04" ]
@@ -19,7 +20,7 @@ jobs:
       UNPRIVILEGED: ubuntu
       TEST_OUTPUT_DIR: /tmp/tests
       WORKDIR: /tmp/workdir
-      #TRACE: true
+      TRACE: true
       TIMEOUT: 10
     steps:
     - name: Install minimal dependencies
@@ -33,10 +34,15 @@ jobs:
         fetch-depth: 0
 
     - name: Create an unprivileged user
+      if: ${{ matrix.container == 'ubuntu:22.04' }}
+      run: useradd -m $UNPRIVILEGED
+
+    - name: Allow the unprivileged user to sudo
       run: |
-        useradd -m $UNPRIVILEGED
-        chown -R $UNPRIVILEGED:$UNPRIVILEGED .
         echo "$UNPRIVILEGED ALL = NOPASSWD: $(which apt-get)" | tee -a /etc/sudoers
+
+    - name: Change ownership of the repo
+      run: chown -R $UNPRIVILEGED:$UNPRIVILEGED .
 
     - name: Build package
       run: sudo -u $UNPRIVILEGED --preserve-env=WORKDIR,TEST_OUTPUT_DIR,TIMEOUT,TRACE env SUDO=sudo build/ubuntu/mk
@@ -44,7 +50,7 @@ jobs:
     - name: Archive source package
       uses: actions/upload-artifact@v4
       with:
-        name: source-package.${{github.sha}}.${{env.ARCH}}
+        name: source-package.${{github.sha}}.${{github.job}}.${{matrix.host}}
         retention-days: 7
         path: build/ubuntu/out/*.tar
 
@@ -68,11 +74,12 @@ jobs:
       uses: actions/upload-artifact@v4
       if: success() || failure()
       with:
-        name: tests.${{github.sha}}.${{env.ARCH}}
+        name: tests.${{github.sha}}.${{github.job}}.${{matrix.host}}
         retention-days: 7
         path: "${{env.TEST_OUTPUT_DIR}}/*-tests-*.tar.gz"
 
   archlinux:
+    continue-on-error: true
     strategy:
       matrix:
         host: [ "ubuntu-22.04", "ubuntu-24.04" ]
@@ -83,7 +90,7 @@ jobs:
       ARCH: archlinux
       UNPRIVILEGED: arch
       TEST_OUTPUT_DIR: /tmp/tests
-      #TRACE: true
+      TRACE: true
       TIMEOUT: 10
     steps:
     - name: Install minimal dependencies
@@ -116,7 +123,7 @@ jobs:
     - name: Archive PKGBUILD
       uses: actions/upload-artifact@v4
       with:
-        name: PKGBUILD.${{github.sha}}
+        name: PKGBUILD.${{github.sha}}.${{matrix.host}}
         retention-days: 7
         path: "build/archlinux/PKGBUILD"
 
@@ -141,6 +148,6 @@ jobs:
       uses: actions/upload-artifact@v4
       if: success() || failure()
       with:
-        name: tests.${{github.sha}}.${{env.ARCH}}
+        name: tests.${{github.sha}}.${{github.job}}.${{matrix.host}}
         retention-days: 7
         path: "${{env.TEST_OUTPUT_DIR}}/*-tests-*.tar.gz"

@@ -43,7 +43,7 @@ EOF
         --format=tar \
         --worktree-attributes \
         --prefix="$BUILD_PROJECT-$BUILD_VERSION/" \
-        --add="$TMP/.build.env" \
+        --add-file="$TMP/.build.env" \
         "${1-HEAD}"
 ) | gzip > "$OUTPUT"
 

@@ -70,12 +70,13 @@ For example running the `test-runner` in a subproject directory lists the
 available tests. `test-runner` ran for [hlua](../hlua) suggests:
 
 ```
-test/syntax
+test/exec
 test/exit
-test/require
-test/noinput
-test/runtime
 test/hello
+test/noinput
+test/require
+test/runtime
+test/syntax
 ```
 
 Then for example `test-runner test/hello` will run the test in the `test/hello`

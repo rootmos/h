@@ -14,15 +14,21 @@ cat <<EOF > "$TMP"
 |-|---------|-------|-------|
 EOF
 
-arch() {
-    export ARCH=$2
-    DEPS=$BUILD/$ARCH/deps
+os() {
+    DEPS="$BUILD/$2/deps"
+    RELEASE=${3-}
+
+    deps() {
+        env RELEASE="$RELEASE" "$DEPS" "$@"
+    }
+
     cat <<EOF
-|$1| $("$DEPS" -rm) | $("$DEPS" -bm) | $("$DEPS" -cm) |
+|$1| $(deps -rm) | $(deps -bm) | $(deps -cm) |
 EOF
 }
 
-arch "Ubuntu 22.04" ubuntu >> "$TMP"
-arch "Arch Linux" archlinux >> "$TMP"
+os "Ubuntu 24.04" ubuntu noble >> "$TMP"
+os "Ubuntu 22.04" ubuntu jammy >> "$TMP"
+os "Arch Linux" archlinux >> "$TMP"
 
 cp "$TMP" "$OUTPUT"

@@ -1,14 +1,31 @@
 #!/usr/bin/env python3
 
 import urllib.request
+import urllib.error
 import sys
+import time
+
 from html.parser import HTMLParser
 
 release = sys.argv[1]
 pkg = sys.argv[2]
 url = f"https://packages.ubuntu.com/{release}/{pkg}"
 
-contents = urllib.request.urlopen(url).read()
+def fetch():
+    backoff = 1.0
+    while True:
+        try:
+            return urllib.request.urlopen(url).read()
+        except urllib.error.HTTPError as e:
+            if e.status == 500:
+                if backoff > 10:
+                    raise
+                time.sleep(backoff)
+                backoff *= 2
+            else:
+                raise
+
+contents = fetch()
 
 class TheHTMLParser(HTMLParser):
     def __init__(self):

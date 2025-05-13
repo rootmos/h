@@ -25,7 +25,7 @@ get_release() {
     grep "VERSION_CODENAME" /etc/os-release | sed 's/VERSION_CODENAME=//'
 }
 
-RELEASE=$(get_release)
+RELEASE=${RELEASE-$(get_release)}
 
 if [ "$RELEASE" = "jammy" ]; then # 22.04
     LIBNODE_VER=72
@@ -60,7 +60,9 @@ if [ -n "$BUILD" ]; then
 fi
 
 if [ -n "$CHECK" ]; then
-    PKGS+=("python$PYTHON_VER-toml") # TODO until python >= 3.11
+    if [ "$RELEASE" = "jammy" ]; then
+        PKGS+=("python$PYTHON_VER-toml")
+    fi
 fi
 
 if [ -z "$MARKDOWN" ]; then

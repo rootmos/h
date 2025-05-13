@@ -50,7 +50,7 @@ jobs:
     - name: Archive source package
       uses: actions/upload-artifact@v4
       with:
-        name: source-package.${{github.sha}}.${{github.job}}.${{matrix.host}}
+        name: source-package.${{github.sha}}.${{github.job}}.${{matrix.host}}.${{matrix.container}}
         retention-days: 7
         path: build/ubuntu/out/*.tar
 
@@ -74,7 +74,7 @@ jobs:
       uses: actions/upload-artifact@v4
       if: success() || failure()
       with:
-        name: tests.${{github.sha}}.${{github.job}}.${{matrix.host}}
+        name: tests.${{github.sha}}.${{github.job}}.${{matrix.host}}.${{matrix.container}}
         retention-days: 7
         path: "${{env.TEST_OUTPUT_DIR}}/*-tests-*.tar.gz"
 

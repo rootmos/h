@@ -104,8 +104,6 @@ int main(int argc, char* argv[])
     struct options o;
     parse_options(&o, argc, argv);
 
-    setenv("UV_USE_IO_URING", "0", 1);
-
     rlimit_apply(o.rlimits, LENGTH(o.rlimits));
 
     int rsfd = landlock_new_ruleset();

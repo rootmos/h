@@ -7,7 +7,6 @@ on:
 
 jobs:
   ubuntu:
-    continue-on-error: true
     strategy:
       matrix:
         host: [ "ubuntu-22.04", "ubuntu-24.04" ]
@@ -23,7 +22,7 @@ jobs:
       UNPRIVILEGED: ubuntu
       TEST_OUTPUT_DIR: /tmp/tests
       WORKDIR: /tmp/workdir
-      TRACE: true
+      #TRACE: true
       TIMEOUT: 10
     steps:
     - name: Install minimal dependencies

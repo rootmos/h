@@ -7,9 +7,13 @@ on:
 
 jobs:
   ubuntu:
-    runs-on: ubuntu-22.04
+    strategy:
+      matrix:
+        host: [ "ubuntu-22.04", "ubuntu-24.04" ]
+        container: [ "ubuntu:22.04", "ubuntu:24.04" ]
+    runs-on: ${{ matrix.host }}
     container:
-      image: ubuntu:22.04
+      image: ${{ matrix.container }}
     env:
       ARCH: ubuntu2204
       UNPRIVILEGED: ubuntu
@@ -69,7 +73,10 @@ jobs:
         path: "${{env.TEST_OUTPUT_DIR}}/*-tests-*.tar.gz"
 
   archlinux:
-    runs-on: ubuntu-22.04
+    strategy:
+      matrix:
+        host: [ "ubuntu-22.04", "ubuntu-24.04" ]
+    runs-on: ${{ matrix.host }}
     container:
       image: archlinux:latest
     env:

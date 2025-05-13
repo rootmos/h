@@ -104,19 +104,18 @@ int main(int argc, char* argv[])
     struct options o;
     parse_options(&o, argc, argv);
 
+    setenv("UV_USE_IO_URING", "0", 1);
+
     rlimit_apply(o.rlimits, LENGTH(o.rlimits));
 
     int rsfd = landlock_new_ruleset();
 
     if(o.allow_script_dir_read || o.allow_script_dir_exec) {
-        char buf0[PATH_MAX];
-        strncpy(buf0, o.input, sizeof(buf0)-1);
-        buf0[sizeof(buf0)-1] = '\0';
-        char* dir = dirname(buf0);
+        char buf[PATH_MAX];
+        char* input = realpath(o.input, buf);
+        CHECK_NOT(input, NULL, "realpath(%s)", o.input);
 
-        char buf2[PATH_MAX];
-        char* script_dir = realpath(dir, buf2);
-        CHECK_NOT(script_dir, NULL, "realpath(%s)", dir);
+        char* script_dir = dirname(input);
 
         if(o.allow_script_dir_read || o.allow_script_dir_exec) {
             debug("allowing read access beneath: %s", script_dir);

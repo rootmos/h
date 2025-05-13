@@ -105,10 +105,6 @@ jeq #$__NR_clone3, good
 jeq #$__NR_rseq, good
 jeq #$__NR_set_robust_list, good
 
-# TODO disableable with UV_USE_IO_URING=0 ?
-#jeq #$__NR_io_uring_setup, good
-#jeq #$__NR_io_uring_enter, good
-
 jeq #$__NR_tgkill, good
 jeq #$__NR_exit, good
 jeq #$__NR_exit_group, good

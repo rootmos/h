@@ -6,10 +6,9 @@
 #define RLIMIT_DEFAULT_CPU (1<<2)
 #define RLIMIT_DEFAULT_DATA (1<<30)
 #define RLIMIT_DEFAULT_NOFILE (1<<5)
-#define RLIMIT_DEFAULT_NPROC (1<<12)
-#define RLIMIT_DEFAULT_RSS (1<<30)
-#define RLIMIT_DEFAULT_AS (1<<30)
-#define RLIMIT_DEFAULT_MEMLOCK (1<<22)
+#define RLIMIT_DEFAULT_NPROC (1<<11)
+#define RLIMIT_DEFAULT_RSS (1<<29)
+#define RLIMIT_DEFAULT_AS ((long unsigned int)1<<31)
 
 #define LIBR_IMPLEMENTATION
 #include "r.h"
@@ -32,7 +31,7 @@ static void print_usage(int fd, const char* prog)
     dprintf(fd, "\n");
     dprintf(fd, "options:\n");
     dprintf(fd, "  -s       allow reading files beneath the input script's directory\n");
-    dprintf(fd, "  -x       allow executing files beneath the input script's directory (imples read access)\n");
+    dprintf(fd, "  -x       allow executing files beneath the input script's directory (implies read access)\n");
     dprintf(fd, "  -h       print this message\n");
     dprintf(fd, "  -v       print version information\n");
     dprintf(fd, "\n");

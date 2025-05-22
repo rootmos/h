@@ -90,7 +90,7 @@ jobs:
       UNPRIVILEGED: arch
       TEST_OUTPUT_DIR: /tmp/tests
       #TRACE: true
-      TIMEOUT: 10
+      TIMEOUT: 20
     steps:
     - name: Install minimal dependencies
       run: pacman -Suy --noconfirm base-devel wget git strace

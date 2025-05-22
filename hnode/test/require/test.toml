@@ -1,1 +1,1 @@
-cmdline = ["$0", "-s", "-R", "main.js"]
+cmdline = ["$0", "-s", "main.js"]

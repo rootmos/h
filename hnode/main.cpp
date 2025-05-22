@@ -6,9 +6,10 @@
 #define RLIMIT_DEFAULT_CPU (1<<2)
 #define RLIMIT_DEFAULT_DATA (1<<30)
 #define RLIMIT_DEFAULT_NOFILE (1<<5)
-#define RLIMIT_DEFAULT_NPROC (1<<11)
-#define RLIMIT_DEFAULT_RSS (1<<28)
+#define RLIMIT_DEFAULT_NPROC (1<<12)
+#define RLIMIT_DEFAULT_RSS (1<<30)
 #define RLIMIT_DEFAULT_AS (1<<30)
+#define RLIMIT_DEFAULT_MEMLOCK (1<<22)
 
 #define LIBR_IMPLEMENTATION
 #include "r.h"
@@ -96,53 +97,62 @@ static void parse_options(struct options* o, int argc, char* argv[])
     }
 }
 
-int main(int argc, char* argv[])
+#if (NODE_MAJOR_VERSION >= 24)
+#include <cppgc/platform.h>
+
+static int RunNodeInstance(
+        node::MultiIsolatePlatform* platform,
+        const std::vector<std::string>& args,
+        const std::vector<std::string>& exec_args,
+        struct options* o)
 {
-    drop_capabilities();
-    no_new_privs();
+    int exit_code = 0;
 
-    struct options o;
-    parse_options(&o, argc, argv);
+    std::vector<std::string> errors;
+    auto setup = node::CommonEnvironmentSetup::Create(platform, &errors, args, exec_args);
 
-    rlimit_apply(o.rlimits, LENGTH(o.rlimits));
-
-    int rsfd = landlock_new_ruleset();
-
-    if(o.allow_script_dir_read || o.allow_script_dir_exec) {
-        char buf[PATH_MAX];
-        char* input = realpath(o.input, buf);
-        CHECK_NOT(input, NULL, "realpath(%s)", o.input);
-
-        char* script_dir = dirname(input);
-
-        if(o.allow_script_dir_read || o.allow_script_dir_exec) {
-            debug("allowing read access beneath: %s", script_dir);
-            landlock_allow_read(rsfd, script_dir);
+    if (!setup) {
+        for(const std::string& err: errors) {
+            error("node environment setup error: %s", err.c_str());
         }
-
-        if(o.allow_script_dir_exec) {
-            debug("allowing execute access beneath: %s", script_dir);
-            landlock_allow(rsfd, script_dir, LANDLOCK_ACCESS_FS_EXECUTE);
-        }
-    } else {
-        debug("allowing read access: %s", o.input);
-        landlock_allow_read(rsfd, o.input);
+        return 1;
     }
 
-#if (NODE_MAJOR_VERSION >= 19)
-    landlock_allow_read(rsfd, "/etc/ssl/openssl.cnf");
-#endif
+    v8::Isolate* isolate = setup->isolate();
+    node::Environment* env = setup->env();
 
-#if (NODE_MAJOR_VERSION == 18)
-    landlock_allow_read(rsfd, "/usr/share/nodejs");
-    landlock_allow_read(rsfd, "/usr/lib/ssl/openssl.cnf");
-#endif
+    {
+        v8::Locker locker(isolate);
+        v8::Isolate::Scope isolate_scope(isolate);
+        v8::HandleScope handle_scope(isolate);
 
-    landlock_apply(rsfd);
-    int r = close(rsfd); CHECK(r, "close");
+        setup->context()->Global()->Set(setup->context(),
+            v8::String::NewFromUtf8(isolate, "input_script_filename").ToLocalChecked(),
+            v8::String::NewFromUtf8(isolate, o->input).ToLocalChecked()
+        ).Check();
 
-    seccomp_apply_filter();
+        v8::Context::Scope context_scope(setup->context());
 
+        const char main_script_source_utf8[] = {
+#include "main.jsc"
+        };
+
+        debug("loading environment");
+        auto loadenv_ret = node::LoadEnvironment(env, main_script_source_utf8);
+        if(loadenv_ret.IsEmpty()) {
+            failwith("unable to load envionment");
+        }
+
+        exit_code = node::SpinEventLoop(env).FromMaybe(1);
+    }
+
+    node::Stop(env);
+
+    return exit_code;
+}
+
+static int run(int argc, char* argv[], struct options* o)
+{
     char* c_args[] = {
         argv[0],
         NULL,
@@ -152,13 +162,56 @@ int main(int argc, char* argv[])
     argv = uv_setup_args(n_args, c_args);
     std::vector<std::string> args(c_args, c_args + n_args);
 
+    auto result = node::InitializeOncePerProcess(
+        args, {
+            node::ProcessInitializationFlags::kNoInitializeV8,
+            node::ProcessInitializationFlags::kNoInitializeNodeV8Platform,
+            node::ProcessInitializationFlags::kDisableNodeOptionsEnv,
+            node::ProcessInitializationFlags::kNoInitializeCppgc,
+        });
+
+    for(const std::string& err: result->errors()) {
+        error("node initialization error: %s", err.c_str());
+    }
+
+    if(result->early_return() != 0) {
+        return result->exit_code();
+    }
+
+    debug("initializing node platform");
+    auto platform = node::MultiIsolatePlatform::Create(1);
+    v8::V8::InitializePlatform(platform.get());
+    cppgc::InitializeProcess(platform->GetPageAllocator());
+    v8::V8::Initialize();
+
+    int ret = RunNodeInstance(platform.get(), result->args(), result->exec_args(), o);
+
+    v8::V8::Dispose();
+    v8::V8::DisposePlatform();
+
+    node::TearDownOncePerProcess();
+    return ret;
+}
+
+#else // NODE_MAJOR_VERSION >= 24
+
+static int run(int argc, char* argv[], struct options* o)
+{
+    char* c_args[] = {
+        argv[0],
+        NULL,
+    };
+    const int n_args = 1;
+
+    argv = uv_setup_args(n_args, c_args);
+    std::vector<std::string> args(c_args, c_args + n_args);
 #if (NODE_MAJOR_VERSION >= 18)
     auto result = node::InitializeOncePerProcess(
         args, {
             node::ProcessInitializationFlags::kNoInitializeV8,
             node::ProcessInitializationFlags::kNoInitializeNodeV8Platform
         });
-    for (const std::string& err: result->errors()) {
+    for(const std::string& err: result->errors()) {
         error("node initialization error: %s", err.c_str());
     }
     if (result->early_return() != 0) {
@@ -188,7 +241,7 @@ int main(int argc, char* argv[])
 
     debug("initializing uv loop");
     uv_loop_t loop;
-    r = uv_loop_init(&loop);
+    int r = uv_loop_init(&loop);
     CHECK_UV(r, "uv_loop_init");
 
     debug("creating allocator");
@@ -225,10 +278,10 @@ int main(int argc, char* argv[])
         global->Set(context,
 #if (NODE_MAJOR_VERSION >= 18)
             v8::String::NewFromUtf8(isolate, "input_script_filename").ToLocalChecked(),
-            v8::String::NewFromUtf8(isolate, o.input).ToLocalChecked()
+            v8::String::NewFromUtf8(isolate, o->input).ToLocalChecked()
 #elif (NODE_MAJOR_VERSION >= 12)
             v8::String::NewFromUtf8(isolate, "input_script_filename"),
-            v8::String::NewFromUtf8(isolate, o.input)
+            v8::String::NewFromUtf8(isolate, o->input)
 #else
 #error "unsupported node version"
 #endif
@@ -308,6 +361,7 @@ int main(int argc, char* argv[])
     debug("disposing isolate");
     bool platform_finished = false;
     platform->AddIsolateFinishedCallback(isolate, [](void* data) {
+        debug("callbacking");
         *static_cast<bool*>(data) = true;
     }, &platform_finished);
     platform->UnregisterIsolate(isolate);
@@ -338,4 +392,56 @@ int main(int argc, char* argv[])
 
     debug("bye: %d", exit_code);
     return exit_code;
+}
+
+#endif // NODE_MAJOR_VERSION >= 24
+
+int main(int argc, char* argv[])
+{
+    drop_capabilities();
+    no_new_privs();
+
+    struct options o;
+    parse_options(&o, argc, argv);
+
+    rlimit_apply(o.rlimits, LENGTH(o.rlimits));
+
+    int rsfd = landlock_new_ruleset();
+
+    if(o.allow_script_dir_read || o.allow_script_dir_exec) {
+        char buf[PATH_MAX];
+        char* input = realpath(o.input, buf);
+        CHECK_NOT(input, NULL, "realpath(%s)", o.input);
+
+        char* script_dir = dirname(input);
+
+        if(o.allow_script_dir_read || o.allow_script_dir_exec) {
+            debug("allowing read access beneath: %s", script_dir);
+            landlock_allow_read(rsfd, script_dir);
+        }
+
+        if(o.allow_script_dir_exec) {
+            debug("allowing execute access beneath: %s", script_dir);
+            landlock_allow(rsfd, script_dir, LANDLOCK_ACCESS_FS_EXECUTE);
+        }
+    } else {
+        debug("allowing read access: %s", o.input);
+        landlock_allow_read(rsfd, o.input);
+    }
+
+#if (NODE_MAJOR_VERSION >= 19)
+    landlock_allow_read(rsfd, "/etc/ssl/openssl.cnf");
+#endif
+
+#if (NODE_MAJOR_VERSION == 18)
+    landlock_allow_read(rsfd, "/usr/share/nodejs");
+    landlock_allow_read(rsfd, "/usr/lib/ssl/openssl.cnf");
+#endif
+
+    landlock_apply(rsfd);
+    int r = close(rsfd); CHECK(r, "close");
+
+    seccomp_apply_filter();
+
+    return run(argc, argv, &o);
 }
